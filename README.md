@@ -1,6 +1,6 @@
 # Hearth
 
-A calm, self-hosted home dashboard. Hearth brings your thermostat, cameras, lights, fans, and Matter devices into one place, and talks to the Home Assistant you already run.
+A calm, self-hosted home dashboard. Hearth brings your thermostat, cameras, lights, fans, and Matter devices into one grid you arrange yourself, talks to the Home Assistant you already run, and lets you change things by asking in plain words.
 
 ![Landing page](docs/screenshots/landing.png)
 
@@ -8,7 +8,11 @@ A calm, self-hosted home dashboard. Hearth brings your thermostat, cameras, ligh
 | --- | --- |
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Dashboard in dark mode](docs/screenshots/dashboard-dark.png) |
 
-The thermostat glows warm from the top when you raise it and cool from the bottom when you lower it, and holds a softer glow while the system is actually heating or cooling.
+| Customize a tile | Ask the assistant |
+| --- | --- |
+| ![Customize dialog](docs/screenshots/customize.png) | ![Assistant panel](docs/screenshots/assistant.png) |
+
+The thermostat glows warm from the top when you raise it and cool from the bottom when you lower it, and keeps a softer glow while the system is actually heating or cooling.
 
 | Raise | Lower |
 | --- | --- |
@@ -16,12 +20,16 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 
 ## What it does
 
-- **Accounts**: email and password sign up and sign in ([Better Auth](https://better-auth.com)). Each person has their own connections, cameras, and layout.
-- **Home Assistant**: lights (with brightness), switches, input booleans, fans (with speed), and climate entities over the REST API with a long-lived access token.
-- **Matter**: connects straight to a Matter server (the one Home Assistant's Matter add-on runs, or a standalone one), lists and controls devices, and pairs new ones from a setup code.
-- **Cameras**: RTSP cameras with a username and password, streamed to the browser over WebRTC through [go2rtc](https://github.com/AlexxIT/go2rtc). Falls back to refreshing snapshots when WebRTC cannot connect.
-- **Demo home**: simulated devices so anyone can explore without hardware.
-- **Security**: integration tokens and camera passwords are encrypted at rest (AES-256-GCM). The browser never sees them.
+- **A grid you arrange.** Every tile sits on square cells and comes in sizes from 1×1 to 4×3. Lights and fans have four templates: **Icon** (tap to switch), **Card** (name, room, status), **Slider** (a tall vertical brightness or speed control), and **Large** (details beside a slider). Choose **Edit** to drag tiles, resize them, pick an icon and a colour, or hide them. Filter by room.
+- **Home Assistant**: lights with brightness, switches, input booleans, fans with speed, and climate entities, with rooms taken from your Home Assistant areas.
+- **Matter**: connects straight to a Matter server, lists and controls devices, and pairs new ones from a setup code.
+- **Cameras**: RTSP cameras with a username and password, streamed to the browser over WebRTC through [go2rtc](https://github.com/AlexxIT/go2rtc), with a snapshot fallback.
+- **Assistant**: a pill in the corner (or Cmd or Ctrl K) opens a chat. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, or Muse, or point it at a model you run yourself.
+- **Accounts**: email and password sign up and sign in. Each person has their own connections, cameras, layout, and assistants.
+- **Look**: liquid glass surfaces over a quiet studio backdrop (Studio, Linen, or Slate), light and dark, and eight accents.
+- **Security**: integration tokens, camera passwords, and AI keys are encrypted at rest (AES-256-GCM) and never sent to the browser.
+
+![Welcome](docs/screenshots/welcome.png)
 
 ## Quick start
 
@@ -45,30 +53,63 @@ docker compose up -d --build
 
 This starts Hearth on port 3000 and go2rtc next to it. If you open Hearth from other devices by IP (for example `http://192.168.1.10:3000`), set that as `BETTER_AUTH_URL` or add it to `TRUSTED_ORIGINS`. Once everyone in your household has an account, set `DISABLE_SIGNUP=true`.
 
+## How Hearth works with Home Assistant and Matter
+
+Matter is a local standard: devices talk over your own network (Wi-Fi, Ethernet, or Thread), and the apps that control them are **controllers**. A controller pairs a device onto its **fabric**, a private set of credentials that lets it send commands. One device can belong to several fabrics at once (Apple Home, Google Home, and Home Assistant together), which Matter calls **multi-admin**.
+
+Home Assistant does not speak Matter inside its own process. Its Matter integration talks to the **Matter Server** (the Matter Server add-on, built on matter.js since add-on 9.x) over a WebSocket on port 5580. The Matter Server is the real controller: it holds the fabric credentials and talks to devices. Home Assistant turns each Matter endpoint into an entity such as `light.desk_lamp`, `fan.bedroom`, or `climate.hallway`. Thread devices also need a Thread border router (a HomePod, a Nest hub, or the Home Assistant Connect ZBT-1 with the OpenThread Border Router add-on).
+
+Hearth can reach those devices along two paths. Pick one per device.
+
+```
+1. Through Home Assistant (recommended if you run it)
+   Hearth ──REST + token──▶ Home Assistant ──▶ Matter integration ──WebSocket──▶ Matter Server ──▶ device
+
+2. Straight to the Matter Server
+   Hearth ──WebSocket :5580──────────────────────────────────────────────────▶ Matter Server ──▶ device
+```
+
+**Path 1, through Home Assistant.** Hearth reads `/api/states` and calls services such as `light.turn_on` with a long-lived access token. It never speaks Matter itself; it sees Home Assistant entities. You get every device Home Assistant knows about, Matter or not (Zigbee, Z-Wave, Wi-Fi), with Home Assistant's names and areas.
+
+**Path 2, straight to the Matter Server.** Hearth opens one WebSocket to the server, sends `start_listening`, and keeps the node list current from the events it pushes. It reads Matter clusters directly (OnOff, LevelControl, FanControl, Thermostat) and sends commands such as `MoveToLevelWithOnOff`. If you point it at the server Home Assistant's add-on runs, Hearth is using **the same controller and fabric** as Home Assistant: a device you pair from Hearth also shows up in Home Assistant, and the reverse. Matter has no notion of Home Assistant's areas, so these devices have no room. Without Home Assistant, run `ghcr.io/matter-js/matterjs-server:stable` in Docker and connect to it the same way.
+
+If you connect both Home Assistant and its Matter Server, each Matter device appears twice. Hide one copy in **Edit**, or connect only one of them.
+
+**Pairing.** **Pair device** sends the setup code to the Matter Server (`commission_with_code`). To add a device that already lives in Apple Home, Google Home, or Alexa, turn on pairing mode (sharing) in that app and use the code it shows; only the network is needed. A brand new, never paired device needs the Matter Server to have Bluetooth for the first handshake.
+
 ## Connecting your home
 
 ### Home Assistant
 
 1. In Home Assistant, open your profile, then **Security**, then **Create token** under long-lived access tokens.
-2. In Hearth, open **Connections**, choose **Add**, then **Home Assistant**, and paste the address (`http://homeassistant.local:8123`) and the token.
+2. In Hearth, open **Settings**, choose **Add** under Connections, then **Home Assistant**, and paste the address (`http://homeassistant.local:8123`) and the token.
 
 Hearth checks the connection before saving it.
 
 ### Matter
 
-Hearth talks to a Matter server over WebSocket on port 5580.
-
 - **Home Assistant OS**: install the **Matter Server** add-on, open its configuration, and expose port 5580. Use `ws://<home-assistant-ip>:5580/ws` as the address.
 - **Standalone**: run `ghcr.io/matter-js/matterjs-server:stable` with host networking.
 
-To control a device that is already in Apple Home, Google Home, or Alexa, open it in that app, turn on **pairing mode** (also called sharing or multi-admin), then use **Pair device** in Hearth with the code it shows. Brand new devices need a Matter server with Bluetooth access.
-
 ### Cameras
 
-1. Make sure go2rtc is running (the compose file starts it) and set its address under **Connections**, then **Stream relay**.
+1. Make sure go2rtc is running (the compose file starts it) and set its address under **Settings**, then **Stream relay**.
 2. Add a camera with its RTSP address (for example `rtsp://192.168.1.20:554/stream1`), username, and password.
 
-The first two cameras appear on the dashboard.
+### AI assistants
+
+Open **Settings**, then **AI assistants**, and add a provider with your own API key. Hearth checks the key with the provider before saving it. Usage is billed to your account with that provider.
+
+| Provider | Default model | Key from |
+| --- | --- | --- |
+| Claude (Anthropic) | `claude-opus-5-5` | console.anthropic.com |
+| ChatGPT (OpenAI) | `gpt-6.1-sol` | platform.openai.com |
+| Grok (xAI) | `grok-4.3` | console.x.ai |
+| Gemini (Google) | `gemini-3.8-flash` | aistudio.google.com |
+| Muse (Meta) | `muse-spark-1.3` | dev.meta.ai |
+| Custom | any | Ollama, LM Studio, vLLM, OpenRouter, or anything that speaks Chat Completions with tools |
+
+You can change the model on each connection. For Claude, Hearth turns on Anthropic's server-side refusal fallback (`fallbacks: "default"`), so a declined request is retried on the model Anthropic recommends.
 
 ## How it works
 
@@ -85,10 +126,13 @@ The best way to learn this codebase is to follow one request end to end. Here is
 | Home Assistant (REST) | `src/lib/integrations/home-assistant.ts` |
 | Matter (WebSocket) | `src/lib/integrations/matter/` |
 | Demo home | `src/lib/integrations/demo.ts` |
+| Dashboard layout (sizes, order, icons, colours) | `src/lib/dashboard/layout.ts`, rendered by `src/components/dashboard/home-grid.tsx` |
+| Tiles and the vertical slider | `src/components/dashboard/tiles` |
+| Assistant (prompt, tool, provider adapters) | `src/lib/assistant`, UI in `src/components/assistant` |
 | Server actions (forms) | `src/lib/actions.ts` |
-| API routes (polling and commands) | `src/app/api` |
+| API routes (polling, commands, assistant) | `src/app/api` |
 | Camera signalling | `src/app/api/cameras/[id]/webrtc/route.ts` and `src/components/dashboard/camera-tile.tsx` |
-| Liquid glass surfaces | `src/components/glass` |
+| Liquid glass surfaces and wallpapers | `src/components/glass` |
 
 ### One provider interface, three integrations
 
@@ -102,15 +146,21 @@ interface Provider {
 }
 ```
 
-The dashboard only knows about `Device` and `DeviceCommand`. Adding a new integration (Philips Hue, a Zigbee bridge, Shelly) means writing one more class that maps its API onto those types.
+The dashboard and the assistant only know about `Device` and `DeviceCommand`. Adding an integration (Philips Hue, a Zigbee bridge, Shelly) means one more class that maps its API onto those types.
 
-### Home Assistant: request and response
+### The layout is data
 
-`GET /api/states` returns every entity. Hearth keeps the ones it understands and turns, for example, `light.kitchen` with `brightness: 128` into `{ kind: "light", brightness: 50 }`. Turning it on is `POST /api/services/light/turn_on` with `{ "entity_id": "light.kitchen" }`.
+A layout is an ordered list of `{ id, size, icon, color, hidden }`. `resolveLayout` reconciles it with whatever devices exist right now: saved tiles keep their place, missing ones drop out, and new ones are added with sensible defaults. The grid is CSS: row height equals column width (container query units), so every size lines up, and dense packing fills gaps.
 
-### Matter: a long-lived WebSocket
+### How the assistant decides what to do
 
-The Matter server pushes changes instead of being polled. Hearth opens one connection per server, sends `start_listening` to receive every node, then applies `attribute_updated` events as they arrive, so reading devices never waits on the network. Attributes are addressed `endpoint/cluster/attribute`: `1/6/0` is the OnOff attribute of endpoint 1, and `1/513/18` is a thermostat's heating setpoint in hundredths of a degree.
+Each request sends the model a short system prompt that lists every device (id, name, room, kind, and state) and one tool, `control_device`. The model calls the tool once per device. Hearth validates each call, runs it through the same path as a tile press, tells the model what happened, and shows the changes under the reply. The three API styles live in `src/lib/assistant/run.ts`:
+
+- **Claude** through the official Anthropic SDK.
+- **ChatGPT and Grok** through the Responses API, which OpenAI's current models need for tool calling.
+- **Gemini, Muse, and custom servers** through Chat Completions. Assistant messages are sent back unchanged, because Gemini rejects a tool turn that lost its thought signature.
+
+Voice input uses the browser's Web Speech API, and a spoken request gets a spoken reply.
 
 ### Cameras: why go2rtc
 
@@ -124,6 +174,7 @@ The dashboard polls `/api/home` every four seconds with [SWR](https://swr.vercel
 
 - [Arc](https://uiarc.dev) components, installed with the shadcn CLI into `src/components/arc` (`components.json` registers the `@uiarc` registry). Install more with `npx shadcn@latest add @uiarc/<name>`.
 - [React Bits](https://reactbits.dev) Glass Surface for the refractive navigation bar, in `src/components/reactbits`.
+- [dnd-kit](https://dndkit.com) for dragging tiles, with keyboard support.
 - [Motion](https://motion.dev) for animation, with a reduced motion branch everywhere.
 
 ## Scripts
@@ -132,7 +183,7 @@ The dashboard polls `/api/home` every four seconds with [SWR](https://swr.vercel
 | --- | --- |
 | `npm run dev` | Development server with hot reload |
 | `npm run build` and `npm start` | Production build and server |
-| `npm test` | Unit tests (Vitest) for the integration mappings, encryption, and wire formats |
+| `npm test` | Unit tests (Vitest): integration mappings, layout, assistant adapters, encryption, wire formats |
 | `npm run lint` and `npm run typecheck` | ESLint and TypeScript |
 | `npm run db:generate` | New migration after editing `src/lib/db/schema.ts` |
 
@@ -141,8 +192,8 @@ The dashboard polls `/api/home` every four seconds with [SWR](https://swr.vercel
 Good exercises if you are learning with this project:
 
 1. **Live updates without polling**: subscribe to Home Assistant's WebSocket API (`/api/websocket`) on the server and stream changes to the browser with Server-Sent Events.
-2. **Rooms**: read Home Assistant areas and group tiles by room.
-3. **Scenes**: a button that sends several commands at once.
-4. **Colour lights**: extend `LightDevice` with colour temperature and map it for Home Assistant and Matter (cluster 768).
+2. **Scenes**: a tile that sends several commands at once, and an assistant tool to create them.
+3. **Colour lights**: extend `LightDevice` with colour temperature and map it for Home Assistant and Matter (cluster 768).
+4. **Several dashboards**: one layout per room or per wall tablet.
 5. **Household sharing**: let several accounts share one set of connections.
 6. **A new integration**: Philips Hue's local API is a good first one.
