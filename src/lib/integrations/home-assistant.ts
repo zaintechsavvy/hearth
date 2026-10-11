@@ -1,0 +1,152 @@
+import { clamp, deviceId, type Device, type DeviceCommand, type TemperatureUnit, type ThermostatAction, type ThermostatMode } from "@/lib/devices/types";
+import { IntegrationError, type Provider } from "./types";
+
+export interface HassState {
+  entity_id: string;
+  state: string;
+  attributes: Record<string, unknown>;
+}
+
+interface HassConfig {
+  unit_system?: { temperature?: string };
+}
+
+const SUPPORTED = new Set(["light", "switch", "input_boolean", "fan", "climate"]);
+const FAN_SET_SPEED = 1;
+
+const HVAC_TO_MODE: Record<string, ThermostatMode> = { off: "off", heat: "heat", cool: "cool", heat_cool: "auto", auto: "auto" };
+const ACTIONS: Record<string, ThermostatAction> = { heating: "heating", preheating: "heating", cooling: "cooling", idle: "idle", off: "off" };
+
+const num = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
+
+export function mapHassState(integrationId: string, entity: HassState, unit: TemperatureUnit): Device | null {
+  const domain = entity.entity_id.split(".")[0];
+  if (!SUPPORTED.has(domain)) return null;
+  const { attributes } = entity;
+  const base = {
+    id: deviceId(integrationId, entity.entity_id),
+    integrationId,
+    name: typeof attributes.friendly_name === "string" ? attributes.friendly_name : entity.entity_id,
+    available: entity.state !== "unavailable" && entity.state !== "unknown",
+  };
+  const on = entity.state === "on";
+
+  switch (domain) {
+    case "light": {
+      const colorModes = Array.isArray(attributes.supported_color_modes) ? attributes.supported_color_modes : [];
+      const dimmable = colorModes.some(mode => mode !== "onoff");
+      const brightness = num(attributes.brightness);
+      return { ...base, kind: "light", on, dimmable, brightness: on && brightness !== null ? Math.round(brightness / 255 * 100) : 0 };
+    }
+    case "fan": {
+      const features = num(attributes.supported_features) ?? 0;
+      return { ...base, kind: "fan", on, adjustable: (features & FAN_SET_SPEED) !== 0, speed: on ? num(attributes.percentage) ?? 100 : 0 };
+    }
+    case "climate": {
+      const hvacModes = Array.isArray(attributes.hvac_modes) ? attributes.hvac_modes.map(String) : [];
+      const modes = [...new Set(hvacModes.map(mode => HVAC_TO_MODE[mode]).filter(Boolean))];
+      const low = num(attributes.target_temp_low), high = num(attributes.target_temp_high);
+      const step = num(attributes.target_temp_step) ?? (unit === "F" ? 1 : 0.5);
+      const target = num(attributes.temperature) ?? (low !== null && high !== null ? roundTo((low + high) / 2, step) : null);
+      return {
+        ...base,
+        kind: "thermostat",
+        unit,
+        current: num(attributes.current_temperature),
+        target,
+        min: num(attributes.min_temp) ?? (unit === "F" ? 45 : 7),
+        max: num(attributes.max_temp) ?? (unit === "F" ? 95 : 35),
+        step,
+        mode: HVAC_TO_MODE[entity.state] ?? "off",
+        modes: modes.length ? modes : ["off", "heat"],
+        action: typeof attributes.hvac_action === "string" ? ACTIONS[attributes.hvac_action] ?? "idle" : null,
+      };
+    }
+    default:
+      return { ...base, kind: "switch", on };
+  }
+}
+
+function roundTo(value: number, step: number) {
+  return Math.round(value / step) * step;
+}
+
+export class HomeAssistantProvider implements Provider {
+  private readonly base: URL;
+  private readonly token: string;
+
+  constructor(private readonly integrationId: string, config: { url: string; token: string }) {
+    this.base = new URL(config.url.endsWith("/") ? config.url : `${config.url}/`);
+    this.token = config.token;
+  }
+
+  private async request<T>(path: string, init?: RequestInit): Promise<T> {
+    let response: Response;
+    try {
+      response = await fetch(new URL(path, this.base), {
+        ...init,
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+        headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" },
+      });
+    } catch {
+      throw new IntegrationError(`Could not reach Home Assistant at ${this.base.origin}.`);
+    }
+    if (response.status === 401) throw new IntegrationError("Home Assistant rejected the access token.");
+    if (!response.ok) throw new IntegrationError(`Home Assistant answered with ${response.status} ${response.statusText}.`);
+    return response.json() as Promise<T>;
+  }
+
+  async check() {
+    await this.request("api/");
+  }
+
+  async listDevices() {
+    const [config, states] = await Promise.all([this.request<HassConfig>("api/config"), this.request<HassState[]>("api/states")]);
+    const unit: TemperatureUnit = config.unit_system?.temperature === "°F" ? "F" : "C";
+    return states.map(state => mapHassState(this.integrationId, state, unit)).filter((device): device is Device => device !== null);
+  }
+
+  private call(domain: string, service: string, data: Record<string, unknown>) {
+    return this.request(`api/services/${domain}/${service}`, { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async execute(entityId: string, command: DeviceCommand) {
+    const domain = entityId.split(".")[0];
+    const target = { entity_id: entityId };
+    switch (command.type) {
+      case "power":
+        if (domain === "climate") {
+          const entity = await this.request<HassState>(`api/states/${entityId}`);
+          const modes = (entity.attributes.hvac_modes as string[] | undefined) ?? [];
+          return void await this.call("climate", "set_hvac_mode", { ...target, hvac_mode: command.on ? modes.find(mode => mode !== "off") ?? "heat" : "off" });
+        }
+        return void await this.call(domain === "light" ? "light" : "homeassistant", command.on ? "turn_on" : "turn_off", target);
+      case "brightness":
+        return void await (command.value <= 0
+          ? this.call("light", "turn_off", target)
+          : this.call("light", "turn_on", { ...target, brightness_pct: clamp(Math.round(command.value), 1, 100) }));
+      case "fanSpeed":
+        return void await this.call("fan", "set_percentage", { ...target, percentage: clamp(Math.round(command.value), 0, 100) });
+      case "targetTemperature":
+        return void await this.setTemperature(entityId, command.value);
+      case "thermostatMode": {
+        const entity = await this.request<HassState>(`api/states/${entityId}`);
+        const modes = (entity.attributes.hvac_modes as string[] | undefined) ?? [];
+        const hvacMode = command.mode === "auto" ? modes.find(mode => mode === "heat_cool") ?? "auto" : command.mode;
+        return void await this.call("climate", "set_hvac_mode", { ...target, hvac_mode: hvacMode });
+      }
+    }
+  }
+
+  /** Range thermostats keep their spread: both setpoints move by the same amount. */
+  private async setTemperature(entityId: string, value: number) {
+    const { attributes } = await this.request<HassState>(`api/states/${entityId}`);
+    const low = num(attributes.target_temp_low), high = num(attributes.target_temp_high);
+    if (num(attributes.temperature) === null && low !== null && high !== null) {
+      const shift = value - (low + high) / 2;
+      return this.call("climate", "set_temperature", { entity_id: entityId, target_temp_low: low + shift, target_temp_high: high + shift });
+    }
+    return this.call("climate", "set_temperature", { entity_id: entityId, temperature: value });
+  }
+}
