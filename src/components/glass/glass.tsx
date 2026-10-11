@@ -12,3 +12,5 @@ export function Glass<T extends ElementType = "div">({ as, shape = "surface", cl
 }
 
 export const glassClass = (shape: "surface" | "panel" | "pill" = "surface") => `${styles.glass} ${styles[shape]}`;
+
+export const glassSheetClass = styles.sheet;

@@ -1,0 +1,5 @@
+# Hearth adds and removes camera streams through the API, so this file can stay almost empty.
+api:
+  listen: ":1984"
+webrtc:
+  listen: ":8555"

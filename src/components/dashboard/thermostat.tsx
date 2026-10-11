@@ -52,7 +52,7 @@ export function Thermostat({ device, onCommand }: ThermostatProps) {
     if (reduce) return;
     const [glow, other] = direction > 0 ? [warmPulse, coolPulse] : [coolPulse, warmPulse];
     animate(other, 0, { duration: motionTokens.duration.fast });
-    animate(glow, [glow.get(), 1, 0], { duration: 1.5, times: [0, 0.14, 1], ease: [0.22, 1, 0.36, 1] });
+    animate(glow, [glow.get(), 1, 0.6, 0], { duration: 1.9, times: [0, 0.1, 0.45, 1], ease: "easeOut" });
   }
 
   async function commit(value: number) {

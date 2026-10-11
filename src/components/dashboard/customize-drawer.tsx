@@ -8,6 +8,7 @@ import { Select } from "@/components/arc/select/select";
 import { Switch } from "@/components/arc/switch/switch";
 import { setDeviceHidden, setThermostat } from "@/lib/actions";
 import type { Device } from "@/lib/devices/types";
+import { glassSheetClass } from "@/components/glass/glass";
 import styles from "./customize-drawer.module.css";
 
 interface CustomizeDrawerProps {
@@ -39,7 +40,7 @@ export function CustomizeDrawer({ devices, hidden, thermostatId, onChange }: Cus
       <DrawerTrigger asChild>
         <Button variant="secondary"><SlidersHorizontal size={16} strokeWidth={1.75} aria-hidden="true" /> Customize</Button>
       </DrawerTrigger>
-      <DrawerContent title="Customize your home" description="Choose the thermostat and which devices appear on the dashboard.">
+      <DrawerContent className={glassSheetClass} title="Customize your home" description="Choose the thermostat and which devices appear on the dashboard.">
         <div className={styles.body}>
           {thermostats.length > 1 && (
             <Select

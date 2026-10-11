@@ -1,0 +1,26 @@
+services:
+  hearth:
+    build: .
+    image: hearth:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      DATABASE_PATH: /data/hearth.db
+      STREAM_RELAY_URL: http://host.docker.internal:1984
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - hearth-data:/data
+
+  # Turns RTSP cameras into WebRTC. Host networking lets browsers on your LAN reach its media port.
+  go2rtc:
+    image: alexxit/go2rtc:latest
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./go2rtc:/config
+
+volumes:
+  hearth-data:

@@ -6,7 +6,7 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "./schema";
 
 function open() {
-  const file = resolve(process.env.DATABASE_PATH ?? "data/hearth.db");
+  const file = resolve(/*turbopackIgnore: true*/ process.env.DATABASE_PATH ?? "data/hearth.db");
   mkdirSync(dirname(file), { recursive: true });
   const sqlite = new Database(file);
   sqlite.pragma("journal_mode = WAL");
@@ -22,5 +22,5 @@ const cache = globalThis as unknown as { hearthDb?: Db };
 export const db = cache.hearthDb ??= open();
 
 export function runMigrations() {
-  migrate(db, { migrationsFolder: resolve(process.env.MIGRATIONS_PATH ?? "drizzle") });
+  migrate(db, { migrationsFolder: resolve(/*turbopackIgnore: true*/ process.env.MIGRATIONS_PATH ?? "drizzle") });
 }
