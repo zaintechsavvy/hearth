@@ -13,7 +13,7 @@ import styles from "./landing.module.css";
 const POINTS = [
   { icon: House, title: "Works with Home Assistant", body: "Bring in the lights, fans, and climate you already run." },
   { icon: Radio, title: "Speaks Matter", body: "Pair devices with a setup code through your Matter server." },
-  { icon: Sparkles, title: "Ask in plain words", body: "Type or say \u201cturn on the bedroom fan\u201d with Claude, ChatGPT, Grok, Gemini, or Muse." },
+  { icon: Sparkles, title: "Ask in plain words", body: "Type or say \u201cturn on the bedroom fan\u201d with Claude, ChatGPT, Gemini, Grok, Groq, or Muse." },
   { icon: HardDrive, title: "Runs at home", body: "Self hosted. Tokens and camera passwords are encrypted at rest." },
 ];
 

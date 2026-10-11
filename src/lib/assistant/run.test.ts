@@ -47,6 +47,13 @@ describe("Chat Completions adapter", () => {
     expect(Object.keys(calls[0].body).sort()).toEqual(["messages", "model", "tools"]);
   });
 
+  it("sends Groq requests to its OpenAI compatible endpoint", async () => {
+    const calls = stubFetch([{ choices: [{ message: { role: "assistant", content: "Hi." } }] }]);
+    await runAssistant(base("groq", "openai/gpt-oss-120b"));
+    expect(calls[0].url).toBe("https://api.groq.com/openai/v1/chat/completions");
+    expect(calls[0].body.model).toBe("openai/gpt-oss-120b");
+  });
+
   it("talks to a custom server without a key", async () => {
     const calls = stubFetch([{ choices: [{ message: { role: "assistant", content: "Hi." } }] }]);
     await runAssistant({ ...base("custom", "llama3.2"), apiKey: "", baseUrl: "http://localhost:11434/v1/" });

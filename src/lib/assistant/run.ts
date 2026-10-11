@@ -36,6 +36,7 @@ const BASE_URLS: Record<Exclude<HttpProvider, "custom">, string> = {
   xai: "https://api.x.ai/v1",
   gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
   meta: "https://api.meta.ai/v1",
+  groq: "https://api.groq.com/openai/v1",
 };
 
 function baseUrlFor(provider: HttpProvider, custom?: string | null) {
@@ -55,6 +56,7 @@ export function runAssistant(run: AssistantRun): Promise<string> {
       return runResponses(run);
     case "gemini":
     case "meta":
+    case "groq":
     case "custom":
       return runChatCompletions(run);
   }
@@ -157,9 +159,9 @@ interface ChatMessage {
   tool_calls?: { id: string; function: { name: string; arguments: string } }[];
 }
 
-/** Gemini, Muse, and custom servers over Chat Completions. The assistant message is echoed verbatim: Gemini rejects a tool turn whose thought signature was dropped. Muse only accepts the default tool choice, so none is sent. */
+/** Gemini, Muse, Groq, and custom servers over Chat Completions. The assistant message is echoed verbatim: Gemini rejects a tool turn whose thought signature was dropped. Muse only accepts the default tool choice, so none is sent. */
 async function runChatCompletions({ provider, model, apiKey, baseUrl, system, history, callTool }: AssistantRun) {
-  const p = provider as "gemini" | "meta" | "custom";
+  const p = provider as "gemini" | "meta" | "groq" | "custom";
   const messages: unknown[] = [{ role: "system", content: system }, ...history.map(turn => ({ role: turn.role, content: turn.text }))];
   const tools = [{ type: "function", function: { name: CONTROL_TOOL.name, description: CONTROL_TOOL.description, parameters: CONTROL_TOOL.parameters } }];
   for (let step = 0; step < MAX_STEPS; step++) {

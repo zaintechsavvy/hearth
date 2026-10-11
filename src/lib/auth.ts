@@ -8,7 +8,7 @@ import * as schema from "@/lib/db/schema";
 const trustedOrigins = (process.env.TRUSTED_ORIGINS ?? "").split(",").map(origin => origin.trim()).filter(Boolean);
 
 export const auth = betterAuth({
-  database: drizzleAdapter(db, { provider: "sqlite", schema }),
+  database: drizzleAdapter(db, { provider: "pg", schema }),
   trustedOrigins,
   emailAndPassword: {
     enabled: true,

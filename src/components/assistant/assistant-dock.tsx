@@ -157,7 +157,7 @@ export function AssistantDock() {
                   <EmptyState
                     icon={<Sparkles size={24} strokeWidth={1.75} />}
                     title="Connect an assistant"
-                    description="Add an API key for Claude, ChatGPT, Grok, Gemini, or Muse, and ask for changes in plain words."
+                    description="Add an API key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, and ask for changes in plain words."
                     action={<Button variant="secondary" onClick={() => { setOpen(false); router.push("/settings#assistants"); }}>Open Settings</Button>}
                   />
                 </div>

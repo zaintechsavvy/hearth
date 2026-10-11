@@ -189,9 +189,9 @@ export async function removeAssistant(id: string): Promise<ActionResult> {
 
 export async function setDefaultAssistant(id: string): Promise<ActionResult> {
   return authed(async userId => {
-    db.transaction(tx => {
-      tx.update(assistant).set({ isDefault: false }).where(eq(assistant.userId, userId)).run();
-      tx.update(assistant).set({ isDefault: true }).where(and(eq(assistant.id, id), eq(assistant.userId, userId))).run();
+    await db.transaction(async tx => {
+      await tx.update(assistant).set({ isDefault: false }).where(eq(assistant.userId, userId));
+      await tx.update(assistant).set({ isDefault: true }).where(and(eq(assistant.id, id), eq(assistant.userId, userId)));
     });
     revalidatePath("/", "layout");
     return OK;

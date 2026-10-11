@@ -24,7 +24,7 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 - **Home Assistant**: lights with brightness, switches, input booleans, fans with speed, and climate entities, with rooms taken from your Home Assistant areas.
 - **Matter**: connects straight to a Matter server, lists and controls devices, and pairs new ones from a setup code.
 - **Cameras**: RTSP cameras with a username and password, streamed to the browser over WebRTC through [go2rtc](https://github.com/AlexxIT/go2rtc), with a snapshot fallback.
-- **Assistant**: a pill in the corner (or Cmd or Ctrl K) opens a chat. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, or Muse, or point it at a model you run yourself.
+- **Assistant**: a pill in the corner (or Cmd or Ctrl K) opens a chat. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, or point it at a model you run yourself.
 - **Accounts**: email and password sign up and sign in. Each person has their own connections, cameras, layout, and assistants.
 - **Look**: liquid glass surfaces over a quiet studio backdrop (Studio, Linen, or Slate), light and dark, and eight accents.
 - **Security**: integration tokens, camera passwords, and AI keys are encrypted at rest (AES-256-GCM) and never sent to the browser.
@@ -42,7 +42,24 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000, create an account, and choose **Open the demo home**. The database (`data/hearth.db`) and its tables are created on first start.
+Open http://localhost:3000, create an account, and choose **Open the demo home**. The database and its tables are created on first start.
+
+### Where your data lives
+
+Hearth stores accounts, sessions, connections, cameras, layouts, and assistants in Postgres.
+
+- **By default** it runs [PGlite](https://pglite.dev), Postgres compiled to WebAssembly, inside the app, saving to `data/pglite` (or the `hearth-data` volume in Docker). Nothing to install.
+- **Set `DATABASE_URL`** to use any Postgres instead, such as [Neon](https://neon.tech) or [Supabase](https://supabase.com). Hearth creates its tables on the next start.
+
+Passwords are hashed (scrypt) by Better Auth and never stored in readable form. Home Assistant tokens, camera passwords, and AI keys are encrypted with a key derived from `BETTER_AUTH_SECRET` before they reach the database, so a hosted database only ever sees ciphertext. Keep that secret on your server: lose it and the stored secrets cannot be decrypted.
+
+To use Neon, create a project, copy the **pooled** connection string, and add it to `.env.local`:
+
+```bash
+DATABASE_URL=postgresql://user:password@ep-example-pooler.us-east-2.aws.neon.tech/hearth?sslmode=require
+```
+
+To use Supabase, open **Connect**, copy the **Transaction pooler** string (port 6543), and add it the same way. Restart Hearth after changing it. Switching starts with an empty database; there is no copy from the embedded one.
 
 ### Run it at home with Docker
 
@@ -107,6 +124,7 @@ Open **Settings**, then **AI assistants**, and add a provider with your own API 
 | Grok (xAI) | `grok-4.3` | console.x.ai |
 | Gemini (Google) | `gemini-3.8-flash` | aistudio.google.com |
 | Muse (Meta) | `muse-spark-1.3` | dev.meta.ai |
+| Groq | `openai/gpt-oss-120b` | console.groq.com |
 | Custom | any | Ollama, LM Studio, vLLM, OpenRouter, or anything that speaks Chat Completions with tools |
 
 You can change the model on each connection. For Claude, Hearth turns on Anthropic's server-side refusal fallback (`fallbacks: "default"`), so a declined request is retried on the model Anthropic recommends.
@@ -120,7 +138,7 @@ The best way to learn this codebase is to follow one request end to end. Here is
 | Pages and layouts (App Router) | `src/app` (route groups `(auth)` and `(app)` share layouts) |
 | Signed-out redirect | `src/proxy.ts` (Next.js 16's name for middleware) |
 | Session checks | `src/lib/session.ts`, used by every page, route, and action |
-| Database schema and migrations | `src/lib/db/schema.ts`, `drizzle/`, applied by `src/instrumentation.ts` at startup |
+| Database (Postgres or embedded PGlite), schema, and migrations | `src/lib/db`, `drizzle/`, applied by `src/instrumentation.ts` at startup |
 | Encrypting secrets | `src/lib/crypto.ts` |
 | The device model every integration maps onto | `src/lib/devices/types.ts` |
 | Home Assistant (REST) | `src/lib/integrations/home-assistant.ts` |
@@ -158,7 +176,7 @@ Each request sends the model a short system prompt that lists every device (id, 
 
 - **Claude** through the official Anthropic SDK.
 - **ChatGPT and Grok** through the Responses API, which OpenAI's current models need for tool calling.
-- **Gemini, Muse, and custom servers** through Chat Completions. Assistant messages are sent back unchanged, because Gemini rejects a tool turn that lost its thought signature.
+- **Gemini, Muse, Groq, and custom servers** through Chat Completions. Assistant messages are sent back unchanged, because Gemini rejects a tool turn that lost its thought signature.
 
 Voice input uses the browser's Web Speech API, and a spoken request gets a spoken reply.
 

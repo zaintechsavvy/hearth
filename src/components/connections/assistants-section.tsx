@@ -57,7 +57,7 @@ export function AssistantsSection({ assistants }: { assistants: AssistantSummary
 
       <Glass shape="panel" className={styles.group}>
         {assistants.length === 0 ? (
-          <EmptyState className={styles.empty} icon={<Sparkles size={24} strokeWidth={1.75} />} title="No assistant yet" description="Connect Claude, ChatGPT, Grok, Gemini, or Muse to control your home in plain words." />
+          <EmptyState className={styles.empty} icon={<Sparkles size={24} strokeWidth={1.75} />} title="No assistant yet" description="Connect Claude, ChatGPT, Grok, Gemini, Muse, or Groq to control your home in plain words." />
         ) : assistants.map(item => (
           <div key={item.id} className={styles.row}>
             <Sparkles className={styles.rowIcon} size={20} strokeWidth={1.75} aria-hidden="true" />

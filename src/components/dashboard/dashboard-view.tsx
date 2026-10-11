@@ -87,13 +87,13 @@ export function DashboardView({ userName }: { userName: string }) {
   const hiddenCount = tiles.filter(tile => tile.hidden).length;
   const editable = customizing ? editableTile(tiles.find(tile => tile.id === customizing), devices, cameras) : null;
 
-  const renderTile = (tile: TileConfig) => {
+  const renderTile = (tile: TileConfig, preview = false) => {
     const camera = cameras.get(tile.id);
-    if (camera) return <CameraTile camera={camera} fill />;
+    if (camera) return preview ? <CameraPreview name={camera.name} /> : <CameraTile camera={camera} fill />;
     const device = devices.get(tile.id);
     if (!device) return null;
     if (device.kind === "thermostat") return <Thermostat device={device} onCommand={command => send(device, command)} />;
-    return <DeviceTile device={device} config={tile} interactive={!editing} onCommand={command => send(device, command)} />;
+    return <DeviceTile device={device} config={tile} interactive={!editing && !preview} onCommand={command => send(device, command)} />;
   };
 
   return (
@@ -124,15 +124,24 @@ export function DashboardView({ userName }: { userName: string }) {
       ))}
 
       {shownTiles.some(tile => !tile.hidden) ? (
-        <HomeGrid tiles={shownTiles} editing={editing} renderTile={renderTile} nameOf={nameOf} onTilesChange={next => change(room === ALL_ROOMS || editing ? next : mergeFiltered(tiles, next))} onCustomize={setCustomizing} />
+        <HomeGrid tiles={shownTiles} editing={editing} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(room === ALL_ROOMS || editing ? next : mergeFiltered(tiles, next))} onCustomize={setCustomizing} />
       ) : (
         <Glass className={styles.placeholder}>
           <EmptyState icon={<Video size={24} strokeWidth={1.75} />} title="Nothing to show here" description="Every tile is hidden. Choose Edit, then Hidden, to bring tiles back." />
         </Glass>
       )}
 
-      <TileEditor tile={editable} onOpenChange={open => !open && setCustomizing(null)} onChange={patch => customizing && change(updateTile(tiles, customizing, patch))} />
+      <TileEditor tile={editable} renderPreview={config => renderTile(config, true)} onOpenChange={open => !open && setCustomizing(null)} onChange={patch => customizing && change(updateTile(tiles, customizing, patch))} />
       <HiddenTilesDrawer open={showHidden} onOpenChange={setShowHidden} tiles={tiles} nameOf={nameOf} onShow={id => change(updateTile(tiles, id, { hidden: false }))} />
+    </div>
+  );
+}
+
+function CameraPreview({ name }: { name: string }) {
+  return (
+    <div className={`${glassClass()} ${styles.cameraPreview}`}>
+      <Video size={24} strokeWidth={1.75} aria-hidden="true" />
+      <span>{name}</span>
     </div>
   );
 }

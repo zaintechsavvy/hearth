@@ -18,6 +18,7 @@ A self-hosted home dashboard: Next.js 16 App Router, Better Auth, Drizzle on SQL
 - **Errors shown to people are `IntegrationError`s.** Anything else is logged and replaced with a generic message by `readableError` in `src/lib/home.ts`.
 - **Secrets are sealed** with `seal` / `unseal` (`src/lib/crypto.ts`) before they reach the database, and never sent to the browser. `publicConfig` is the only path from a stored config to a client component.
 - **Every page, route handler, and server action checks the session itself.** `src/proxy.ts` only checks that a cookie exists.
+- **Database is Postgres**: `DATABASE_URL` for a real server (Neon, Supabase), otherwise embedded PGlite in `DATABASE_PATH`. Code only against Drizzle's query API so both keep working; never use driver-specific calls.
 - **Schema changes**: edit `src/lib/db/schema.ts`, run `npm run db:generate`, commit the new file under `drizzle/`. Migrations apply on startup.
 - **Arc components live in `src/components/arc`** and are installed with `npx shadcn@latest add @uiarc/<name>`. Do not edit them; compose them. `components.json` must keep `"style": "new-york"`: Base UI styles make the shadcn CLI rewrite Arc's Radix `asChild` into `render` and break it.
 - **React Bits code in `src/components/reactbits` is vendored** and excluded from lint.

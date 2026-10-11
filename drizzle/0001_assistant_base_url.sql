@@ -1,1 +1,0 @@
-ALTER TABLE `assistant` ADD `base_url` text;

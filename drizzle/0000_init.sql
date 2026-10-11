@@ -1,92 +1,94 @@
-CREATE TABLE `account` (
-	`id` text PRIMARY KEY NOT NULL,
-	`account_id` text NOT NULL,
-	`provider_id` text NOT NULL,
-	`user_id` text NOT NULL,
-	`access_token` text,
-	`refresh_token` text,
-	`id_token` text,
-	`access_token_expires_at` integer,
-	`refresh_token_expires_at` integer,
-	`scope` text,
-	`password` text,
-	`created_at` integer NOT NULL,
-	`updated_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+CREATE TABLE "account" (
+	"id" text PRIMARY KEY NOT NULL,
+	"account_id" text NOT NULL,
+	"provider_id" text NOT NULL,
+	"user_id" text NOT NULL,
+	"access_token" text,
+	"refresh_token" text,
+	"id_token" text,
+	"access_token_expires_at" timestamp with time zone,
+	"refresh_token_expires_at" timestamp with time zone,
+	"scope" text,
+	"password" text,
+	"created_at" timestamp with time zone NOT NULL,
+	"updated_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `account_user_idx` ON `account` (`user_id`);--> statement-breakpoint
-CREATE TABLE `assistant` (
-	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
-	`provider` text NOT NULL,
-	`model` text NOT NULL,
-	`api_key` text NOT NULL,
-	`is_default` integer DEFAULT false NOT NULL,
-	`created_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+CREATE TABLE "assistant" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"provider" text NOT NULL,
+	"model" text NOT NULL,
+	"api_key" text NOT NULL,
+	"base_url" text,
+	"is_default" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `assistant_user_idx` ON `assistant` (`user_id`);--> statement-breakpoint
-CREATE TABLE `camera` (
-	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
-	`name` text NOT NULL,
-	`source` text NOT NULL,
-	`created_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+CREATE TABLE "camera" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"name" text NOT NULL,
+	"source" text NOT NULL,
+	"created_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `camera_user_idx` ON `camera` (`user_id`);--> statement-breakpoint
-CREATE TABLE `integration` (
-	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
-	`kind` text NOT NULL,
-	`name` text NOT NULL,
-	`config` text NOT NULL,
-	`created_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+CREATE TABLE "integration" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"kind" text NOT NULL,
+	"name" text NOT NULL,
+	"config" text NOT NULL,
+	"created_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `integration_user_idx` ON `integration` (`user_id`);--> statement-breakpoint
-CREATE TABLE `preference` (
-	`user_id` text PRIMARY KEY NOT NULL,
-	`stream_relay_url` text,
-	`layout` text NOT NULL,
-	`updated_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+CREATE TABLE "preference" (
+	"user_id" text PRIMARY KEY NOT NULL,
+	"stream_relay_url" text,
+	"layout" jsonb NOT NULL,
+	"updated_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `session` (
-	`id` text PRIMARY KEY NOT NULL,
-	`expires_at` integer NOT NULL,
-	`token` text NOT NULL,
-	`ip_address` text,
-	`user_agent` text,
-	`user_id` text NOT NULL,
-	`created_at` integer NOT NULL,
-	`updated_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+CREATE TABLE "session" (
+	"id" text PRIMARY KEY NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"token" text NOT NULL,
+	"ip_address" text,
+	"user_agent" text,
+	"user_id" text NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	"updated_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "session_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `session_token_unique` ON `session` (`token`);--> statement-breakpoint
-CREATE INDEX `session_user_idx` ON `session` (`user_id`);--> statement-breakpoint
-CREATE TABLE `user` (
-	`id` text PRIMARY KEY NOT NULL,
-	`name` text NOT NULL,
-	`email` text NOT NULL,
-	`email_verified` integer DEFAULT false NOT NULL,
-	`image` text,
-	`created_at` integer NOT NULL,
-	`updated_at` integer NOT NULL
+CREATE TABLE "user" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"email" text NOT NULL,
+	"email_verified" boolean DEFAULT false NOT NULL,
+	"image" text,
+	"created_at" timestamp with time zone NOT NULL,
+	"updated_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "user_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);--> statement-breakpoint
-CREATE TABLE `verification` (
-	`id` text PRIMARY KEY NOT NULL,
-	`identifier` text NOT NULL,
-	`value` text NOT NULL,
-	`expires_at` integer NOT NULL,
-	`created_at` integer NOT NULL,
-	`updated_at` integer NOT NULL
+CREATE TABLE "verification" (
+	"id" text PRIMARY KEY NOT NULL,
+	"identifier" text NOT NULL,
+	"value" text NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	"updated_at" timestamp with time zone NOT NULL
 );
+--> statement-breakpoint
+ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "assistant" ADD CONSTRAINT "assistant_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "camera" ADD CONSTRAINT "camera_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "integration" ADD CONSTRAINT "integration_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "preference" ADD CONSTRAINT "preference_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "account_user_idx" ON "account" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "assistant_user_idx" ON "assistant" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "camera_user_idx" ON "camera" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "integration_user_idx" ON "integration" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "session_user_idx" ON "session" USING btree ("user_id");

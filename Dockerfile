@@ -3,7 +3,6 @@
 FROM node:24-bookworm-slim AS deps
 WORKDIR /app
 ARG NPM_REGISTRY=https://registry.npmjs.org/
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci --registry="$NPM_REGISTRY" --no-audit --no-fund
 
@@ -22,7 +21,7 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
-    DATABASE_PATH=/data/hearth.db \
+    DATABASE_PATH=/data/pglite \
     MIGRATIONS_PATH=/app/drizzle
 RUN mkdir -p /data && chown node:node /data
 COPY --from=build --chown=node:node /app/.next/standalone ./

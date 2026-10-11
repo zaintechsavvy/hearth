@@ -1,26 +1,47 @@
 import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { resolve } from "node:path";
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
+import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
+import { drizzle as drizzlePostgres, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { migrate as migratePostgres } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
 import * as schema from "./schema";
 
-function open() {
-  const file = resolve(/*turbopackIgnore: true*/ process.env.DATABASE_PATH ?? "data/hearth.db");
-  mkdirSync(dirname(file), { recursive: true });
-  const sqlite = new Database(file);
-  sqlite.pragma("journal_mode = WAL");
-  sqlite.pragma("foreign_keys = ON");
-  return drizzle(sqlite, { schema });
+/** Both drivers expose the same Drizzle query API; this is the type the app codes against. */
+export type Db = PostgresJsDatabase<typeof schema>;
+
+interface Connection {
+  db: Db;
+  migrate: () => Promise<void>;
 }
 
-export type Db = ReturnType<typeof open>;
+const migrationsFolder = () => resolve(/*turbopackIgnore: true*/ process.env.MIGRATIONS_PATH ?? "drizzle");
 
-const cache = globalThis as unknown as { hearthDb?: Db };
+/**
+ * DATABASE_URL points at any Postgres (Neon, Supabase, self-hosted). Without it Hearth runs PGlite, Postgres
+ * compiled to WebAssembly, in a folder on disk. `next build` runs many workers that import this module, so the
+ * build gets throwaway in-memory databases instead of fighting over one folder.
+ */
+function connect(): Connection {
+  const url = process.env.DATABASE_URL;
+  if (url) {
+    // prepare: false keeps transaction poolers (Supabase on port 6543, Neon's pooled host) working.
+    const client = postgres(url, { prepare: false, max: 10 });
+    const db = drizzlePostgres(client, { schema });
+    return { db, migrate: () => migratePostgres(db, { migrationsFolder: migrationsFolder() }) };
+  }
+  const building = process.env.NEXT_PHASE === "phase-production-build";
+  const directory = resolve(/*turbopackIgnore: true*/ process.env.DATABASE_PATH ?? "data/pglite");
+  if (!building) mkdirSync(directory, { recursive: true });
+  const db = drizzlePglite(building ? new PGlite() : new PGlite(directory), { schema });
+  return { db: db as unknown as Db, migrate: () => migratePglite(db, { migrationsFolder: migrationsFolder() }) };
+}
+
+const cache = globalThis as unknown as { hearthDatabase?: Connection };
 
 /** One connection per server process; the global survives dev hot reloads. */
-export const db = cache.hearthDb ??= open();
+const connection = cache.hearthDatabase ??= connect();
 
-export function runMigrations() {
-  migrate(db, { migrationsFolder: resolve(/*turbopackIgnore: true*/ process.env.MIGRATIONS_PATH ?? "drizzle") });
-}
+export const db = connection.db;
+export const runMigrations = () => connection.migrate();

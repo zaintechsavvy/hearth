@@ -7,7 +7,8 @@ services:
       - "3000:3000"
     env_file: .env
     environment:
-      DATABASE_PATH: /data/hearth.db
+      # Leave DATABASE_URL out of .env to keep everything in the hearth-data volume.
+      DATABASE_PATH: /data/pglite
       STREAM_RELAY_URL: http://host.docker.internal:1984
     extra_hosts:
       - "host.docker.internal:host-gateway"

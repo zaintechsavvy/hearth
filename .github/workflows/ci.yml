@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BETTER_AUTH_SECRET: ci-only-secret-not-used-in-production-000000
-      DATABASE_PATH: /tmp/hearth-ci.db
+      DATABASE_PATH: /tmp/hearth-ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

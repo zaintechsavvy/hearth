@@ -1,4 +1,4 @@
-export const ASSISTANT_PROVIDER_IDS = ["anthropic", "openai", "xai", "gemini", "meta", "custom"] as const;
+export const ASSISTANT_PROVIDER_IDS = ["anthropic", "openai", "xai", "gemini", "meta", "groq", "custom"] as const;
 export type AssistantProvider = (typeof ASSISTANT_PROVIDER_IDS)[number];
 
 export interface ProviderInfo {
@@ -16,5 +16,6 @@ export const ASSISTANT_PROVIDERS: Record<AssistantProvider, ProviderInfo> = {
   xai: { label: "Grok", company: "xAI", defaultModel: "grok-4.3", keyUrl: "https://console.x.ai", keyHint: "Starts with xai-" },
   gemini: { label: "Gemini", company: "Google", defaultModel: "gemini-3.8-flash", keyUrl: "https://aistudio.google.com/apikey", keyHint: "From Google AI Studio" },
   meta: { label: "Muse", company: "Meta", defaultModel: "muse-spark-1.3", keyUrl: "https://dev.meta.ai", keyHint: "From the Meta developer console" },
+  groq: { label: "Groq", company: "Groq", defaultModel: "openai/gpt-oss-120b", keyUrl: "https://console.groq.com/keys", keyHint: "Starts with gsk_" },
   custom: { label: "Custom", company: "OpenAI compatible", defaultModel: "llama3.2", keyUrl: "https://ollama.com", keyHint: "Leave blank if your server needs no key" },
 };
