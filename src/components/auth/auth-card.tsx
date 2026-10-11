@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
+import { glassClass } from "@/components/glass/glass";
 import styles from "./auth-card.module.css";
 
 interface AuthCardProps {
@@ -17,10 +18,10 @@ export function AuthCard({ title, description, footer, children }: AuthCardProps
   const reduce = useReducedMotion();
   return (
     <motion.section
-      className={styles.card}
+      className={`${glassClass()} ${styles.card}`}
       aria-labelledby="auth-title"
       initial={reduce ? false : { opacity: 0, y: 12, filter: `blur(${motionTokens.blur.soft}px)` }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      animate={{ opacity: 1, y: 0, filter: "none" }}
       transition={{ duration: motionTokens.duration.considered, ease: [...motionTokens.ease.enter] }}
     >
       <div className={styles.heading}>

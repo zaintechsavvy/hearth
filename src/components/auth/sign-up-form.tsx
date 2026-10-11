@@ -5,12 +5,14 @@ import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Input } from "@/components/arc/input/input";
-import { PasswordStrength } from "@/components/arc/password-strength/password-strength";
+import { PasswordStrength, createPasswordRules } from "@/components/arc/password-strength/password-strength";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth-policy";
 import { authClient } from "@/lib/auth-client";
 import { AuthCard } from "./auth-card";
 import styles from "./auth-card.module.css";
 
 const MIN_LEVEL = 2;
+const rules = createPasswordRules({ minLength: MIN_PASSWORD_LENGTH });
 
 export function SignUpForm() {
   const router = useRouter();
@@ -33,7 +35,7 @@ export function SignUpForm() {
       setPending(false);
       return;
     }
-    router.replace("/");
+    router.replace("/dashboard");
     router.refresh();
   }
 
@@ -46,7 +48,7 @@ export function SignUpForm() {
       <form className={styles.form} onSubmit={submit}>
         <Input label="Name" name="name" autoComplete="name" required autoFocus />
         <Input label="Email" name="email" type="email" autoComplete="email" required />
-        <PasswordStrength label="Password" name="password" autoComplete="new-password" required onValueChange={(_, strength) => setLevel(strength.level)} />
+        <PasswordStrength label="Password" name="password" autoComplete="new-password" required rules={rules} shortLength={MIN_PASSWORD_LENGTH} onValueChange={(_, strength) => setLevel(strength.level)} />
         <Alert tone="danger" title="Could not create your account" open={Boolean(error)}>{error ?? ""}</Alert>
         <Button type="submit" size="lg" loading={pending} disabled={level < MIN_LEVEL} className={styles.submit}>Create account</Button>
       </form>

@@ -29,7 +29,7 @@ export function SignInForm() {
       setPending(false);
       return;
     }
-    router.replace("/");
+    router.replace("/dashboard");
     router.refresh();
   }
 

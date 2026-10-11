@@ -1,17 +1,16 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Logo } from "@/components/brand/logo";
+import { Wallpaper } from "@/components/glass/wallpaper";
 import { getUser } from "@/lib/session";
 import styles from "./auth.module.css";
 
 export default async function AuthLayout({ children }: LayoutProps<"/">) {
-  if (await getUser()) redirect("/");
+  if (await getUser()) redirect("/dashboard");
   return (
     <div className={styles.page}>
-      <div className={styles.backdrop} aria-hidden="true">
-        <span className={styles.warm} />
-        <span className={styles.cool} />
-      </div>
-      <header className={styles.header}><Logo /></header>
+      <Wallpaper />
+      <header className={styles.header}><Link href="/" aria-label="Hearth"><Logo /></Link></header>
       <main className={styles.main}>{children}</main>
     </div>
   );

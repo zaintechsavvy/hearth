@@ -1,0 +1,112 @@
+.tile {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  margin: 0;
+  background: oklch(16% .01 260);
+}
+
+.media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.offline {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  color: oklch(85% 0 0);
+  font-size: var(--text-sm);
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height-sm);
+  padding-inline: var(--space-4);
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.caption {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  max-width: calc(100% - 80px);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding-inline: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  color: var(--text-secondary);
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.tile[data-state="live"] .dot {
+  background: var(--success);
+  animation: breathe 2.4s var(--ease-standard) infinite;
+}
+
+.tile[data-state="snapshot"] .dot {
+  background: var(--warning);
+}
+
+.tile[data-state="offline"] .dot {
+  background: var(--danger);
+}
+
+@keyframes breathe {
+  50% { opacity: .45; }
+}
+
+.fullscreen {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--foreground);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.tile:hover .fullscreen,
+.fullscreen:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .fullscreen { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile[data-state="live"] .dot { animation: none; }
+}

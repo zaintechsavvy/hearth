@@ -1,7 +1,7 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/sign-in", "/sign-up"];
+const PUBLIC = ["/", "/sign-in", "/sign-up"];
 
 /** A fast cookie presence check only; layouts and routes verify the session itself. */
 export function proxy(request: NextRequest) {

@@ -1,0 +1,151 @@
+.window {
+  margin: 0;
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-2);
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / .9),
+    0 40px 90px -30px oklch(30% .05 260 / .35),
+    0 12px 30px -12px oklch(30% .04 260 / .18);
+}
+
+:root[data-theme="dark"] .window {
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .12), 0 40px 90px -30px oklch(0% 0 0 / .8);
+}
+
+.titlebar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 36px;
+  padding-inline: var(--space-3);
+}
+
+.lights {
+  display: inline-flex;
+  gap: 7px;
+}
+
+.lights i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: oklch(70% .17 25);
+}
+
+.lights i:nth-child(2) { background: oklch(82% .15 80); }
+.lights i:nth-child(3) { background: oklch(74% .16 145); }
+
+.title {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.tag {
+  justify-self: end;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--accent-subtle);
+  color: var(--accent-strong);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: calc(var(--radius-surface) - var(--space-2));
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.tiles > * {
+  min-height: 0;
+}
+
+.cameras {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.camera {
+  position: relative;
+  aspect-ratio: 16 / 8;
+  overflow: hidden;
+}
+
+.sceneSky,
+.sceneGround,
+.sceneLamp {
+  position: absolute;
+  pointer-events: none;
+}
+
+.sceneSky {
+  inset: 0;
+  background: linear-gradient(180deg, oklch(62% .09 280), oklch(78% .1 55) 70%, oklch(70% .08 40));
+}
+
+.camera[data-scene="night"] .sceneSky {
+  background: linear-gradient(180deg, oklch(22% .04 265), oklch(34% .05 250) 75%);
+}
+
+.sceneGround {
+  inset: 62% 0 0;
+  background: linear-gradient(180deg, oklch(35% .03 150), oklch(22% .02 150));
+  filter: blur(1px);
+}
+
+.camera[data-scene="night"] .sceneGround {
+  background: linear-gradient(180deg, oklch(20% .02 200), oklch(12% .01 220));
+}
+
+.sceneLamp {
+  width: 34%;
+  aspect-ratio: 1;
+  right: 12%;
+  top: 22%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, oklch(92% .1 85 / .9), transparent);
+  filter: blur(6px);
+}
+
+.cameraLabel {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 26px;
+  padding-inline: var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.cameraLabel em {
+  color: var(--text-secondary);
+  font-style: normal;
+}
+
+.caption {
+  padding: 0 var(--space-3) var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
