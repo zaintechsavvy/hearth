@@ -9,6 +9,7 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: { default: "Hearth", template: "%s · Hearth" },
   description: "A calm dashboard for your home: climate, cameras, lights, and Matter devices.",
+  icons: { icon: "/icon.svg" },
 };
 
 export const viewport: Viewport = {
@@ -20,7 +21,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" data-theme="light" data-accent="orange" className={`${geist.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="en" data-theme="light" data-accent="neutral" data-wallpaper="studio" className={`${geist.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>

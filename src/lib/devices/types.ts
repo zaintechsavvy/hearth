@@ -7,6 +7,8 @@ interface DeviceBase {
   id: string;
   integrationId: string;
   name: string;
+  /** The room or area, when the integration knows it. */
+  room: string | null;
   available: boolean;
 }
 

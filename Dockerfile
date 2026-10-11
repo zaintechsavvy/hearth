@@ -9,7 +9,9 @@ RUN npm ci --registry="$NPM_REGISTRY" --no-audit --no-fund
 
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
+# Only so modules can be evaluated while prerendering; the runtime image reads the real secret from its environment.
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    BETTER_AUTH_SECRET=build-stage-only-not-a-runtime-secret
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

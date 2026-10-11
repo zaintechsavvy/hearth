@@ -17,9 +17,21 @@ const FAN_SET_SPEED = 1;
 const HVAC_TO_MODE: Record<string, ThermostatMode> = { off: "off", heat: "heat", cool: "cool", heat_cool: "auto", auto: "auto" };
 const ACTIONS: Record<string, ThermostatAction> = { heating: "heating", preheating: "heating", cooling: "cooling", idle: "idle", off: "off" };
 
+/** Areas are not in the REST state objects; a template renders `entity_id<TAB>area` for every entity in one request. */
+const AREA_TEMPLATE = "{% for s in states %}{{ s.entity_id }}\t{{ area_name(s.entity_id) or '' }}\n{% endfor %}";
+
+export function parseAreas(rendered: string) {
+  const areas = new Map<string, string>();
+  for (const line of rendered.split("\n")) {
+    const [entityId, area] = line.split("\t");
+    if (entityId && area?.trim()) areas.set(entityId.trim(), area.trim());
+  }
+  return areas;
+}
+
 const num = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
 
-export function mapHassState(integrationId: string, entity: HassState, unit: TemperatureUnit): Device | null {
+export function mapHassState(integrationId: string, entity: HassState, unit: TemperatureUnit, room: string | null = null): Device | null {
   const domain = entity.entity_id.split(".")[0];
   if (!SUPPORTED.has(domain)) return null;
   const { attributes } = entity;
@@ -27,6 +39,7 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
     id: deviceId(integrationId, entity.entity_id),
     integrationId,
     name: typeof attributes.friendly_name === "string" ? attributes.friendly_name : entity.entity_id,
+    room,
     available: entity.state !== "unavailable" && entity.state !== "unknown",
   };
   const on = entity.state === "on";
@@ -80,7 +93,7 @@ export class HomeAssistantProvider implements Provider {
     this.token = config.token;
   }
 
-  private async request<T>(path: string, init?: RequestInit): Promise<T> {
+  private async request<T>(path: string, init?: RequestInit, parse: "json" | "text" = "json"): Promise<T> {
     let response: Response;
     try {
       response = await fetch(new URL(path, this.base), {
@@ -94,7 +107,7 @@ export class HomeAssistantProvider implements Provider {
     }
     if (response.status === 401) throw new IntegrationError("Home Assistant rejected the access token.");
     if (!response.ok) throw new IntegrationError(`Home Assistant answered with ${response.status} ${response.statusText}.`);
-    return response.json() as Promise<T>;
+    return (parse === "json" ? response.json() : response.text()) as Promise<T>;
   }
 
   async check() {
@@ -102,9 +115,13 @@ export class HomeAssistantProvider implements Provider {
   }
 
   async listDevices() {
-    const [config, states] = await Promise.all([this.request<HassConfig>("api/config"), this.request<HassState[]>("api/states")]);
+    const [config, states, areas] = await Promise.all([
+      this.request<HassConfig>("api/config"),
+      this.request<HassState[]>("api/states"),
+      this.request<string>("api/template", { method: "POST", body: JSON.stringify({ template: AREA_TEMPLATE }) }, "text").then(parseAreas, () => new Map<string, string>()),
+    ]);
     const unit: TemperatureUnit = config.unit_system?.temperature === "°F" ? "F" : "C";
-    return states.map(state => mapHassState(this.integrationId, state, unit)).filter((device): device is Device => device !== null);
+    return states.map(state => mapHassState(this.integrationId, state, unit, areas.get(state.entity_id) ?? null)).filter((device): device is Device => device !== null);
   }
 
   private call(domain: string, service: string, data: Record<string, unknown>) {

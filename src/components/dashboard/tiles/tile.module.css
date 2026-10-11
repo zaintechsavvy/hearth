@@ -1,0 +1,165 @@
+/* Shared by every device tile. Colour presets set --tile-color; "on" tiles turn into a bright, nearly opaque surface like Apple Home. */
+.tile {
+  --tile-color: oklch(82% .15 82);
+  position: relative;
+  container-type: size;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--foreground);
+  text-align: start;
+  transition: background var(--duration-standard) var(--ease-standard), color var(--duration-standard) var(--ease-standard), box-shadow var(--duration-standard) var(--ease-standard), opacity var(--duration-standard) var(--ease-standard);
+}
+
+.tile[data-color="amber"] { --tile-color: oklch(82% .15 82); }
+.tile[data-color="orange"] { --tile-color: oklch(72% .17 52); }
+.tile[data-color="rose"] { --tile-color: oklch(68% .19 12); }
+.tile[data-color="violet"] { --tile-color: oklch(62% .19 295); }
+.tile[data-color="blue"] { --tile-color: oklch(63% .16 252); }
+.tile[data-color="teal"] { --tile-color: oklch(70% .11 192); }
+.tile[data-color="green"] { --tile-color: oklch(70% .16 148); }
+.tile[data-color="graphite"] { --tile-color: oklch(38% .01 260); }
+
+/* Off tiles sit back in a dimmer, more transparent glass; on tiles become a bright surface, like Apple Home.
+   Selectors repeat .tile to outrank the themed .glass rules they sit on. */
+.tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
+  background: linear-gradient(180deg, oklch(93% .003 260 / .55), oklch(89% .003 260 / .45));
+  border-color: oklch(100% 0 0 / .45);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .6), 0 1px 2px oklch(20% .02 260 / .04);
+}
+
+:root[data-theme="dark"] .tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
+  background: linear-gradient(180deg, oklch(30% .004 260 / .5), oklch(22% .004 260 / .45));
+  border-color: oklch(100% 0 0 / .08);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .1);
+}
+
+.tile.tile[data-on] {
+  background: linear-gradient(180deg, oklch(100% 0 0 / .97), oklch(97% 0 0 / .92));
+  color: oklch(20% 0 0);
+  border-color: oklch(100% 0 0 / .9);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0), 0 1px 2px oklch(20% .02 260 / .08), 0 16px 40px -14px oklch(20% .03 260 / .3);
+}
+
+:root[data-theme="dark"] .tile.tile[data-on] {
+  background: linear-gradient(180deg, oklch(96% 0 0 / .95), oklch(88% 0 0 / .9));
+  border-color: oklch(100% 0 0 / .5);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0), 0 16px 40px -14px oklch(0% 0 0 / .6);
+}
+
+.tile[data-unavailable] {
+  opacity: .5;
+}
+
+.icon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-secondary);
+  transition: color var(--duration-standard) var(--ease-standard), transform var(--duration-spring) var(--ease-spring);
+}
+
+.tile[data-on] .icon {
+  color: var(--tile-color);
+}
+
+.icon[data-spin] svg {
+  animation: spin linear infinite;
+  animation-duration: var(--spin-duration, 2s);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile[data-on] .meta {
+  color: oklch(45% 0 0);
+}
+
+.error {
+  color: var(--danger);
+}
+
+/* Toggle templates: the whole tile is the button. */
+.press {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  padding: 12%;
+  transition: transform var(--duration-spring) var(--ease-spring);
+}
+
+.press:active {
+  transform: scale(.97);
+}
+
+.press[data-size="1x1"] {
+  place-items: center;
+  align-content: center;
+  gap: var(--space-2);
+  padding: 10%;
+}
+
+.press[data-size="1x1"] .name {
+  max-width: 100%;
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.press[data-size="2x1"] {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+}
+
+.badge {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: oklch(50% 0 0 / .1);
+  transition: background var(--duration-standard) var(--ease-standard);
+}
+
+.tile[data-on] .badge {
+  background: color-mix(in oklch, var(--tile-color) 18%, transparent);
+}
+
+.text {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+@container (max-height: 100px) {
+  .press[data-size="1x1"] .name { display: none; }
+}
+
+@container (max-width: 150px) {
+  .press[data-size="2x1"] .badge { width: 32px; height: 32px; }
+  .press[data-size="2x1"] { gap: var(--space-2); padding: 0 var(--space-3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile, .icon, .press { transition: none; }
+  .icon[data-spin] svg { animation: none; }
+}

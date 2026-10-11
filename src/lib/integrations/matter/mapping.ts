@@ -89,6 +89,7 @@ export function mapMatterNode(integrationId: string, node: MatterNode): Device[]
       id: deviceId(integrationId, matterNativeId(nodeId, endpoint)),
       integrationId,
       name: str(attribute(node, endpoint, Cluster.BridgedBasicInformation, 5)) ?? str(attribute(node, endpoint, Cluster.BridgedBasicInformation, 3)) ?? nodeName,
+      room: null,
       available: node.available,
     };
     const on = attribute(node, endpoint, Cluster.OnOff, 0) === true;
@@ -116,7 +117,7 @@ export function mapMatterNode(integrationId: string, node: MatterNode): Device[]
   });
 }
 
-function mapThermostat(base: Pick<Device, "id" | "integrationId" | "name" | "available">, node: MatterNode, endpoint: number): Device {
+function mapThermostat(base: Pick<Device, "id" | "integrationId" | "name" | "room" | "available">, node: MatterNode, endpoint: number): Device {
   const mode = MODE_FROM_SYSTEM[num(attribute(node, endpoint, Cluster.Thermostat, ThermostatAttribute.SystemMode)) ?? 0] ?? "off";
   const heating = centi(node, endpoint, ThermostatAttribute.OccupiedHeating);
   const cooling = centi(node, endpoint, ThermostatAttribute.OccupiedCooling);

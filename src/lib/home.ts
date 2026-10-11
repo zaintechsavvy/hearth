@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { camera, integration, preference } from "@/lib/db/schema";
+import type { TileConfig } from "@/lib/dashboard/layout";
 import { parseDeviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
 import { createProvider } from "@/lib/integrations/registry";
 import { IntegrationError, type IntegrationKind } from "@/lib/integrations/types";
@@ -18,8 +19,8 @@ export interface IntegrationStatus {
 export interface HomeSnapshot {
   devices: Device[];
   integrations: IntegrationStatus[];
-  hiddenDevices: string[];
-  thermostatId: string | null;
+  cameras: { id: string; name: string }[];
+  layout: TileConfig[];
 }
 
 const LIST_TIMEOUT_MS = 10_000;
@@ -36,13 +37,14 @@ export function readableError(error: unknown) {
 
 export async function getPreferences(userId: string) {
   const row = await db.query.preference.findFirst({ where: eq(preference.userId, userId) });
-  return { streamRelayUrl: row?.streamRelayUrl ?? null, hiddenDevices: row?.hiddenDevices ?? [], thermostatId: row?.thermostatId ?? null };
+  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout: row?.layout ?? [] };
 }
 
 export async function loadHome(userId: string): Promise<HomeSnapshot> {
-  const [rows, preferences] = await Promise.all([
+  const [rows, preferences, cameras] = await Promise.all([
     db.select().from(integration).where(eq(integration.userId, userId)).orderBy(integration.createdAt),
     getPreferences(userId),
+    db.select({ id: camera.id, name: camera.name }).from(camera).where(eq(camera.userId, userId)).orderBy(camera.createdAt),
   ]);
   const results = await Promise.allSettled(rows.map(row => withTimeout(createProvider(row).listDevices(), LIST_TIMEOUT_MS, `${row.name} took too long to answer.`)));
   const devices: Device[] = [];
@@ -52,7 +54,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
     if (ok) devices.push(...result.value);
     return { id: row.id, name: row.name, kind: row.kind, ok, error: ok ? null : readableError(result.reason), deviceCount: ok ? result.value.length : 0 };
   });
-  return { devices, integrations, hiddenDevices: preferences.hiddenDevices, thermostatId: preferences.thermostatId };
+  return { devices, integrations, cameras, layout: preferences.layout };
 }
 
 export async function runCommand(userId: string, id: string, command: DeviceCommand) {

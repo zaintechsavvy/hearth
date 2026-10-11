@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
-import { PlugZap } from "lucide-react";
+import { Settings } from "lucide-react";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { UserMenu } from "@/components/arc/user-menu/user-menu";
 import { Logo } from "@/components/brand/logo";
@@ -14,7 +14,7 @@ import styles from "./app-header.module.css";
 
 const LINKS = [
   { href: "/dashboard", label: "Home" },
-  { href: "/connections", label: "Connections" },
+  { href: "/settings", label: "Settings" },
 ] as const;
 
 export function AppHeader({ user }: { user: { name: string; email: string } }) {
@@ -44,7 +44,7 @@ export function AppHeader({ user }: { user: { name: string; email: string } }) {
           user={user}
           theme={theme}
           onThemeChange={setTheme}
-          items={[{ label: "Connections", icon: <PlugZap size={16} strokeWidth={1.75} />, onSelect: () => router.push("/connections") }]}
+          items={[{ label: "Settings", icon: <Settings size={16} strokeWidth={1.75} />, onSelect: () => router.push("/settings") }]}
           onSignOut={async () => {
             await authClient.signOut();
             router.replace("/sign-in");

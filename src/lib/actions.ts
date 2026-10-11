@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { CameraSource } from "@/lib/cameras/stream-relay";
 import { StreamRelay, relayStreamName } from "@/lib/cameras/stream-relay";
 import { seal } from "@/lib/crypto";
+import { TILE_COLORS, TILE_ICONS, TILE_SIZES } from "@/lib/dashboard/layout";
 import { db } from "@/lib/db";
 import { camera, integration, preference } from "@/lib/db/schema";
 import { getPreferences, readableError, streamRelayUrl } from "@/lib/home";
@@ -124,20 +125,19 @@ export async function saveStreamRelay(url: string): Promise<ActionResult> {
   });
 }
 
-export async function setDeviceHidden(deviceId: string, hidden: boolean): Promise<ActionResult> {
-  return authed(async userId => {
-    const { hiddenDevices } = await getPreferences(userId);
-    const next = new Set(hiddenDevices);
-    if (hidden) next.add(deviceId);
-    else next.delete(deviceId);
-    await savePreferences(userId, { hiddenDevices: [...next] });
-    return OK;
-  });
-}
+const tileSchema = z.object({
+  id: z.string().min(1).max(300),
+  size: z.enum(TILE_SIZES),
+  icon: z.enum(TILE_ICONS).optional(),
+  color: z.enum(TILE_COLORS).optional(),
+  hidden: z.boolean().optional(),
+});
 
-export async function setThermostat(deviceId: string): Promise<ActionResult> {
+export async function saveLayout(tiles: unknown): Promise<ActionResult> {
+  const parsed = z.array(tileSchema).max(500).safeParse(tiles);
+  if (!parsed.success) return { ok: false, error: "That layout is not valid." };
   return authed(async userId => {
-    await savePreferences(userId, { thermostatId: deviceId });
+    await savePreferences(userId, { layout: parsed.data });
     return OK;
   });
 }

@@ -53,33 +53,13 @@
 }
 
 .body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-3);
   padding: var(--space-2);
-  border-radius: calc(var(--radius-surface) - var(--space-2));
-}
-
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.tiles > * {
-  min-height: 0;
-}
-
-.cameras {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
 }
 
 .camera {
   position: relative;
-  aspect-ratio: 16 / 8;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -144,8 +124,3 @@
   text-align: center;
 }
 
-@media (max-width: 560px) {
-  .body {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}

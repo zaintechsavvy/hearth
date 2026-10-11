@@ -1,69 +1,65 @@
 .wallpaper {
+  --base-top: oklch(97.6% .002 260);
+  --base-bottom: oklch(93.2% .003 260);
+  --light: oklch(100% 0 0 / .95);
+  --floor: oklch(86% .004 260 / .55);
   position: fixed;
   inset: 0;
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-  background: linear-gradient(180deg, oklch(97.5% .006 70), oklch(96% .008 250));
+  background:
+    radial-gradient(140% 80% at 50% 118%, var(--floor), transparent 62%),
+    linear-gradient(180deg, var(--base-top), var(--base-bottom));
+}
+
+:root[data-wallpaper="linen"] .wallpaper {
+  --base-top: oklch(97.4% .007 80);
+  --base-bottom: oklch(92.8% .011 75);
+  --floor: oklch(85% .016 70 / .5);
+}
+
+:root[data-wallpaper="slate"] .wallpaper {
+  --base-top: oklch(96.8% .007 250);
+  --base-bottom: oklch(91.6% .012 252);
+  --floor: oklch(84% .018 252 / .5);
 }
 
 :root[data-theme="dark"] .wallpaper {
-  background: linear-gradient(180deg, oklch(17% .008 60), oklch(14% .012 260));
+  --base-top: oklch(18.5% .003 260);
+  --base-bottom: oklch(11.5% .003 260);
+  --light: oklch(34% .004 260 / .75);
+  --floor: oklch(6% 0 0 / .6);
 }
 
-.peach,
-.sky,
-.lilac {
+:root[data-theme="dark"][data-wallpaper="linen"] .wallpaper {
+  --base-top: oklch(19.5% .009 70);
+  --base-bottom: oklch(12.5% .006 60);
+  --light: oklch(36% .014 70 / .7);
+}
+
+:root[data-theme="dark"][data-wallpaper="slate"] .wallpaper {
+  --base-top: oklch(19% .014 255);
+  --base-bottom: oklch(11.5% .01 258);
+  --light: oklch(35% .022 252 / .7);
+}
+
+/* One overhead source, wider than the screen, so surfaces near the top catch more light than those below. */
+.light {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(90px);
-  will-change: transform;
-  animation: drift 32s var(--ease-standard) infinite alternate;
+  inset: -20% -10% auto;
+  height: 90%;
+  background: radial-gradient(60% 55% at 50% 0%, var(--light), transparent 72%);
 }
-
-.peach {
-  width: 62vmax;
-  height: 62vmax;
-  top: -28vmax;
-  left: -16vmax;
-  background: radial-gradient(closest-side, oklch(80% .13 55 / .75), transparent);
-}
-
-.sky {
-  width: 70vmax;
-  height: 70vmax;
-  right: -24vmax;
-  bottom: -34vmax;
-  background: radial-gradient(closest-side, oklch(72% .13 250 / .6), transparent);
-  animation-delay: -16s;
-}
-
-.lilac {
-  width: 40vmax;
-  height: 40vmax;
-  top: 30%;
-  left: 42%;
-  background: radial-gradient(closest-side, oklch(82% .08 310 / .45), transparent);
-  animation-duration: 40s;
-  animation-delay: -8s;
-}
-
-:root[data-theme="dark"] .peach { background: radial-gradient(closest-side, oklch(55% .13 50 / .5), transparent); }
-:root[data-theme="dark"] .sky { background: radial-gradient(closest-side, oklch(48% .14 255 / .55), transparent); }
-:root[data-theme="dark"] .lilac { background: radial-gradient(closest-side, oklch(45% .1 310 / .35), transparent); }
 
 .grain {
   position: absolute;
   inset: 0;
-  opacity: .05;
+  opacity: .045;
   mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-@keyframes drift {
-  to { transform: translate3d(5vmax, 3vmax, 0) scale(1.06); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .peach, .sky, .lilac { animation: none; }
+:root[data-theme="dark"] .grain {
+  opacity: .07;
 }

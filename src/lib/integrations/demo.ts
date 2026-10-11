@@ -14,15 +14,17 @@ const HEATING_RATE = 0.02;
 const AMBIENT = 20.5;
 
 export function seedDemoDevices(integrationId: string): Device[] {
-  const base = (nativeId: string, name: string) => ({ id: deviceId(integrationId, nativeId), integrationId, name, available: true });
+  const base = (nativeId: string, name: string, room: string) => ({ id: deviceId(integrationId, nativeId), integrationId, name, room, available: true });
   return [
-    { ...base("thermostat", "Living room"), kind: "thermostat", unit: "C", current: 20.5, target: 22, min: 10, max: 30, step: 0.5, mode: "heat", modes: ["off", "heat", "cool", "auto"], action: "heating" },
-    { ...base("kitchen-pendants", "Kitchen pendants"), kind: "light", on: true, dimmable: true, brightness: 80 },
-    { ...base("living-lamp", "Living room lamp"), kind: "light", on: true, dimmable: true, brightness: 45 },
-    { ...base("porch", "Porch light"), kind: "light", on: false, dimmable: false, brightness: 0 },
-    { ...base("bedroom-fan", "Bedroom fan"), kind: "fan", on: true, adjustable: true, speed: 40 },
-    { ...base("coffee", "Coffee machine"), kind: "switch", on: false },
-    { ...base("office-plug", "Office desk"), kind: "switch", on: true },
+    { ...base("thermostat", "Living room", "Living room"), kind: "thermostat", unit: "C", current: 20.5, target: 22, min: 10, max: 30, step: 0.5, mode: "heat", modes: ["off", "heat", "cool", "auto"], action: "heating" },
+    { ...base("kitchen-pendants", "Pendants", "Kitchen"), kind: "light", on: true, dimmable: true, brightness: 80 },
+    { ...base("living-lamp", "Floor lamp", "Living room"), kind: "light", on: true, dimmable: true, brightness: 45 },
+    { ...base("porch", "Porch light", "Outside"), kind: "light", on: false, dimmable: false, brightness: 0 },
+    { ...base("bedroom-fan", "Ceiling fan", "Bedroom"), kind: "fan", on: true, adjustable: true, speed: 40 },
+    { ...base("coffee", "Coffee machine", "Kitchen"), kind: "switch", on: false },
+    { ...base("office-plug", "Desk", "Office"), kind: "switch", on: true },
+    { ...base("bedside", "Bedside lamp", "Bedroom"), kind: "light", on: false, dimmable: true, brightness: 0 },
+    { ...base("tv", "Television", "Living room"), kind: "switch", on: false },
   ];
 }
 

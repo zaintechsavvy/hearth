@@ -44,7 +44,7 @@ async function connect(cameraId: string, video: HTMLVideoElement, signal: AbortS
   return peer;
 }
 
-export function CameraTile({ camera }: { camera: { id: string; name: string } }) {
+export function CameraTile({ camera, fill = false }: { camera: { id: string; name: string }; fill?: boolean }) {
   const frame = useRef<HTMLElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const [state, setState] = useState<StreamState>("connecting");
@@ -79,7 +79,7 @@ export function CameraTile({ camera }: { camera: { id: string; name: string } })
   };
 
   return (
-    <figure ref={frame} className={`${glassClass()} ${styles.tile}`} data-state={state}>
+    <figure ref={frame} className={`${glassClass()} ${styles.tile} ${fill ? styles.fill : ""}`} data-state={state}>
       <video ref={video} className={styles.media} autoPlay muted playsInline onPlaying={() => setState("live")} hidden={state === "snapshot" || state === "offline"} />
       {state === "snapshot" && (
         // eslint-disable-next-line @next/next/no-img-element -- a live, authenticated JPEG that must bypass the image optimiser

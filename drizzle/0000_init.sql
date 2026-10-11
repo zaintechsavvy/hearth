@@ -16,6 +16,18 @@ CREATE TABLE `account` (
 );
 --> statement-breakpoint
 CREATE INDEX `account_user_idx` ON `account` (`user_id`);--> statement-breakpoint
+CREATE TABLE `assistant` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`provider` text NOT NULL,
+	`model` text NOT NULL,
+	`api_key` text NOT NULL,
+	`is_default` integer DEFAULT false NOT NULL,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `assistant_user_idx` ON `assistant` (`user_id`);--> statement-breakpoint
 CREATE TABLE `camera` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -40,8 +52,7 @@ CREATE INDEX `integration_user_idx` ON `integration` (`user_id`);--> statement-b
 CREATE TABLE `preference` (
 	`user_id` text PRIMARY KEY NOT NULL,
 	`stream_relay_url` text,
-	`hidden_devices` text NOT NULL,
-	`thermostat_id` text,
+	`layout` text NOT NULL,
 	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );

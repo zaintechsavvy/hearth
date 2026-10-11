@@ -1,4 +1,5 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import type { TileConfig } from "@/lib/dashboard/layout";
 
 const timestamp = (name: string) => integer(name, { mode: "timestamp_ms" });
 const createdAt = () => timestamp("created_at").notNull().$defaultFn(() => new Date());
@@ -72,7 +73,18 @@ export const camera = sqliteTable("camera", {
 export const preference = sqliteTable("preference", {
   userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
   streamRelayUrl: text("stream_relay_url"),
-  hiddenDevices: text("hidden_devices", { mode: "json" }).$type<string[]>().notNull().$defaultFn(() => []),
-  thermostatId: text("thermostat_id"),
+  /** Dashboard tiles in display order. Reconciled with live devices by `resolveLayout`. */
+  layout: text("layout", { mode: "json" }).$type<TileConfig[]>().notNull().$defaultFn(() => []),
   updatedAt: updatedAt(),
 });
+
+export const assistant = sqliteTable("assistant", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  provider: text("provider", { enum: ["anthropic", "openai", "xai", "gemini", "meta"] }).notNull(),
+  model: text("model").notNull(),
+  /** Sealed with `lib/crypto`. */
+  apiKey: text("api_key").notNull(),
+  isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+  createdAt: createdAt(),
+}, t => [index("assistant_user_idx").on(t.userId)]);
