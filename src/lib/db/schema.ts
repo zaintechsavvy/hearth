@@ -1,4 +1,5 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { TileConfig } from "@/lib/dashboard/layout";
 
 const timestamp = (name: string) => integer(name, { mode: "timestamp_ms" });
@@ -81,10 +82,12 @@ export const preference = sqliteTable("preference", {
 export const assistant = sqliteTable("assistant", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-  provider: text("provider", { enum: ["anthropic", "openai", "xai", "gemini", "meta"] }).notNull(),
+  provider: text("provider", { enum: ASSISTANT_PROVIDER_IDS }).notNull(),
   model: text("model").notNull(),
   /** Sealed with `lib/crypto`. */
   apiKey: text("api_key").notNull(),
+  /** Only for `custom`: any server that speaks Chat Completions, such as Ollama, LM Studio, or OpenRouter. */
+  baseUrl: text("base_url"),
   isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
   createdAt: createdAt(),
 }, t => [index("assistant_user_idx").on(t.userId)]);

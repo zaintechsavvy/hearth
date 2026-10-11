@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Inter } from "next/font/google";
+import Script from "next/script";
 import { THEME_BOOTSTRAP } from "@/lib/theme";
 import "./globals.css";
 
@@ -22,10 +23,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" data-theme="light" data-accent="neutral" data-wallpaper="studio" className={`${geist.variable} ${inter.variable}`} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
-      </head>
-      <body>{children}</body>
+      <body>
+        <Script id="theme-bootstrap" strategy="beforeInteractive">{THEME_BOOTSTRAP}</Script>
+        {children}
+      </body>
     </html>
   );
 }

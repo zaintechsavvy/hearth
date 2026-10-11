@@ -5,10 +5,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { CameraSource } from "@/lib/cameras/stream-relay";
 import { StreamRelay, relayStreamName } from "@/lib/cameras/stream-relay";
+import { ASSISTANT_PROVIDER_IDS, ASSISTANT_PROVIDERS } from "@/lib/assistant/providers";
+import { checkAssistantKey } from "@/lib/assistant/run";
 import { seal } from "@/lib/crypto";
 import { TILE_COLORS, TILE_ICONS, TILE_SIZES } from "@/lib/dashboard/layout";
 import { db } from "@/lib/db";
-import { camera, integration, preference } from "@/lib/db/schema";
+import { assistant, camera, integration, preference } from "@/lib/db/schema";
 import { getPreferences, readableError, streamRelayUrl } from "@/lib/home";
 import { MatterProvider } from "@/lib/integrations/matter/provider";
 import { createProvider } from "@/lib/integrations/registry";
@@ -138,6 +140,60 @@ export async function saveLayout(tiles: unknown): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "That layout is not valid." };
   return authed(async userId => {
     await savePreferences(userId, { layout: parsed.data });
+    return OK;
+  });
+}
+
+const assistantInput = z.object({
+  provider: z.enum(ASSISTANT_PROVIDER_IDS),
+  apiKey: z.string().trim().max(500),
+  model: z.string().trim().max(100).optional(),
+  baseUrl: z.string().trim().optional(),
+}).superRefine((value, context) => {
+  if (value.provider === "custom") {
+    if (!httpUrl.safeParse(value.baseUrl).success) context.addIssue({ code: "custom", message: "Enter the server address, like http://localhost:11434/v1" });
+  } else if (value.apiKey.length < 10) {
+    context.addIssue({ code: "custom", message: "Paste the full API key." });
+  }
+});
+
+/** Checks the key against the provider before saving. The first assistant becomes the default. */
+export async function addAssistant(input: unknown): Promise<ActionResult> {
+  const parsed = assistantInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const { provider } = parsed.data;
+  return authed(async userId => {
+    const baseUrl = provider === "custom" ? parsed.data.baseUrl?.replace(/\/+$/, "") ?? null : null;
+    await checkAssistantKey(provider, parsed.data.apiKey, baseUrl);
+    const existing = await db.select({ id: assistant.id }).from(assistant).where(eq(assistant.userId, userId)).limit(1);
+    await db.insert(assistant).values({
+      userId,
+      provider,
+      model: parsed.data.model || ASSISTANT_PROVIDERS[provider].defaultModel,
+      apiKey: seal(parsed.data.apiKey),
+      baseUrl,
+      isDefault: existing.length === 0,
+    });
+    revalidatePath("/", "layout");
+    return OK;
+  });
+}
+
+export async function removeAssistant(id: string): Promise<ActionResult> {
+  return authed(async userId => {
+    await db.delete(assistant).where(and(eq(assistant.id, id), eq(assistant.userId, userId)));
+    revalidatePath("/", "layout");
+    return OK;
+  });
+}
+
+export async function setDefaultAssistant(id: string): Promise<ActionResult> {
+  return authed(async userId => {
+    db.transaction(tx => {
+      tx.update(assistant).set({ isDefault: false }).where(eq(assistant.userId, userId)).run();
+      tx.update(assistant).set({ isDefault: true }).where(and(eq(assistant.id, id), eq(assistant.userId, userId))).run();
+    });
+    revalidatePath("/", "layout");
     return OK;
   });
 }

@@ -71,7 +71,7 @@ export function applyCommand<T extends Device>(device: T, command: DeviceCommand
   switch (command.type) {
     case "power":
       if (device.kind === "thermostat") return { ...device, mode: command.on ? device.modes.find(mode => mode !== "off") ?? "heat" : "off" };
-      if (device.kind === "fan") return { ...device, on: command.on, speed: command.on ? device.speed || 100 : 0 };
+      if (device.kind === "fan") return { ...device, on: command.on, speed: command.on ? device.speed || 100 : device.speed };
       return { ...device, on: command.on };
     case "brightness":
       return device.kind === "light" ? { ...device, brightness: command.value, on: command.value > 0 } : device;
