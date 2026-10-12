@@ -2,7 +2,7 @@ import {
   AirVent, Armchair, Baby, Bath, Bed, Bell, Blinds, Car, Cat, Coffee, CookingPot, DoorOpen, Dog, Droplets, Fan, Flame, Flower2,
   Gamepad2, Heater, House, Lamp, LampCeiling, LampDesk, LampFloor, Leaf, Lightbulb, Lock, Microwave, Monitor, Moon, Music, Plug,
   Power, Refrigerator, Router, ShowerHead, Snowflake, Sofa, Sparkles, Speaker, Star, Sun, Tv, WashingMachine, Wind, Zap,
-  Activity, BatteryMedium, BellRing, Camera, Clapperboard, DoorClosed, Gauge, LockOpen, Play, Shield, Thermometer, Warehouse,
+  Activity, BatteryMedium, BellRing, Camera, Clapperboard, DoorClosed, Gauge, LockOpen, Play, Shield, Thermometer, Warehouse, Calendar, ListChecks, Clock,
   type LucideIcon,
 } from "lucide-react";
 import type { TileIcon } from "@/lib/dashboard/layout";
@@ -16,8 +16,9 @@ export const TILE_ICON_COMPONENTS: Record<TileIcon, LucideIcon> = {
   flower: Flower2, router: Router, car: Car, baby: Baby, dog: Dog, cat: Cat, bell: Bell, house: House,
   "lock-open": LockOpen, "door-closed": DoorClosed, garage: Warehouse, activity: Activity, thermometer: Thermometer,
   battery: BatteryMedium, gauge: Gauge, clapperboard: Clapperboard, play: Play, shield: Shield, "bell-ring": BellRing, camera: Camera,
+  calendar: Calendar, "list-checks": ListChecks, clock: Clock,
 };
 
-export const TILE_ICON_LABELS: Partial<Record<TileIcon, string>> = { "lock-open": "Unlocked", "door-closed": "Door", clapperboard: "Scene", "bell-ring": "Doorbell", activity: "Motion", "lamp-desk": "Desk lamp", "lamp-floor": "Floor lamp", "lamp-ceiling": "Ceiling lamp", "air-vent": "Air vent", "cooking-pot": "Cooking pot", "washing-machine": "Washing machine" };
+export const TILE_ICON_LABELS: Partial<Record<TileIcon, string>> = { "lock-open": "Unlocked", "door-closed": "Door", clapperboard: "Scene", "bell-ring": "Doorbell", activity: "Motion", "lamp-desk": "Desk lamp", "lamp-floor": "Floor lamp", "lamp-ceiling": "Ceiling lamp", "air-vent": "Air vent", "cooking-pot": "Cooking pot", "washing-machine": "Washing machine", "list-checks": "Checklist" };
 
 export const iconLabel = (icon: TileIcon) => TILE_ICON_LABELS[icon] ?? icon[0].toUpperCase() + icon.slice(1).replaceAll("-", " ");

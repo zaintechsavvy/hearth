@@ -1,3 +1,4 @@
+import type { TileIcon } from "@/lib/dashboard/layout";
 import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/types";
 
 export interface SceneAction {
@@ -8,7 +9,7 @@ export interface SceneAction {
 export interface HearthScene {
   id: string;
   name: string;
-  icon: string | null;
+  icon: TileIcon | null;
   actions: SceneAction[];
 }
 

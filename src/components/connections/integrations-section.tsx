@@ -12,7 +12,6 @@ import { Glass } from "@/components/glass/glass";
 import { removeIntegration } from "@/lib/actions";
 import { INTEGRATION_LABELS, type IntegrationKind } from "@/lib/integrations/types";
 import { AddIntegrationDialog } from "./add-integration-dialog";
-import { DevicePicker } from "./device-picker";
 import { PairMatterDialog } from "./pair-matter-dialog";
 import styles from "./connections.module.css";
 
@@ -30,11 +29,6 @@ export function IntegrationsSection({ integrations }: { integrations: Integratio
   const { home, refresh } = useHome();
   const [adding, setAdding] = useState(false);
   const [pairing, setPairing] = useState<IntegrationSummary | null>(null);
-  const [reviewing, setReviewing] = useState<string | null>(null);
-  const placed = new Set(home?.layout.map(tile => tile.id) ?? []);
-  const newDevices = (id: string) => home?.integrations.find(item => item.id === id)?.curated
-    ? home.devices.filter(device => device.integrationId === id && !placed.has(device.id)).length
-    : 0;
 
   const changed = () => {
     router.refresh();
@@ -80,8 +74,6 @@ export function IntegrationsSection({ integrations }: { integrations: Integratio
                     {status.ok ? `${status.deviceCount} ${status.deviceCount === 1 ? "device" : "devices"}` : "Not responding"}
                   </Badge>
                 )}
-                {newDevices(integration.id) > 0 && <Badge tone="info" size="sm">{newDevices(integration.id)} new</Badge>}
-                {status?.ok && <Button variant="ghost" size="sm" onClick={() => setReviewing(integration.id)}>Choose devices</Button>}
                 {integration.kind === "matter" && <Button variant="ghost" size="sm" onClick={() => setPairing(integration)}>Pair device</Button>}
                 <ConfirmMorph label="Remove" prompt={`Remove ${integration.name}?`} confirmLabel="Remove" pendingLabel="Removing" doneLabel="Removed" onConfirm={async () => {
                   const result = await removeIntegration(integration.id);
@@ -94,8 +86,7 @@ export function IntegrationsSection({ integrations }: { integrations: Integratio
         })}
       </Glass>
 
-      <AddIntegrationDialog open={adding} onOpenChange={setAdding} onAdded={(id, kind) => { changed(); if (kind !== "demo") setReviewing(id); }} />
-      <DevicePicker integrationId={reviewing} onOpenChange={open => !open && setReviewing(null)} onSaved={changed} />
+      <AddIntegrationDialog open={adding} onOpenChange={setAdding} onAdded={() => { refresh(); router.push("/"); }} />
       <PairMatterDialog integration={pairing} onOpenChange={open => !open && setPairing(null)} onPaired={changed} />
     </section>
   );

@@ -1,12 +1,37 @@
 import type { TemperatureUnit } from "@/lib/devices/types";
 import type { HassState } from "./home-assistant";
+import { IntegrationError } from "./types";
 
+type Result = { type: "result"; id: number; success: boolean; result?: unknown; error?: { code?: string; message?: string } };
 type Message =
   | { type: "auth_required" | "auth_ok" }
   | { type: "auth_invalid"; message?: string }
-  | { type: "result"; id: number; success: boolean; result?: unknown; error?: { message?: string } }
-  | { type: "event"; id: number; event: { event_type: string; data: { entity_id: string; new_state: HassState | null } } }
+  | Result
+  | { type: "event"; id: number; event: unknown }
   | { type: "pong"; id: number };
+
+interface StateChanged {
+  event_type: string;
+  data: { entity_id: string; new_state: HassState | null };
+}
+
+interface Waiter {
+  result: (message: Result) => void;
+  /** Present for commands that keep sending events after their result, such as a camera's WebRTC session. */
+  event?: (event: unknown) => void;
+}
+
+export interface LiveRequest<T> {
+  result: T;
+  /** Ends the subscription and lets the connection close when nothing else needs it. */
+  close: () => void;
+}
+
+export class HomeAssistantCommandError extends IntegrationError {
+  constructor(message: string, readonly code?: string) {
+    super(message);
+  }
+}
 
 interface DisplayRegistry {
   entities: { ei: string; ec?: number; hb?: boolean }[];
@@ -17,6 +42,7 @@ const WATCHED = new Set(["light", "switch", "input_boolean", "fan", "climate", "
 const RECONNECT_MIN_MS = 2000;
 const RECONNECT_MAX_MS = 30_000;
 const IDLE_CLOSE_MS = 60_000;
+const COMMAND_TIMEOUT_MS = 10_000;
 
 export const webSocketUrl = (baseUrl: string) => {
   const url = new URL("api/websocket", baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
@@ -35,6 +61,7 @@ export class HomeAssistantLive {
   /** Entities Home Assistant files under settings or diagnostics, or hides. */
   readonly auxiliary = new Set<string>();
   private readonly listeners = new Set<() => void>();
+  private readonly waiting = new Map<number, Waiter>();
   private ready = false;
   private retryMs = RECONNECT_MIN_MS;
   private retryTimer?: ReturnType<typeof setTimeout>;
@@ -70,6 +97,51 @@ export class HomeAssistantLive {
     return () => {
       this.listeners.delete(listener);
       if (this.listeners.size === 0) this.idleTimer = setTimeout(() => this.close(), IDLE_CLOSE_MS);
+    };
+  }
+
+  /**
+   * Runs a command on the live connection, opening it if needed. With `onEvent`, the command is a subscription:
+   * events keep arriving until `close`, and the connection stays open until then.
+   */
+  async request<T>(message: Record<string, unknown>, onEvent?: (event: unknown) => void): Promise<LiveRequest<T>> {
+    const release = this.subscribe(() => {});
+    if (!(await this.waitUntilReady(COMMAND_TIMEOUT_MS))) {
+      release();
+      throw new IntegrationError(this.error ?? "Home Assistant did not answer.");
+    }
+    const socket = this.socket;
+    let id = 0;
+    let result: Result;
+    try {
+      result = await new Promise<Result>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          this.waiting.delete(id);
+          reject(new IntegrationError("Home Assistant took too long to answer."));
+        }, COMMAND_TIMEOUT_MS);
+        id = this.send(message);
+        this.waiting.set(id, { result: answer => { clearTimeout(timer); resolve(answer); }, event: onEvent });
+      });
+      if (!result.success) throw new HomeAssistantCommandError(result.error?.message ?? "Home Assistant refused the request.", result.error?.code);
+    } catch (error) {
+      this.waiting.delete(id);
+      release();
+      throw error;
+    }
+    if (!onEvent) {
+      this.waiting.delete(id);
+      release();
+    }
+    let closed = !onEvent;
+    return {
+      result: result.result as T,
+      close: () => {
+        if (closed) return;
+        closed = true;
+        this.waiting.delete(id);
+        if (this.socket === socket && socket?.readyState === WebSocket.OPEN) this.send({ type: "unsubscribe_events", subscription: id });
+        release();
+      },
     };
   }
 
@@ -113,6 +185,11 @@ export class HomeAssistantLive {
           pending.set(this.send({ type: "get_states" }), "states");
           return;
         case "result": {
+          const waiter = this.waiting.get(message.id);
+          if (waiter) {
+            waiter.result(message);
+            return;
+          }
           const kind = pending.get(message.id);
           pending.delete(message.id);
           if (!message.success) return;
@@ -132,7 +209,12 @@ export class HomeAssistantLive {
           return;
         }
         case "event": {
-          const { entity_id, new_state } = message.event.data;
+          const waiter = this.waiting.get(message.id);
+          if (waiter?.event) {
+            waiter.event(message.event);
+            return;
+          }
+          const { entity_id, new_state } = (message.event as StateChanged).data;
           if (new_state) this.states.set(entity_id, new_state);
           else this.states.delete(entity_id);
           if (this.ready && WATCHED.has(entity_id.split(".")[0])) this.notify();
@@ -145,11 +227,21 @@ export class HomeAssistantLive {
       if (this.socket !== socket) return;
       this.socket = null;
       this.ready = false;
+      this.dropWaiters();
       if (this.listeners.size === 0) return;
       this.retryTimer = setTimeout(() => this.open(), this.retryMs);
       this.retryMs = Math.min(this.retryMs * 2, RECONNECT_MAX_MS);
     });
     socket.addEventListener("error", () => socket.close());
+  }
+
+  private dropWaiters() {
+    const waiters = [...this.waiting.values()];
+    this.waiting.clear();
+    for (const waiter of waiters) {
+      waiter.result({ type: "result", id: 0, success: false, error: { code: "disconnected", message: "Lost the connection to Home Assistant." } });
+      waiter.event?.({ type: "error", code: "disconnected", message: "Lost the connection to Home Assistant." });
+    }
   }
 
   close() {
@@ -158,6 +250,7 @@ export class HomeAssistantLive {
     const socket = this.socket;
     this.socket = null;
     this.ready = false;
+    this.dropWaiters();
     socket?.close();
   }
 }

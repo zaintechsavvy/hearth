@@ -1,13 +1,21 @@
 "use client";
 
+import { Link2, MapPin } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import useSWR from "swr";
 import { Button } from "@/components/arc/button/button";
+import { Checkbox } from "@/components/arc/checkbox/checkbox";
 import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
+import { Input } from "@/components/arc/input/input";
 import { RadioCards } from "@/components/arc/radio-cards/radio-cards";
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { glassSheetClass } from "@/components/glass/glass";
-import { SIZE_OPTIONS, spanOf, TILE_COLORS, TILE_ICONS, type TileColor, type TileConfig, type TileIcon, type TileKind, type TileSize } from "@/lib/dashboard/layout";
+import { KIND_INFO } from "@/lib/dashboard/catalog";
+import { isWidget, SIZE_OPTIONS, spanOf, TILE_COLORS, TILE_ICONS, type TileColor, type TileConfig, type TileIcon, type TileKind, type TileSize } from "@/lib/dashboard/layout";
+import type { Agenda } from "@/lib/widgets/calendar";
 import { TILE_ICON_COMPONENTS, iconLabel } from "./tiles/tile-icons";
 import styles from "./tile-editor.module.css";
 
@@ -15,6 +23,8 @@ export interface EditableTile {
   config: TileConfig;
   kind: TileKind;
   name: string;
+  /** What the tile shows: the device, camera, or scene, or the weather place. Null when nothing is linked. */
+  linkedName: string | null;
   adjustable: boolean;
   icon: TileIcon | null;
   color: TileColor | null;
@@ -26,6 +36,9 @@ interface TileEditorProps {
   onChange: (patch: Partial<Omit<TileConfig, "id">>) => void;
   /** Renders the real tile for a config, without side effects such as opening a camera stream. */
   renderPreview: (config: TileConfig) => ReactNode;
+  onRemove: () => void;
+  /** Opens the chooser for what the tile shows: a device, or a place for weather. */
+  onRelink: () => void;
   /** Extra actions for this kind of tile, such as editing a scene. */
   extra?: ReactNode;
 }
@@ -41,6 +54,8 @@ const SIZE_NOTES: Partial<Record<TileSize, string>> = {
   "2x1": "Name and status",
   "1x2": "Vertical slider",
   "2x2": "Details and slider",
+  "2x3": "A longer list",
+  "2x4": "Full height",
   "3x3": "Room for every control",
   "4x2": "Panoramic",
   "4x3": "Big picture",
@@ -48,11 +63,11 @@ const SIZE_NOTES: Partial<Record<TileSize, string>> = {
 
 const capitalize = (value: string) => value[0].toUpperCase() + value.slice(1);
 
-export function TileEditor({ tile, onOpenChange, onChange, renderPreview, extra }: TileEditorProps) {
+export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, renderPreview, extra }: TileEditorProps) {
   const [preview, setPreview] = useState<Preview>({});
   const styled = tile && tile.icon !== null;
   const options = tile ? SIZE_OPTIONS[tile.kind] : [];
-  const blocked = (size: TileSize) => (size === "1x2" || size === "2x2") && !tile?.adjustable;
+  const blocked = (size: TileSize) => (size === "1x2" || size === "2x2") && SIZE_OPTIONS[tile?.kind ?? "light"].length > 2 && !tile?.adjustable;
   const shown: TileConfig | null = tile && {
     ...tile.config,
     size: preview.size ?? tile.config.size,
@@ -72,6 +87,7 @@ export function TileEditor({ tile, onOpenChange, onChange, renderPreview, extra 
           <div className={styles.body}>
             <TilePreview config={shown} label={previewing ? "Previewing" : "Current"}>{renderPreview(shown)}</TilePreview>
             <div className={styles.options}>
+            <LinkSection tile={tile} onChange={onChange} onRelink={onRelink} />
             <section aria-labelledby="tile-size" className={styles.section}>
               <h3 id="tile-size" className={styles.heading}>Template</h3>
               <div
@@ -84,7 +100,7 @@ export function TileEditor({ tile, onOpenChange, onChange, renderPreview, extra 
               >
                 <RadioCards
                   aria-labelledby="tile-size"
-                  minColumnWidth={140}
+                  minColumnWidth={112}
                   value={tile.config.size}
                   onValueChange={size => onChange({ size: size as TileSize })}
                   options={options.map(option => ({
@@ -127,7 +143,7 @@ export function TileEditor({ tile, onOpenChange, onChange, renderPreview, extra 
             )}
             <div className={styles.actions}>
               <div className={styles.extra}>
-                <Button variant="ghost" onClick={() => { onChange({ hidden: true }); close(false); }}>Hide tile</Button>
+                <Button variant="ghost" onClick={() => { onRemove(); close(false); }}>Remove tile</Button>
                 {extra}
               </div>
               <DialogClose asChild><Button>Done</Button></DialogClose>
@@ -137,6 +153,64 @@ export function TileEditor({ tile, onOpenChange, onChange, renderPreview, extra 
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function LinkSection({ tile, onChange, onRelink }: { tile: EditableTile; onChange: TileEditorProps["onChange"]; onRelink: () => void }) {
+  const { config } = tile;
+  if (tile.kind === "weather") {
+    return (
+      <section aria-labelledby="tile-link" className={styles.section}>
+        <h3 id="tile-link" className={styles.heading}>Place</h3>
+        <div className={styles.link}>
+          <MapPin size={16} strokeWidth={1.75} aria-hidden="true" />
+          <span className={styles.linkName}>{tile.linkedName ?? "No place yet"}</span>
+          <Button variant="secondary" size="sm" onClick={onRelink}>{tile.linkedName ? "Change" : "Choose"}</Button>
+        </div>
+        <SegmentedControl label="Units" value={config.options?.units ?? "C"} onValueChange={units => onChange({ options: { ...config.options, units: units as "C" | "F" } })} options={[{ value: "C", label: "Celsius" }, { value: "F", label: "Fahrenheit" }]} />
+      </section>
+    );
+  }
+  if (tile.kind === "calendar") return <CalendarChoice config={config} onChange={onChange} />;
+  if (isWidget(tile.kind)) return null;
+  return (
+    <section aria-labelledby="tile-link" className={styles.section}>
+      <h3 id="tile-link" className={styles.heading}>Shows</h3>
+      <div className={styles.link}>
+        <Link2 size={16} strokeWidth={1.75} aria-hidden="true" />
+        <span className={styles.linkName}>{tile.linkedName ?? "Not linked yet"}</span>
+        <Button variant="secondary" size="sm" onClick={onRelink}>{tile.linkedName ? "Change" : "Link"}</Button>
+      </div>
+      {!tile.linkedName && (
+        <Input label="Name" placeholder={KIND_INFO[tile.kind].label} defaultValue={config.label ?? ""} maxLength={60}
+          onBlur={event => onChange({ label: event.target.value.trim() || undefined })} />
+      )}
+    </section>
+  );
+}
+
+function CalendarChoice({ config, onChange }: { config: TileConfig; onChange: TileEditorProps["onChange"] }) {
+  const { data } = useSWR<Agenda>("/api/calendar", (url: string) => fetch(url).then(response => response.json()));
+  const chosen = config.options?.calendars;
+  const calendars = data?.calendars ?? [];
+  const toggle = (id: string, on: boolean) => {
+    const current = chosen ?? calendars.map(calendar => calendar.id);
+    const next = on ? [...new Set([...current, id])] : current.filter(item => item !== id);
+    onChange({ options: { ...config.options, calendars: next.length === calendars.length ? undefined : next } });
+  };
+  return (
+    <section aria-labelledby="tile-calendars" className={styles.section}>
+      <h3 id="tile-calendars" className={styles.heading}>Calendars</h3>
+      {calendars.length === 0 ? (
+        <p className={styles.note}>No calendars yet. <Link href="/settings#calendars">Add one in Settings</Link>.</p>
+      ) : (
+        <div className={styles.calendars}>
+          {calendars.map(calendar => (
+            <Checkbox key={calendar.id} label={calendar.name} checked={!chosen || chosen.includes(calendar.id)} onCheckedChange={on => toggle(calendar.id, on === true)} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

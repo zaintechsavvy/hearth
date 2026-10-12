@@ -3,7 +3,7 @@
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { EyeOff, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { glassClass } from "@/components/glass/glass";
 import { moveTile, spanOf, type TileConfig } from "@/lib/dashboard/layout";
@@ -16,14 +16,14 @@ interface HomeGridProps {
   nameOf: (tile: TileConfig) => string;
   onTilesChange: (tiles: TileConfig[]) => void;
   onCustomize: (id: string) => void;
+  onRemove: (id: string) => void;
 }
 
-export function HomeGrid({ tiles, editing, renderTile, nameOf, onTilesChange, onCustomize }: HomeGridProps) {
+export function HomeGrid({ tiles, editing, renderTile, nameOf, onTilesChange, onCustomize, onRemove }: HomeGridProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const visible = tiles.filter(tile => !tile.hidden);
 
   function dragEnd({ active, over }: DragEndEvent) {
     if (over && active.id !== over.id) onTilesChange(moveTile(tiles, String(active.id), String(over.id)));
@@ -32,11 +32,11 @@ export function HomeGrid({ tiles, editing, renderTile, nameOf, onTilesChange, on
   return (
     <div className={styles.frame}>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dragEnd}>
-        <SortableContext items={visible.map(tile => tile.id)} strategy={rectSortingStrategy} disabled={!editing}>
+        <SortableContext items={tiles.map(tile => tile.id)} strategy={rectSortingStrategy} disabled={!editing}>
           <div className={styles.grid} data-editing={editing || undefined}>
-            {visible.map((tile, index) => (
+            {tiles.map((tile, index) => (
               <SortableTile key={tile.id} tile={tile} index={index} editing={editing} name={nameOf(tile)}
-                onHide={() => onTilesChange(tiles.map(item => item.id === tile.id ? { ...item, hidden: true } : item))}
+                onRemove={() => onRemove(tile.id)}
                 onCustomize={() => onCustomize(tile.id)}>
                 {renderTile(tile)}
               </SortableTile>
@@ -53,12 +53,12 @@ interface SortableTileProps {
   index: number;
   editing: boolean;
   name: string;
-  onHide: () => void;
+  onRemove: () => void;
   onCustomize: () => void;
   children: ReactNode;
 }
 
-function SortableTile({ tile, index, editing, name, onHide, onCustomize, children }: SortableTileProps) {
+function SortableTile({ tile, index, editing, name, onRemove, onCustomize, children }: SortableTileProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tile.id, disabled: !editing });
   const { columns, rows } = spanOf(tile.size);
   const style: CSSProperties = {
@@ -80,8 +80,8 @@ function SortableTile({ tile, index, editing, name, onHide, onCustomize, childre
       <div className={styles.content} inert={editing || undefined}>{children}</div>
       {editing && (
         <div className={styles.controls}>
-          <button type="button" className={`${glassClass("pill")} ${styles.control}`} onClick={onHide} aria-label={`Hide ${name}`}>
-            <EyeOff size={15} strokeWidth={1.75} aria-hidden="true" />
+          <button type="button" className={`${glassClass("pill")} ${styles.control}`} onClick={onRemove} aria-label={`Remove ${name}`}>
+            <X size={15} strokeWidth={1.75} aria-hidden="true" />
           </button>
           <button type="button" className={`${glassClass("pill")} ${styles.control}`} onClick={onCustomize} aria-label={`Customize ${name}`}>
             <SlidersHorizontal size={15} strokeWidth={1.75} aria-hidden="true" />

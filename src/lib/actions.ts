@@ -8,11 +8,10 @@ import { StreamRelay, relayStreamName } from "@/lib/cameras/stream-relay";
 import { ASSISTANT_PROVIDER_IDS, ASSISTANT_PROVIDERS } from "@/lib/assistant/providers";
 import { checkAssistantKey } from "@/lib/assistant/run";
 import { seal } from "@/lib/crypto";
-import { TILE_COLORS, TILE_ICONS, TILE_SIZES } from "@/lib/dashboard/layout";
-import { db } from "@/lib/db";
-import { assistant, camera, integration, preference, scene } from "@/lib/db/schema";
-import { resolveLayout } from "@/lib/dashboard/layout";
+import { createTile, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES } from "@/lib/dashboard/layout";
 import { tileSources } from "@/lib/dashboard/sources";
+import { db } from "@/lib/db";
+import { assistant, calendar, camera, integration, preference, reminder, scene } from "@/lib/db/schema";
 import { getPreferences, loadHome, readableError, streamRelayUrl } from "@/lib/home";
 import { saveScene } from "@/lib/scenes/service";
 import { MatterProvider } from "@/lib/integrations/matter/provider";
@@ -20,6 +19,8 @@ import { createProvider } from "@/lib/integrations/registry";
 import { INTEGRATION_LABELS, IntegrationError, type IntegrationConfig } from "@/lib/integrations/types";
 import { publish, userTopic } from "@/lib/live/bus";
 import { getUser } from "@/lib/session";
+import { feedUrl, fetchFeed, forgetCalendar } from "@/lib/widgets/calendar";
+import { eventsBetween } from "@/lib/widgets/ical";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type CreatedResult = { ok: true; id: string } | { ok: false; error: string };
@@ -57,14 +58,14 @@ async function authed(run: (userId: string) => Promise<ActionResult>): Promise<A
 
 const firstIssue = (error: z.ZodError) => error.issues[0]?.message ?? "Check the form and try again.";
 
-/** Connects before saving, so a saved integration is one that worked at least once. Returns its id for the device review. */
+/** Connects before saving, so a saved integration is one that worked at least once. */
 export async function addIntegration(input: unknown): Promise<CreatedResult> {
   const parsed = integrationInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const id = crypto.randomUUID();
   const result = await authed(async userId => {
     const { name, ...config } = parsed.data;
-    const row = { id, userId, kind: config.kind, name: name || INTEGRATION_LABELS[config.kind], config: seal(config satisfies IntegrationConfig), curatedAt: null, createdAt: new Date() };
+    const row = { id, userId, kind: config.kind, name: name || INTEGRATION_LABELS[config.kind], config: seal(config satisfies IntegrationConfig), createdAt: new Date() };
     await createProvider(row).check();
     await db.insert(integration).values(row);
     revalidatePath("/", "layout");
@@ -73,29 +74,13 @@ export async function addIntegration(input: unknown): Promise<CreatedResult> {
   return result.ok ? { ok: true, id } : result;
 }
 
+/** The demo home also fills an empty dashboard, so there is something to try straight away. */
 export async function addDemoHome(): Promise<ActionResult> {
   const result = await addIntegration({ kind: "demo", name: "Demo home" });
-  return result.ok ? OK : result;
-}
-
-/**
- * Saves which of a connection's devices appear on the dashboard and marks the connection reviewed. Every one of
- * its devices gets a layout entry, so devices found later are recognisably new.
- */
-export async function chooseDevices(integrationId: string, shown: unknown): Promise<ActionResult> {
-  const ids = z.array(z.string().max(300)).max(5000).safeParse(shown);
-  if (!ids.success) return { ok: false, error: "That selection is not valid." };
+  if (!result.ok) return result;
   return authed(async userId => {
-    const row = await db.query.integration.findFirst({ where: and(eq(integration.id, integrationId), eq(integration.userId, userId)) });
-    if (!row) return { ok: false, error: "That connection no longer exists." };
     const home = await loadHome(userId);
-    const visible = new Set(ids.data);
-    const tiles = resolveLayout(home.layout, tileSources(home)).map(tile => {
-      const device = home.devices.find(item => item.id === tile.id);
-      return device?.integrationId === integrationId ? { ...tile, hidden: !visible.has(tile.id) } : tile;
-    });
-    await savePreferences(userId, { layout: tiles });
-    await db.update(integration).set({ curatedAt: new Date() }).where(eq(integration.id, integrationId));
+    if (home.layout.length === 0) await savePreferences(userId, { layout: [createTile("clock"), ...suggestedTiles(tileSources(home))] });
     return OK;
   });
 }
@@ -160,12 +145,21 @@ export async function saveStreamRelay(url: string): Promise<ActionResult> {
   });
 }
 
+const placeSchema = z.object({ name: z.string().max(120), latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) });
+
 const tileSchema = z.object({
   id: z.string().min(1).max(300),
+  kind: z.enum(TILE_KINDS),
+  link: z.string().min(1).max(300).nullable(),
   size: z.enum(TILE_SIZES),
   icon: z.enum(TILE_ICONS).optional(),
   color: z.enum(TILE_COLORS).optional(),
-  hidden: z.boolean().optional(),
+  label: z.string().trim().max(60).optional(),
+  options: z.object({
+    place: placeSchema.optional(),
+    units: z.enum(["C", "F"]).optional(),
+    calendars: z.array(z.string().max(100)).max(20).optional(),
+  }).optional(),
 });
 
 export async function saveLayout(tiles: unknown): Promise<ActionResult> {
@@ -248,6 +242,61 @@ export async function updateScene(id: string, input: unknown): Promise<ActionRes
 export async function deleteScene(id: string): Promise<ActionResult> {
   return authed(async userId => {
     await db.delete(scene).where(and(eq(scene.id, id), eq(scene.userId, userId)));
+    return OK;
+  });
+}
+
+const calendarInput = z.object({
+  name: z.string().trim().min(1, "Give the calendar a name.").max(60),
+  url: z.string().trim().transform(feedUrl).pipe(z.url({ protocol: /^https?$/, error: "Paste the full address, starting with https:// or webcal://" })),
+  color: z.enum(TILE_COLORS),
+});
+
+/** Reads the feed once before saving, so a saved calendar is one that worked. */
+export async function addCalendar(input: unknown): Promise<ActionResult> {
+  const parsed = calendarInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  return authed(async userId => {
+    eventsBetween(await fetchFeed(parsed.data.url), "check", new Date(), new Date());
+    await db.insert(calendar).values({ userId, name: parsed.data.name, color: parsed.data.color, url: seal(parsed.data.url) });
+    revalidatePath("/", "layout");
+    return OK;
+  });
+}
+
+export async function removeCalendar(id: string): Promise<ActionResult> {
+  return authed(async userId => {
+    await db.delete(calendar).where(and(eq(calendar.id, id), eq(calendar.userId, userId)));
+    forgetCalendar(id);
+    revalidatePath("/", "layout");
+    return OK;
+  });
+}
+
+const reminderInput = z.object({
+  title: z.string().trim().min(1, "Write the reminder first.").max(200),
+  dueAt: z.iso.datetime({ offset: true }).nullish(),
+});
+
+export async function addReminder(input: unknown): Promise<ActionResult> {
+  const parsed = reminderInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  return authed(async userId => {
+    await db.insert(reminder).values({ userId, title: parsed.data.title, dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null });
+    return OK;
+  });
+}
+
+export async function setReminderDone(id: string, done: boolean): Promise<ActionResult> {
+  return authed(async userId => {
+    await db.update(reminder).set({ doneAt: done ? new Date() : null }).where(and(eq(reminder.id, id), eq(reminder.userId, userId)));
+    return OK;
+  });
+}
+
+export async function removeReminder(id: string): Promise<ActionResult> {
+  return authed(async userId => {
+    await db.delete(reminder).where(and(eq(reminder.id, id), eq(reminder.userId, userId)));
     return OK;
   });
 }

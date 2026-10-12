@@ -1,4 +1,4 @@
-.dialog {
+.dialog.dialog {
   width: min(calc(100vw - var(--space-8)), 560px);
 }
 

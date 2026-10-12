@@ -2,8 +2,8 @@ import {
   clamp, deviceId, type BinarySensorClass, type CoverClass, type CoverState, type Device, type DeviceCommand, type EventClass, type LockState,
   type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode,
 } from "@/lib/devices/types";
-import { homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
-import { IntegrationError, countBy, type DeviceList, type Provider } from "./types";
+import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
+import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type IceCandidate, type Provider, type WebRtcAnswer } from "./types";
 
 export interface HassState {
   entity_id: string;
@@ -14,6 +14,17 @@ export interface HassState {
 interface HassConfig {
   unit_system?: { temperature?: string };
 }
+
+type HassWebRtcEvent =
+  | { type: "session"; session_id: string }
+  | { type: "answer"; answer: string }
+  | { type: "candidate"; candidate: IceCandidate }
+  | { type: "error"; code?: string; message?: string };
+
+const WEBRTC_ANSWER_MS = 10_000;
+const WEBRTC_GATHER_MS = 1500;
+const WEBRTC_QUIET_MS = 250;
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const FAN_SET_SPEED = 1;
 const COVER = { open: 1, close: 2, setPosition: 4, stop: 8 };
@@ -196,12 +207,6 @@ export class HomeAssistantProvider implements Provider {
     return { devices, unsupported: countBy(skipped) } satisfies DeviceList;
   }
 
-  /** Waits briefly for the WebSocket mirror so diagnostic and settings entities are marked before anyone chooses. */
-  async review() {
-    await this.live.waitUntilReady(5000);
-    return this.listDevices();
-  }
-
   /** Home Assistant already turns every camera it knows into MJPEG and JPEG, whatever the camera speaks. */
   async camera(entityId: string, mode: "stream" | "snapshot", signal: AbortSignal) {
     if (!entityId.startsWith("camera.")) throw new IntegrationError("That device is not a camera.");
@@ -213,6 +218,49 @@ export class HomeAssistantProvider implements Provider {
       });
     } catch {
       throw new IntegrationError(`Could not reach Home Assistant at ${this.base.origin}.`);
+    }
+  }
+
+  /**
+   * WebRTC the way Home Assistant's own frontend plays cameras: its built-in go2rtc answers the offer, so RTSP
+   * cameras stream with sub-second latency instead of being rebuilt as MJPEG from stills. Candidates that arrive
+   * shortly after the answer are collected and returned with it.
+   */
+  async cameraWebRtc(entityId: string, offer: string): Promise<WebRtcAnswer> {
+    if (!entityId.startsWith("camera.")) throw new IntegrationError("That device is not a camera.");
+    const capabilities = await this.live.request<{ frontend_stream_types?: string[] }>({ type: "camera/capabilities", entity_id: entityId }).catch(() => null);
+    if (capabilities && !capabilities.result.frontend_stream_types?.includes("web_rtc")) throw new WebRtcUnsupportedError("This camera does not offer WebRTC in Home Assistant.");
+
+    const candidates: IceCandidate[] = [];
+    let lastCandidateAt = 0;
+    let answered: (sdp: string) => void = () => {};
+    let failed: (error: Error) => void = () => {};
+    const answer = new Promise<string>((resolve, reject) => { answered = resolve; failed = reject; });
+    const onEvent = (raw: unknown) => {
+      const event = raw as HassWebRtcEvent;
+      if (event.type === "answer") answered(event.answer);
+      else if (event.type === "candidate") {
+        candidates.push(event.candidate);
+        lastCandidateAt = Date.now();
+      } else if (event.type === "error") failed(new IntegrationError(event.message ?? "Home Assistant could not start the stream."));
+    };
+
+    let session;
+    try {
+      session = await this.live.request({ type: "camera/webrtc/offer", entity_id: entityId, offer }, onEvent);
+    } catch (error) {
+      if (!(error instanceof HomeAssistantCommandError) || error.code !== "unknown_command") throw error;
+      const legacy = await this.live.request<{ answer: string }>({ type: "camera/web_rtc_offer", entity_id: entityId, offer });
+      return { answer: legacy.result.answer, candidates: [], close: () => {} };
+    }
+    try {
+      const sdp = await Promise.race([answer, sleep(WEBRTC_ANSWER_MS).then(() => { throw new IntegrationError("The camera did not answer in time."); })]);
+      const started = Date.now();
+      while (Date.now() - started < WEBRTC_GATHER_MS && !(Date.now() - Math.max(lastCandidateAt, started) > WEBRTC_QUIET_MS && (candidates.length > 0 || sdp.includes("a=candidate")))) await sleep(50);
+      return { answer: sdp, candidates, close: session.close };
+    } catch (error) {
+      session.close();
+      throw error;
     }
   }
 

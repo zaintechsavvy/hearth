@@ -17,13 +17,26 @@ export interface Provider {
   /** Throws an `IntegrationError` with a readable message when the service cannot be reached. */
   check(): Promise<void>;
   listDevices(): Promise<DeviceList>;
-  /** A complete, careful listing for choosing what to show. May take a little longer than `listDevices`. */
-  review?(): Promise<DeviceList>;
   execute(nativeId: string, command: DeviceCommand): Promise<void>;
   /** Starts pushing changes for as long as someone listens. Calls `onChange` whenever any device may have changed. */
   subscribe?(onChange: () => void): () => void;
   /** A camera's live MJPEG stream or a single JPEG, for integrations that relay camera video. */
   camera?(nativeId: string, mode: "stream" | "snapshot", signal: AbortSignal): Promise<Response>;
+  /** Answers a browser's WebRTC offer for a camera. Throws `WebRtcUnsupportedError` when that camera has no WebRTC. */
+  cameraWebRtc?(nativeId: string, offer: string): Promise<WebRtcAnswer>;
+}
+
+export interface IceCandidate {
+  candidate: string;
+  sdpMid?: string | null;
+  sdpMLineIndex?: number | null;
+}
+
+export interface WebRtcAnswer {
+  answer: string;
+  candidates: IceCandidate[];
+  /** Ends the session upstream; the media stops when it does. */
+  close: () => void;
 }
 
 export function countBy(values: string[]) {
@@ -35,6 +48,10 @@ export function countBy(values: string[]) {
 /** An error whose message is safe and useful to show the person who owns the integration. */
 export class IntegrationError extends Error {
   override name = "IntegrationError";
+}
+
+export class WebRtcUnsupportedError extends IntegrationError {
+  override name = "WebRtcUnsupportedError";
 }
 
 export const INTEGRATION_LABELS: Record<IntegrationKind, string> = {

@@ -1,9 +1,14 @@
 import type { Device } from "@/lib/devices/types";
 
-export type TileKind = Device["kind"] | "camera";
-export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "3x3" | "4x2" | "4x3";
+export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock"] as const;
+export type WidgetKind = (typeof WIDGET_KINDS)[number];
+export type TileKind = Device["kind"] | WidgetKind;
+export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x2" | "4x3";
 
-export const TILE_SIZES = ["1x1", "2x1", "1x2", "2x2", "3x3", "4x2", "4x3"] as const satisfies readonly TileSize[];
+export const TILE_KINDS = [
+  "light", "switch", "fan", "thermostat", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", ...WIDGET_KINDS,
+] as const satisfies readonly TileKind[];
+export const TILE_SIZES = ["1x1", "2x1", "1x2", "2x2", "2x3", "2x4", "3x3", "4x2", "4x3"] as const satisfies readonly TileSize[];
 export const TILE_COLORS = ["amber", "orange", "rose", "violet", "blue", "teal", "green", "graphite"] as const;
 export type TileColor = (typeof TILE_COLORS)[number];
 
@@ -13,25 +18,46 @@ export const TILE_ICONS = [
   "coffee", "cooking-pot", "refrigerator", "microwave", "washing-machine", "bed", "sofa", "armchair", "bath",
   "shower", "door", "lock", "blinds", "heater", "flame", "snowflake", "droplets", "leaf", "flower", "router",
   "car", "baby", "dog", "cat", "bell", "house", "lock-open", "door-closed", "garage", "activity", "thermometer",
-  "battery", "gauge", "clapperboard", "play", "shield", "bell-ring", "camera",
+  "battery", "gauge", "clapperboard", "play", "shield", "bell-ring", "camera", "calendar", "list-checks", "clock",
 ] as const;
 export type TileIcon = (typeof TILE_ICONS)[number];
 
+export interface WeatherPlace {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface TileOptions {
+  /** Weather: the place to forecast. */
+  place?: WeatherPlace;
+  /** Weather: units for temperatures. */
+  units?: "C" | "F";
+  /** Calendar: which saved calendars to show; all of them when absent. */
+  calendars?: string[];
+}
+
+/** One tile someone put on their dashboard. */
 export interface TileConfig {
-  /** A device id, or `camera:<id>`. */
   id: string;
+  kind: TileKind;
+  /** What the tile shows: a device id, `camera:<id>`, or `scene:<id>`. Null until linked; widgets never link. */
+  link: string | null;
   size: TileSize;
   icon?: TileIcon;
   color?: TileColor;
-  hidden?: boolean;
+  /** A name for a tile that is not linked yet, such as "Front door". */
+  label?: string;
+  options?: TileOptions;
 }
 
+/** Something a tile can link to: a device, a camera, or a scene. */
 export interface TileSource {
   id: string;
   kind: TileKind;
   /** Lights, fans, and covers with a level get a slider template by default. */
   adjustable?: boolean;
-  /** New tiles from this source start hidden, such as battery levels and diagnostic buttons. */
+  /** Not worth suggesting, such as battery levels and diagnostic buttons. */
   hidden?: boolean;
 }
 
@@ -58,11 +84,16 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   scene: SWITCHABLE,
   thermostat: [{ size: "2x2", label: "Compact" }, { size: "3x3", label: "Large" }],
   camera: [{ size: "2x2", label: "Square" }, { size: "4x2", label: "Wide" }, { size: "4x3", label: "Large" }],
+  weather: [{ size: "2x1", label: "Now" }, { size: "2x2", label: "Today" }, { size: "4x2", label: "Week" }],
+  calendar: [{ size: "2x2", label: "Next up" }, { size: "2x3", label: "Agenda" }, { size: "2x4", label: "Tall" }, { size: "4x2", label: "Wide" }],
+  reminders: [{ size: "2x2", label: "Short list" }, { size: "2x3", label: "List" }, { size: "2x4", label: "Tall" }],
+  clock: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }],
 };
 
 /** Kinds whose tiles take an icon and a colour. */
-export type StyledKind = Exclude<TileKind, "thermostat" | "camera">;
-export const isStyled = (kind: TileKind): kind is StyledKind => kind !== "thermostat" && kind !== "camera";
+export type StyledKind = Exclude<TileKind, "thermostat" | "camera" | WidgetKind>;
+export const isStyled = (kind: TileKind): kind is StyledKind => kind !== "thermostat" && kind !== "camera" && !isWidget(kind);
+export const isWidget = (kind: TileKind): kind is WidgetKind => (WIDGET_KINDS as readonly string[]).includes(kind);
 
 const KIND_ORDER: TileKind[] = ["thermostat", "scene", "light", "fan", "switch", "lock", "cover", "binary_sensor", "sensor", "event", "camera"];
 
@@ -73,58 +104,86 @@ export function spanOf(size: TileSize) {
   return { columns, rows };
 }
 
-export function defaultSize(source: TileSource, isFirstOfKind: boolean): TileSize {
-  switch (source.kind) {
+export function defaultSize(kind: TileKind, adjustable = false): TileSize {
+  switch (kind) {
     case "thermostat":
-      return isFirstOfKind ? "3x3" : "2x2";
+      return "3x3";
     case "camera":
       return "4x3";
     case "lock":
     case "event":
     case "scene":
+    case "weather":
+    case "clock":
       return "2x1";
+    case "calendar":
+    case "reminders":
+      return "2x3";
     case "cover":
-      return source.adjustable ? "1x2" : "2x1";
+      return adjustable ? "1x2" : "2x1";
     case "switch":
     case "sensor":
     case "binary_sensor":
       return "1x1";
     default:
-      return source.adjustable ? "1x2" : "1x1";
+      return adjustable ? "1x2" : "1x1";
   }
 }
 
+export const newTileId = () => `tile-${crypto.randomUUID()}`;
+
+export function createTile(kind: TileKind, link: string | null = null, adjustable = false, extra: Partial<TileConfig> = {}): TileConfig {
+  return { id: newTileId(), kind, link, size: defaultSize(kind, adjustable), ...extra };
+}
+
+/** A saved entry from before tiles had their own id and kind: `{ id: <device id>, size, hidden? }`. */
+export interface LegacyTile {
+  id: string;
+  size: TileSize;
+  icon?: TileIcon;
+  color?: TileColor;
+  hidden?: boolean;
+  kind?: undefined;
+}
+
 /**
- * Reconciles a saved layout with what exists now: saved tiles keep their order and settings, tiles whose
- * source disappeared are dropped, sizes the kind no longer allows fall back to the default, and new sources
- * are appended by kind.
+ * Turns what was saved into the tiles to draw. Tiles keep their order and settings, sizes their kind cannot use
+ * fall back to its default, and entries in the older shape become linked tiles. Nothing is added: the dashboard
+ * holds only what the person put there.
  */
-export function resolveLayout(saved: TileConfig[], sources: TileSource[]): TileConfig[] {
+export type SavedTile = TileConfig | LegacyTile;
+
+export function resolveLayout(saved: SavedTile[], sources: TileSource[]): TileConfig[] {
   const byId = new Map(sources.map(source => [source.id, source]));
-  const placed = new Set<string>();
-  const seenKinds = new Set<TileKind>();
-  const fallback = (source: TileSource) => {
-    const size = defaultSize(source, !seenKinds.has(source.kind));
-    seenKinds.add(source.kind);
-    return size;
-  };
-
-  const kept: TileConfig[] = [];
-  for (const tile of saved) {
-    const source = byId.get(tile.id);
-    if (!source || placed.has(tile.id)) continue;
-    placed.add(tile.id);
-    const allowed = SIZE_OPTIONS[source.kind].some(option => option.size === tile.size);
-    if (allowed) seenKinds.add(source.kind);
-    kept.push({ ...tile, size: allowed ? tile.size : fallback(source) });
+  const seen = new Set<string>();
+  const tiles: TileConfig[] = [];
+  for (const entry of saved) {
+    if (seen.has(entry.id)) continue;
+    seen.add(entry.id);
+    let tile: TileConfig;
+    if (entry.kind === undefined) {
+      const source = byId.get(entry.id);
+      if (!source || entry.hidden) continue;
+      tile = { id: entry.id, kind: source.kind, link: entry.id, size: entry.size, icon: entry.icon, color: entry.color };
+    } else {
+      tile = entry;
+    }
+    const allowed = SIZE_OPTIONS[tile.kind].some(option => option.size === tile.size);
+    tiles.push(allowed ? tile : { ...tile, size: defaultSize(tile.kind, byId.get(tile.link ?? "")?.adjustable) });
   }
+  return tiles;
+}
 
-  const added = sources
-    .filter(source => !placed.has(source.id))
+/** A starting dashboard from what is connected: the devices worth showing, thermostats first. */
+export function suggestedTiles(sources: TileSource[]): TileConfig[] {
+  return sources
+    .filter(source => !source.hidden)
     .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind))
-    .map((source): TileConfig => ({ id: source.id, size: fallback(source), ...(source.hidden ? { hidden: true } : {}) }));
-
-  return [...kept, ...added];
+    .map((source, index, all) => {
+      const firstThermostat = source.kind === "thermostat" && all.findIndex(item => item.kind === "thermostat") === index;
+      const size = source.kind === "thermostat" && !firstThermostat ? "2x2" : defaultSize(source.kind, source.adjustable);
+      return { id: newTileId(), kind: source.kind, link: source.id, size };
+    });
 }
 
 export function moveTile(tiles: TileConfig[], fromId: string, toId: string) {
@@ -139,4 +198,8 @@ export function moveTile(tiles: TileConfig[], fromId: string, toId: string) {
 
 export function updateTile(tiles: TileConfig[], id: string, patch: Partial<Omit<TileConfig, "id">>) {
   return tiles.map(tile => tile.id === id ? { ...tile, ...patch } : tile);
+}
+
+export function removeTile(tiles: TileConfig[], id: string) {
+  return tiles.filter(tile => tile.id !== id);
 }

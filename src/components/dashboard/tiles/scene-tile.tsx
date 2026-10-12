@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { glassClass } from "@/components/glass/glass";
-import type { TileConfig, TileIcon } from "@/lib/dashboard/layout";
+import type { TileConfig } from "@/lib/dashboard/layout";
 import type { SceneRun } from "@/lib/home";
 import type { HearthScene } from "@/lib/scenes/types";
 import { TILE_ICON_COMPONENTS } from "./tile-icons";
@@ -19,7 +19,7 @@ interface SceneTileProps {
 export function SceneTile({ scene, config, onRun, interactive = true }: SceneTileProps) {
   const [status, setStatus] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const Icon = TILE_ICON_COMPONENTS[config.icon ?? (scene.icon as TileIcon | null) ?? "clapperboard"];
+  const Icon = TILE_ICON_COMPONENTS[config.icon ?? scene.icon ?? "clapperboard"];
   const color = config.color ?? "violet";
 
   useEffect(() => {

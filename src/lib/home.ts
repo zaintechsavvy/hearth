@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { camera, integration, preference, scene } from "@/lib/db/schema";
-import type { TileConfig } from "@/lib/dashboard/layout";
+import type { SavedTile } from "@/lib/dashboard/layout";
 import type { HearthScene } from "@/lib/scenes/types";
 import { parseDeviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
 import { createProvider } from "@/lib/integrations/registry";
@@ -18,8 +18,6 @@ export interface IntegrationStatus {
   deviceCount: number;
   /** Things the integration has that Hearth cannot show yet, counted by type. */
   unsupported: Record<string, number>;
-  /** The person has chosen which devices to show; new ones wait for review. */
-  curated: boolean;
 }
 
 export interface HomeSnapshot {
@@ -27,7 +25,7 @@ export interface HomeSnapshot {
   integrations: IntegrationStatus[];
   cameras: { id: string; name: string }[];
   scenes: HearthScene[];
-  layout: TileConfig[];
+  layout: SavedTile[];
 }
 
 const LIST_TIMEOUT_MS = 10_000;
@@ -65,7 +63,6 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
       error: ok ? null : readableError(result.reason),
       deviceCount: ok ? result.value.devices.length : 0,
       unsupported: ok ? result.value.unsupported : {},
-      curated: row.curatedAt !== null,
     };
   });
   return { devices, integrations, cameras, scenes, layout: preferences.layout };
@@ -78,6 +75,14 @@ export async function runCommand(userId: string, id: string, command: DeviceComm
   if (!row) throw new IntegrationError("Unknown device.");
   await createProvider(row).execute(parsed.nativeId, command);
   publish(integrationTopic(row.id));
+}
+
+/** The provider behind one of this person's devices, with the id that provider knows it by. */
+export async function deviceProvider(userId: string, deviceId: string) {
+  const parsed = parseDeviceId(deviceId);
+  if (!parsed) return null;
+  const row = await db.query.integration.findFirst({ where: and(eq(integration.id, parsed.integrationId), eq(integration.userId, userId)) });
+  return row ? { provider: createProvider(row), nativeId: parsed.nativeId } : null;
 }
 
 export async function findCamera(userId: string, cameraId: string) {

@@ -1,6 +1,6 @@
 import { boolean, index, jsonb, pgTable, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
-import type { TileConfig, TileIcon } from "@/lib/dashboard/layout";
+import type { SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
 import type { SceneAction } from "@/lib/scenes/types";
 
 const timestamp = (name: string) => pgTimestamp(name, { withTimezone: true, mode: "date" });
@@ -60,8 +60,6 @@ export const integration = pgTable("integration", {
   name: text("name").notNull(),
   /** Sealed with `lib/crypto`: holds URLs and access tokens. */
   config: text("config").notNull(),
-  /** When the person last chose which of its devices to show. After that, newly found devices start hidden. */
-  curatedAt: timestamp("curated_at"),
   createdAt: createdAt(),
 }, t => [index("integration_user_idx").on(t.userId)]);
 
@@ -77,8 +75,8 @@ export const camera = pgTable("camera", {
 export const preference = pgTable("preference", {
   userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
   streamRelayUrl: text("stream_relay_url"),
-  /** Dashboard tiles in display order. Reconciled with live devices by `resolveLayout`. */
-  layout: jsonb("layout").$type<TileConfig[]>().notNull().$defaultFn(() => []),
+  /** Dashboard tiles in display order, read through `resolveLayout`. */
+  layout: jsonb("layout").$type<SavedTile[]>().notNull().$defaultFn(() => []),
   updatedAt: updatedAt(),
 });
 
@@ -104,3 +102,22 @@ export const scene = pgTable("scene", {
   actions: jsonb("actions").$type<SceneAction[]>().notNull(),
   createdAt: createdAt(),
 }, t => [index("scene_user_idx").on(t.userId)]);
+
+export const calendar = pgTable("calendar", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  color: text("color").$type<TileColor>().notNull(),
+  /** Sealed: a secret iCal address reads the whole calendar without signing in, so it is a credential. */
+  url: text("url").notNull(),
+  createdAt: createdAt(),
+}, t => [index("calendar_user_idx").on(t.userId)]);
+
+export const reminder = pgTable("reminder", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  dueAt: timestamp("due_at"),
+  doneAt: timestamp("done_at"),
+  createdAt: createdAt(),
+}, t => [index("reminder_user_idx").on(t.userId)]);

@@ -20,15 +20,16 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 
 ## What it does
 
-- **A grid you arrange.** Every tile sits on square cells and comes in sizes from 1×1 to 4×3. Lights and fans have four templates: **Icon** (tap to switch), **Card** (name, room, status), **Slider** (a tall vertical brightness or speed control), and **Large** (details beside a slider). Choose **Edit** to drag tiles, resize them, pick an icon and a colour, or hide them. Filter by room.
+- **A dashboard you build.** It starts empty. Choose **Add tile** and pick what the tile is: a light, lock, garage door, camera, thermostat, doorbell, sensor, scene, weather, calendar, reminders, or a clock. Link it to a device straight away, or leave it as a placeholder ("Front door") and tap it later to link it. Tiles sit on square cells in sizes from 1×1 to 4×3; lights and fans have four templates: **Icon** (tap to switch), **Card** (name, room, status), **Slider** (a tall vertical brightness or speed control), and **Large** (details beside a slider). Choose **Edit** to drag, resize, relink, restyle, or remove tiles, or start from **Start with suggestions**. Filter by room.
+- **Everyday widgets**: weather for any city (Open-Meteo, no key needed), Google Calendar or any iCal feed, a reminders list shared by everyone on the account, and a clock.
 - **Home Assistant** and **Matter**: lights, switches, fans, thermostats, locks, garage doors, gates, blinds and shades, door and window sensors, motion and leak sensors, temperature, humidity, light level and battery readings, doorbells and buttons, cameras, and Home Assistant scenes, scripts, and buttons. Rooms come from your Home Assistant areas. Anything Hearth cannot show yet is listed under the connection in Settings.
 - **Scenes**: set your devices the way you want them, choose **New scene**, and Hearth saves their current state as one tap. Run scenes from their tile or ask the assistant.
 - **Doorbell**: a ring that arrives while the dashboard is open shows a banner.
-- **Cameras**: RTSP cameras with a username and password, streamed to the browser over WebRTC through [go2rtc](https://github.com/AlexxIT/go2rtc), with a snapshot fallback.
+- **Cameras**: Home Assistant cameras over WebRTC, the way Home Assistant's own app plays them, falling back to MJPEG and then snapshots. RTSP cameras with a username and password stream through [go2rtc](https://github.com/AlexxIT/go2rtc). Every camera has full screen and a snapshot download.
 - **Assistant**: a pill in the corner (or Cmd or Ctrl K) opens a chat. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, or point it at a model you run yourself.
 - **Accounts**: email and password sign up and sign in. Each person has their own connections, cameras, layout, and assistants.
-- **Look**: liquid glass surfaces over a quiet studio backdrop (Studio, Linen, or Slate), light and dark, and eight accents.
-- **Security**: integration tokens, camera passwords, and AI keys are encrypted at rest (AES-256-GCM) and never sent to the browser.
+- **Look**: liquid glass surfaces over a still backdrop (Studio, Linen, Slate) or a slowly moving [Paper Shaders](https://shaders.paper.design) mesh gradient (Aurora, Dusk, Meadow), light and dark, and eight accents. Pick them from the palette button on the dashboard. Moving backgrounds hold still when reduced motion is on.
+- **Security**: integration tokens, camera passwords, calendar addresses, and AI keys are encrypted at rest (AES-256-GCM) and never sent to the browser. Unlocking a door or opening a garage door takes a press and hold.
 
 ![Welcome](docs/screenshots/welcome.png)
 
@@ -59,7 +60,7 @@ Open http://localhost:3000, create an account, and choose **Open the demo home**
 | Cameras | `camera` (streamed through Home Assistant) | Recognised, not streamed | Live view |
 | Scenes and scripts | `scene`, `script`, `button` | | Run |
 
-For safety, the assistant and scenes can lock doors and close garage doors and gates, but never unlock or open them; that stays a deliberate tap with a confirmation.
+For safety, the assistant and scenes can lock doors and close garage doors and gates, but never unlock or open them; that stays a deliberate press and hold on its tile.
 
 ### Where your data lives
 
@@ -119,7 +120,7 @@ If you connect both Home Assistant and its Matter Server, each Matter device app
 1. In Home Assistant, open your profile, then **Security**, then **Create token** under long-lived access tokens.
 2. In Hearth, open **Settings**, choose **Add** under Connections, then **Home Assistant**, and paste the address (`http://homeassistant.local:8123`) and the token.
 
-Hearth checks the connection before saving it, then lists everything it found so you can choose what goes on the dashboard. Each row shows the device's icon, room, type, and current state. Hearth ticks its suggestions to start: entries Home Assistant files under settings or diagnostics (identify buttons, firmware and battery entities, problem sensors), hidden entities, and unavailable ones start unticked. Search, filter by type, or tick a whole room at once. Reopen the list any time from **Choose devices** in Settings. Devices you add to Home Assistant later stay off the dashboard until you review them; Hearth tells you when there are new ones.
+Hearth checks the connection before saving it and takes you back to the dashboard. Nothing is added for you: choose **Add tile**, pick a type such as **Lock** or **Camera**, and Hearth lists the matching devices from Home Assistant grouped by room, with their state. Entries Home Assistant files under settings or diagnostics (identify buttons, firmware entities, problem sensors) are listed last and marked. A placeholder tile links the same way: tap it and choose. Devices you add to Home Assistant later never appear on their own.
 
 ### Matter
 
@@ -130,6 +131,17 @@ Hearth checks the connection before saving it, then lists everything it found so
 
 1. Make sure go2rtc is running (the compose file starts it) and set its address under **Settings**, then **Stream relay**.
 2. Add a camera with its RTSP address (for example `rtsp://192.168.1.20:554/stream1`), username, and password.
+
+Home Assistant cameras need nothing extra: Home Assistant 2024.11 and later relay RTSP cameras over WebRTC with their built-in go2rtc, and Hearth asks for that stream. The browser must be able to reach Home Assistant on your network for the video itself.
+
+### Calendars
+
+1. Open Google Calendar on a computer, then **Settings**.
+2. Under **Settings for my calendars**, choose the calendar, then **Integrate calendar**.
+3. Copy **Secret address in iCal format**.
+4. In Hearth, open **Settings**, choose **Add** under Calendars, paste it, and pick a colour. Then add a **Calendar** tile.
+
+The secret address reads the calendar without signing in, so Hearth encrypts it like a password. iCloud and Outlook links that start with `webcal://` work too. Events refresh every five minutes, and recurring events, moved instances, and cancellations follow the feed.
 
 ### AI assistants
 
@@ -168,18 +180,24 @@ The best way to learn this codebase is to follow one request end to end. Here is
 | Scenes | `src/lib/scenes`, editor in `src/components/dashboard/scene-editor.tsx` |
 | Server actions (forms) | `src/lib/actions.ts` |
 | API routes (snapshot, live stream, commands, assistant) | `src/app/api` |
-| Camera signalling | `src/app/api/cameras/[id]/webrtc/route.ts` and `src/components/dashboard/camera-tile.tsx` |
-| Liquid glass surfaces and wallpapers | `src/components/glass` |
+| Adding and linking tiles | `src/components/dashboard/tile-dialog.tsx`, `entity-chooser.tsx`, `tiles/placeholder-tile.tsx` |
+| Weather, calendar, reminders, clock | `src/lib/widgets`, tiles in `src/components/dashboard/widgets` |
+| Camera signalling (go2rtc) | `src/app/api/cameras/[id]/webrtc/route.ts` and `src/components/dashboard/camera-tile.tsx` |
+| Camera signalling (Home Assistant) | `src/app/api/devices/[id]/camera/webrtc/route.ts` and `src/components/dashboard/integration-camera-tile.tsx` |
+| Liquid glass surfaces and backgrounds | `src/components/glass`, picker in `src/components/shell/background-picker.tsx` |
 
 ### One provider interface, three integrations
 
-Every integration implements the same three methods (`src/lib/integrations/types.ts`):
+Every integration implements the same three methods, plus optional ones for live updates and cameras (`src/lib/integrations/types.ts`):
 
 ```ts
 interface Provider {
   check(): Promise<void>;
-  listDevices(): Promise<Device[]>;
+  listDevices(): Promise<DeviceList>;
   execute(nativeId: string, command: DeviceCommand): Promise<void>;
+  subscribe?(onChange: () => void): () => void;
+  camera?(nativeId: string, mode: "stream" | "snapshot", signal: AbortSignal): Promise<Response>;
+  cameraWebRtc?(nativeId: string, offer: string): Promise<WebRtcAnswer>;
 }
 ```
 
@@ -187,7 +205,7 @@ The dashboard and the assistant only know about `Device` and `DeviceCommand`. Ad
 
 ### The layout is data
 
-A layout is an ordered list of `{ id, size, icon, color, hidden }`. `resolveLayout` reconciles it with whatever devices exist right now: saved tiles keep their place, missing ones drop out, and new ones are added with sensible defaults. The grid is CSS: row height equals column width (container query units), so every size lines up, and dense packing fills gaps.
+A layout is an ordered list of tiles, `{ id, kind, link, size, icon, color, label, options }`. `kind` says what the tile is; `link` is the device, camera, or scene it shows, or null for a placeholder or a widget; `options` holds a weather place or the calendars to show. `resolveLayout` never adds tiles: it keeps their order, fixes sizes a kind cannot use, and upgrades layouts saved in the older one-tile-per-device shape. A tile whose device has gone shows as a placeholder to relink. The grid is CSS: row height equals column width (container query units), so every size lines up, and dense packing fills gaps.
 
 ### How the assistant decides what to do
 
@@ -202,6 +220,8 @@ Voice input uses the browser's Web Speech API, and a spoken request gets a spoke
 ### Cameras: why go2rtc
 
 Browsers cannot play RTSP. go2rtc reads the camera and offers it as WebRTC. The browser creates an SDP offer, Hearth's server forwards it to go2rtc and returns the answer, and the video then flows straight from go2rtc to the browser. The camera password stays on the server.
+
+Home Assistant cameras take the same shape over Home Assistant's WebSocket: Hearth checks `camera/capabilities`, sends `camera/webrtc/offer`, and returns the answer with the candidates that trickle in after it. The session lives as long as the player: it pings every 20 seconds, hangs up when the tile unmounts or the page closes, and the server closes anything silent for 45 seconds. Home Assistant's MJPEG proxy is only a fallback, because for RTSP cameras it rebuilds video from still frames and often stalls.
 
 ### Live updates
 

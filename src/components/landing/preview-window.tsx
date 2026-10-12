@@ -11,12 +11,12 @@ import { seedDemoDevices } from "@/lib/integrations/demo";
 import styles from "./preview-window.module.css";
 
 const SAMPLE_LAYOUT: TileConfig[] = [
-  { id: "preview:thermostat", size: "2x2" },
-  { id: "preview:kitchen-pendants", size: "1x2" },
-  { id: "preview:porch", size: "1x1", icon: "lamp-ceiling", color: "amber" },
-  { id: "preview:coffee", size: "1x1", icon: "coffee", color: "orange" },
-  { id: "sample:front", size: "2x1" },
-  { id: "sample:back", size: "2x1" },
+  { id: "preview:thermostat", kind: "thermostat", link: "preview:thermostat", size: "2x2" },
+  { id: "preview:kitchen-pendants", kind: "light", link: "preview:kitchen-pendants", size: "1x2" },
+  { id: "preview:porch", kind: "light", link: "preview:porch", size: "1x1", icon: "lamp-ceiling", color: "amber" },
+  { id: "preview:coffee", kind: "switch", link: "preview:coffee", size: "1x1", icon: "coffee", color: "orange" },
+  { id: "sample:front", kind: "camera", link: "sample:front", size: "2x1" },
+  { id: "sample:back", kind: "camera", link: "sample:back", size: "2x1" },
 ];
 
 const SAMPLE_CAMERAS: Record<string, { name: string; scene: "dusk" | "night" }> = {
@@ -55,7 +55,7 @@ export function PreviewWindow() {
         <span className={styles.tag}>Preview</span>
       </div>
       <div className={styles.body}>
-        <HomeGrid tiles={SAMPLE_LAYOUT} editing={false} renderTile={renderTile} nameOf={tile => byId.get(tile.id)?.name ?? SAMPLE_CAMERAS[tile.id]?.name ?? ""} onTilesChange={() => {}} onCustomize={() => {}} />
+        <HomeGrid tiles={SAMPLE_LAYOUT} editing={false} renderTile={renderTile} nameOf={tile => byId.get(tile.id)?.name ?? SAMPLE_CAMERAS[tile.id]?.name ?? ""} onTilesChange={() => {}} onCustomize={() => {}} onRemove={() => {}} />
       </div>
       <figcaption className={styles.caption}>Sample data. Drag the slider or press the arrows.</figcaption>
     </figure>

@@ -123,3 +123,39 @@
   text-align: center;
   line-height: 1.45;
 }
+
+.tools {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  gap: var(--space-2);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.tool {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--foreground);
+}
+
+.tile:hover .tools,
+.tools:focus-within {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .tools { opacity: 1; }
+}
+
+.tile:fullscreen {
+  border-radius: 0;
+  background: black;
+}
+
+.tile:fullscreen .media {
+  object-fit: contain;
+}

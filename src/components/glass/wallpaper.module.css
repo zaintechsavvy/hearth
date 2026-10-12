@@ -63,3 +63,46 @@
 :root[data-theme="dark"] .grain {
   opacity: .07;
 }
+
+/* Mesh presets: a static blend of the palette first, then the shader canvas on top once it loads. */
+:root[data-wallpaper="aurora"] .wallpaper { --m1: #dfe7ff; --m2: #c3d0fb; --m3: #cdeee9; --m4: #ecdfff; }
+:root[data-wallpaper="dusk"] .wallpaper { --m1: #ffe6d8; --m2: #fbcfd2; --m3: #efd9fb; --m4: #ffecc9; }
+:root[data-wallpaper="meadow"] .wallpaper { --m1: #e3f3df; --m2: #cbe9da; --m3: #f1efd2; --m4: #d6e7f2; }
+:root[data-theme="dark"][data-wallpaper="aurora"] .wallpaper { --m1: #0c1430; --m2: #1f2f66; --m3: #0f3f45; --m4: #33225a; }
+:root[data-theme="dark"][data-wallpaper="dusk"] .wallpaper { --m1: #26121a; --m2: #552235; --m3: #36204d; --m4: #4f3018; }
+:root[data-theme="dark"][data-wallpaper="meadow"] .wallpaper { --m1: #0d1f16; --m2: #1b4430; --m3: #373f17; --m4: #12303b; }
+
+:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"]) .wallpaper {
+  background:
+    radial-gradient(60% 60% at 15% 20%, var(--m2), transparent 70%),
+    radial-gradient(55% 55% at 85% 25%, var(--m4), transparent 70%),
+    radial-gradient(60% 60% at 70% 85%, var(--m3), transparent 70%),
+    var(--m1);
+}
+
+.mesh {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Keeps text on glass legible over the brightest and darkest parts of a mesh. Still presets need none. */
+.veil {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"]) .veil {
+  display: block;
+  background: oklch(100% 0 0 / .18);
+}
+
+:root[data-theme="dark"]:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"]) .veil {
+  background: oklch(0% 0 0 / .28);
+}
+
+:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"]) .light {
+  opacity: .5;
+}

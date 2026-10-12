@@ -1,8 +1,10 @@
 "use client";
 
+import { LockOpen, Warehouse } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/arc/button/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
+import { HoldToConfirm } from "@/components/arc/hold-to-confirm/hold-to-confirm";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import type { TileConfig } from "@/lib/dashboard/layout";
 import { defaultStyle } from "@/lib/dashboard/style";
@@ -92,8 +94,45 @@ function tapCommand(device: StateDevice): DeviceCommand | null {
   }
 }
 
-function confirmText(device: StateDevice) {
-  return device.kind === "lock" ? { title: `Unlock ${device.name}?`, action: "Unlock" } : { title: `Open ${device.name}?`, action: "Open" };
+const CONFIRM_CLOSE_MS = 700;
+
+function confirmText(device: StateDevice, state: string) {
+  const verb = device.kind === "lock" ? "unlock" : "open";
+  return {
+    title: `${verb === "unlock" ? "Unlock" : "Open"} ${device.name}?`,
+    description: `${device.name} is ${state.toLowerCase()}. This opens your home, so hold the button to ${verb} it.`,
+    hold: `Hold to ${verb}`,
+    done: verb === "unlock" ? "Unlocking" : "Opening",
+  };
+}
+
+function SensitiveConfirm({ device, state, onConfirm, onClose }: { device: StateDevice; state: string; onConfirm: () => void; onClose: () => void }) {
+  const [confirmed, setConfirmed] = useState(false);
+  const text = confirmText(device, state);
+  useEffect(() => {
+    if (!confirmed) return;
+    const timer = setTimeout(onClose, CONFIRM_CLOSE_MS);
+    return () => clearTimeout(timer);
+  }, [confirmed, onClose]);
+  return (
+    <Dialog open onOpenChange={open => !open && onClose()}>
+      <DialogContent className={glassSheetClass} title={text.title} description={text.description}>
+        <div className={styles.confirmActions}>
+          <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+          <HoldToConfirm
+            label={text.hold}
+            confirmedLabel={text.done}
+            tone="neutral"
+            duration={1000}
+            confirmed={confirmed}
+            icon={device.kind === "lock" ? <LockOpen size={18} strokeWidth={1.75} /> : <Warehouse size={18} strokeWidth={1.75} />}
+            onConfirm={() => { setConfirmed(true); onConfirm(); }}
+            autoFocus
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function StateTile({ device, config, onCommand, interactive = true }: StateTileProps) {
@@ -123,16 +162,7 @@ export function StateTile({ device, config, onCommand, interactive = true }: Sta
   const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-template": "toggle", "data-on": active || undefined };
   const meta = error ?? (ran ? "Done" : `${device.room && config.size !== "1x1" ? `${device.room} · ` : ""}${text}`);
   const isReading = device.kind === "sensor";
-  const confirm = pending && (
-    <Dialog open onOpenChange={open => !open && setPending(null)}>
-      <DialogContent className={glassSheetClass} title={confirmText(device).title} description="This opens your home. Make sure it is what you want.">
-        <div className={styles.confirmActions}>
-          <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
-          <Button onClick={() => { run(pending); setPending(null); }}>{confirmText(device).action}</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  const confirm = pending && <SensitiveConfirm device={device} state={text} onConfirm={() => run(pending)} onClose={() => setPending(null)} />;
 
   if (device.kind === "cover" && device.canSetPosition && (config.size === "1x2" || config.size === "2x2")) {
     const commit = (value: number) => request({ type: "coverPosition", value });

@@ -1,0 +1,124 @@
+.tile {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.heading {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.count,
+.muted {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.list {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 36px;
+}
+
+.text {
+  display: grid;
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.item[data-done] .title {
+  color: var(--text-secondary);
+  text-decoration: line-through;
+}
+
+.due {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.due[data-overdue] {
+  color: oklch(62% .2 25);
+}
+
+.remove {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+}
+
+.item:hover .remove,
+.remove:focus-visible {
+  opacity: 1;
+}
+
+.remove:hover {
+  background: var(--surface-muted);
+}
+
+@media (hover: none) {
+  .remove { opacity: 1; }
+}
+
+.form {
+  display: flex;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: oklch(50% 0 0 / .08);
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-sm);
+  outline: none;
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.input::placeholder {
+  color: var(--text-secondary);
+}
+
+.input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring, var(--foreground));
+}

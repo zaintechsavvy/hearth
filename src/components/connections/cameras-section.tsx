@@ -56,7 +56,7 @@ export function CamerasSection({ cameras, relayUrl }: { cameras: CameraSummary[]
       <div className={styles.sectionHeader}>
         <div>
           <h2 id="cameras-title" className={styles.sectionTitle}>Cameras</h2>
-          <p className={styles.sectionDescription}>RTSP cameras play through a go2rtc relay. The first two appear on your dashboard.</p>
+          <p className={styles.sectionDescription}>RTSP cameras play through a go2rtc relay. Put one on the dashboard with Add tile, then Camera.</p>
         </div>
         <Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>
       </div>

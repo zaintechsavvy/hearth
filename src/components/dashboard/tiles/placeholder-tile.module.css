@@ -1,0 +1,55 @@
+.tile {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: 10%;
+  color: var(--text-secondary);
+  text-align: center;
+  outline: 1.5px dashed color-mix(in oklch, var(--text-secondary) 35%, transparent);
+  outline-offset: -7px;
+  transition: color var(--duration-fast) var(--ease-standard), outline-color var(--duration-fast) var(--ease-standard);
+}
+
+.tile:hover:not(:disabled) {
+  color: var(--foreground);
+  outline-color: color-mix(in oklch, var(--foreground) 45%, transparent);
+}
+
+.tile[data-size="2x1"],
+.tile[data-size="4x2"] {
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-items: start;
+  text-align: start;
+  padding: 0 var(--space-5);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+}
+
+.text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+}
