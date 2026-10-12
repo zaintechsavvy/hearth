@@ -21,14 +21,24 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 ## What it does
 
 - **A dashboard you build.** It starts empty. Choose **Add tile** and pick what the tile is: a light, lock, garage door, camera, thermostat, doorbell, sensor, scene, weather, calendar, reminders, or a clock. Link it to a device straight away, or leave it as a placeholder ("Front door") and tap it later to link it. Tiles sit on square cells in sizes from 1×1 to 4×3; lights and fans have four templates: **Icon** (tap to switch), **Card** (name, room, status), **Slider** (a tall vertical brightness or speed control), and **Large** (details beside a slider). Choose **Edit** to drag, resize, relink, restyle, or remove tiles, or start from **Start with suggestions**. Filter by room.
-- **Everyday widgets**: weather for any city (Open-Meteo, no key needed), Google Calendar or any iCal feed, a reminders list shared by everyone on the account, and a clock.
+- **Pages**: make pages such as Kitchen or Wall tablet, each with its own tiles. Swipe between them on a touch screen.
+- **Everyday widgets**: weather for any city (Open-Meteo, no key needed), Google Calendar or any iCal feed, reminders, a clock, countdowns, and kitchen timers every screen hears.
+- **Household widgets**: bin day (bins collected together share one card, a split week shows two), medications with doses to tick off and refill warnings, a sticky-note board, guest Wi-Fi with a QR code, and plants with watering meters.
+- **Rename and re-room anything**: give any device or camera your own name and room, make new rooms, and reorder them. Home Assistant keeps its own names and areas.
+- **Light colour**: colour and white temperature for lights that have them, from Home Assistant and Matter. Press and hold a light, or tap its swatch, for brightness, presets, and Arc's colour picker; lit tiles glow in the light's real colour.
 - **Home Assistant** and **Matter**: lights, switches, fans, thermostats, locks, garage doors, gates, blinds and shades, door and window sensors, motion and leak sensors, temperature, humidity, light level and battery readings, doorbells and buttons, cameras, and Home Assistant scenes, scripts, and buttons. Rooms come from your Home Assistant areas. Anything Hearth cannot show yet is listed under the connection in Settings.
 - **Scenes**: set your devices the way you want them, choose **New scene**, and Hearth saves their current state as one tap. Run scenes from their tile or ask the assistant.
-- **Doorbell**: a ring that arrives while the dashboard is open shows a banner.
-- **Cameras**: Home Assistant cameras over WebRTC, the way Home Assistant's own app plays them, falling back to MJPEG and then snapshots. RTSP cameras with a username and password stream through [go2rtc](https://github.com/AlexxIT/go2rtc). Every camera has full screen and a snapshot download.
-- **Assistant**: a pill in the corner (or Cmd or Ctrl K) opens a chat. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, or point it at a model you run yourself.
-- **Accounts**: email and password sign up and sign in. Each person has their own connections, cameras, layout, and assistants.
-- **Look**: liquid glass surfaces over a still backdrop (Studio, Linen, Slate) or a slowly moving [Paper Shaders](https://shaders.paper.design) mesh gradient (Aurora, Dusk, Meadow), light and dark, and eight accents. Pick them from the palette button on the dashboard. Moving backgrounds hold still when reduced motion is on.
+- **Doorbell**: a ring shows a banner on every open dashboard and, with alerts on, a notification on your phone.
+- **Search**: Cmd or Ctrl K finds any device, scene, page, or setting, and switches things straight from the search box.
+- **Automations**: when, only if, then rules: a time, sunrise or sunset, or a device changing (or staying changed for some minutes); only after dark, between times, or while another device is in a state; then control devices, run scenes, or send an alert. Ready-made ideas fill in from your own devices.
+- **Activity and alerts**: a log of what happened and who did it, kept 60 days, and Web Push alerts for the doorbell, leaks and smoke, doors left open, jammed locks, timers, and doses.
+- **History**: temperature and other readings as a line on their tile, and day, week, and month charts with the low, average, and high.
+- **Wall tablet mode**: install Hearth as an app, keep the screen awake, dim it at night, rest on a drifting clock with what is next, and wake on a touch or a motion sensor.
+- **Household**: invite members, who share everything, and guests, who see only the pages you pick and can never unlock or open anything.
+- **Cameras**: Home Assistant cameras over WebRTC, the way Home Assistant's own app plays them, falling back to HLS relayed through Hearth, then MJPEG, then the last picture, and saying which. "Live" only appears once a frame has actually played. RTSP cameras with a username and password stream through [go2rtc](https://github.com/AlexxIT/go2rtc). Every camera has full screen and a snapshot download.
+- **Assistant**: a pill in the corner (or Cmd or Ctrl J) opens a chat. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, or point it at a model you run yourself.
+- **Accounts**: email and password sign up and sign in. Each home has its own connections, cameras, pages, and assistants, shared with the people invited into it.
+- **Look**: liquid glass surfaces over a still backdrop (Studio, Linen, Slate), a slowly moving [Paper Shaders](https://shaders.paper.design) mesh gradient (Aurora, Dusk, Meadow), a gradient of your own, or your own photo, light and dark, and eight accents. The Background studio picks colours with Arc's colour picker, shuffles harmonious palettes, tunes motion, swirl, and grain, blurs and dims photos, and can turn any photo into a moving gradient from its own colours. Moving backgrounds hold still when reduced motion is on.
 - **Security**: integration tokens, camera passwords, calendar addresses, and AI keys are encrypted at rest (AES-256-GCM) and never sent to the browser. Unlocking a door or opening a garage door takes a press and hold.
 
 ![Welcome](docs/screenshots/welcome.png)
@@ -184,7 +194,14 @@ The best way to learn this codebase is to follow one request end to end. Here is
 | Weather, calendar, reminders, clock | `src/lib/widgets`, tiles in `src/components/dashboard/widgets` |
 | Camera signalling (go2rtc) | `src/app/api/cameras/[id]/webrtc/route.ts` and `src/components/dashboard/camera-tile.tsx` |
 | Camera signalling (Home Assistant) | `src/app/api/devices/[id]/camera/webrtc/route.ts` and `src/components/dashboard/integration-camera-tile.tsx` |
-| Liquid glass surfaces and backgrounds | `src/components/glass`, picker in `src/components/shell/background-picker.tsx` |
+| Liquid glass surfaces and backgrounds | `src/components/glass`, picker in `src/components/shell/background-picker.tsx`, studio in `background-studio.tsx` |
+| Pages and the search palette | `src/components/dashboard/page-tabs.tsx`, `src/components/shell/command-menu.tsx` |
+| Household widgets and their items | `src/lib/widgets/items.ts`, `schedules.ts`, `src/lib/widget-actions.ts`, tiles in `src/components/dashboard/household` |
+| The home monitor (history, activity, alerts, automations) | `src/lib/monitor`, started by `src/instrumentation.ts` |
+| Automations | `src/lib/automations` (types, logic, sun times), UI in `src/components/automations` |
+| Web Push alerts | `src/lib/push.ts`, `public/sw.js`, Settings in `src/components/connections/alerts-section.tsx` |
+| Households, members, and guests | `src/lib/household.ts`, `src/lib/household-actions.ts`, `getHome` in `src/lib/session.ts` |
+| Wall tablet and the installable app | `src/components/shell/wall-mode.tsx`, `src/app/manifest.ts`, `src/app/icons` |
 
 ### One provider interface, three integrations
 
@@ -223,6 +240,10 @@ Browsers cannot play RTSP. go2rtc reads the camera and offers it as WebRTC. The 
 
 Home Assistant cameras take the same shape over Home Assistant's WebSocket: Hearth checks `camera/capabilities`, sends `camera/webrtc/offer`, and returns the answer with the candidates that trickle in after it. The session lives as long as the player: it pings every 20 seconds, hangs up when the tile unmounts or the page closes, and the server closes anything silent for 45 seconds. Home Assistant's MJPEG proxy is only a fallback, because for RTSP cameras it rebuilds video from still frames and often stalls.
 
+### The home monitor
+
+Hearth runs one watcher for every home from the moment the server starts (`src/lib/monitor`), whether or not a dashboard is open. It subscribes to each integration's live updates (polling the few that cannot push), takes a fresh look whenever something changes or a command runs, and hands each look to four jobs: the recorder (readings every few minutes, kept 30 days), the activity log (what changed, credited to whoever sent the command), alerts (Web Push, sent once per event), and automations (device rules on each change, time and sun rules on a 30 second clock). With PGlite, `next dev`'s helper workers get their own in-memory database and skip the monitor, so the data folder is only ever opened by the server.
+
 ### Live updates
 
 The dashboard does not poll. The browser opens one Server-Sent Events stream (`/api/home/stream`), and the server keeps a push connection to each integration for as long as someone is watching:
@@ -254,7 +275,7 @@ Each push sends a fresh snapshot, throttled to a few per second, to every open d
 
 Good exercises if you are learning with this project:
 
-1. **Colour lights**: extend `LightDevice` with colour temperature and map it for Home Assistant and Matter (cluster 768).
-2. **Several dashboards**: one layout per room or per wall tablet.
-3. **Household sharing**: let several accounts share one set of connections.
-4. **A new integration**: Philips Hue's local API is a good first one.
+1. **A new integration**: Philips Hue's local API is a good first one.
+2. **Energy**: chart power and energy sensors, with a daily total and a cost per kilowatt hour.
+3. **Presence**: "everyone left" and "first one home" automations from phones' locations or a router's connected devices.
+4. **Media**: a now-playing tile for Home Assistant media players, with volume and artwork.
