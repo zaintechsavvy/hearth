@@ -1,5 +1,5 @@
-import { clamp, type Device, type DeviceCommand, type ThermostatDevice } from "@/lib/devices/types";
-import { IntegrationError, type Provider } from "../types";
+import { clamp, type DeviceCommand, type ThermostatDevice } from "@/lib/devices/types";
+import { IntegrationError, countBy, type DeviceList, type Provider } from "../types";
 import { matterClient, wireNodeId, type MatterNode } from "./client";
 import { Cluster, FanAttribute, SYSTEM_MODE, ThermostatAttribute, hasCluster, mapMatterNode, parseMatterNativeId } from "./mapping";
 
@@ -10,6 +10,7 @@ interface WriteResult {
 
 const FAN_MODE = { off: 0, on: 4 };
 const COMMISSION_TIMEOUT_MS = 180_000;
+const TIMED_INVOKE_MS = 10_000;
 
 export class MatterProvider implements Provider {
   constructor(private readonly integrationId: string, private readonly config: { url: string }) {}
@@ -26,8 +27,9 @@ export class MatterProvider implements Provider {
     return this.client.subscribe(onChange);
   }
 
-  async listDevices(): Promise<Device[]> {
-    return (await this.client.getNodes()).flatMap(node => mapMatterNode(this.integrationId, node));
+  async listDevices(): Promise<DeviceList> {
+    const mapped = (await this.client.getNodes()).map(node => mapMatterNode(this.integrationId, node, this.client.lastEvents));
+    return { devices: mapped.flatMap(node => node.devices), unsupported: countBy(mapped.flatMap(node => node.unsupported)) };
   }
 
   async execute(nativeId: string, command: DeviceCommand) {
@@ -58,6 +60,14 @@ export class MatterProvider implements Provider {
         return this.setTarget(node, nativeId, command.value);
       case "thermostatMode":
         return this.write(nodeId, endpoint, Cluster.Thermostat, ThermostatAttribute.SystemMode, SYSTEM_MODE[command.mode]);
+      case "lock":
+        return this.invoke(nodeId, endpoint, Cluster.DoorLock, command.locked ? "LockDoor" : "UnlockDoor", {}, TIMED_INVOKE_MS);
+      case "cover":
+        return this.invoke(nodeId, endpoint, Cluster.WindowCovering, command.action === "open" ? "UpOrOpen" : command.action === "close" ? "DownOrClose" : "StopMotion");
+      case "coverPosition":
+        return this.invoke(nodeId, endpoint, Cluster.WindowCovering, "GoToLiftPercentage", { liftPercent100thsValue: Math.round((100 - clamp(command.value, 0, 100)) * 100) });
+      case "activate":
+        throw new IntegrationError("Matter devices have no scenes to run.");
     }
   }
 
@@ -69,7 +79,7 @@ export class MatterProvider implements Provider {
   }
 
   private thermostat(node: MatterNode, nativeId: string) {
-    const device = mapMatterNode(this.integrationId, node).find(item => item.id.endsWith(`:${nativeId}`));
+    const device = mapMatterNode(this.integrationId, node).devices.find(item => item.id.endsWith(`:${nativeId}`));
     if (device?.kind !== "thermostat") throw new IntegrationError("This Matter device is not a thermostat.");
     return device;
   }
@@ -90,8 +100,12 @@ export class MatterProvider implements Provider {
     return this.write(nodeId, endpoint, Cluster.Thermostat, ThermostatAttribute.OccupiedHeating, centi(value));
   }
 
-  private async invoke(nodeId: string, endpoint: number, cluster: number, command: string, payload: Record<string, unknown> = {}) {
-    await this.client.request("device_command", { node_id: wireNodeId(nodeId), endpoint_id: endpoint, cluster_id: cluster, command_name: command, payload });
+  /** Door locks only accept commands inside a timed interaction, so those pass a timeout. */
+  private async invoke(nodeId: string, endpoint: number, cluster: number, command: string, payload: Record<string, unknown> = {}, timedMs?: number) {
+    await this.client.request("device_command", {
+      node_id: wireNodeId(nodeId), endpoint_id: endpoint, cluster_id: cluster, command_name: command, payload,
+      ...(timedMs ? { timed_request_timeout_ms: timedMs } : {}),
+    });
   }
 
   /** A rejected write still arrives as a success envelope, so the per-path status is checked here. */

@@ -9,15 +9,21 @@ import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Glass, glassClass } from "@/components/glass/glass";
-import { addDemoHome, saveLayout } from "@/lib/actions";
-import { DEFAULT_COLOR, DEFAULT_ICON, cameraTileId, resolveLayout, updateTile, type TileConfig, type TileSource } from "@/lib/dashboard/layout";
-import type { Device, ThermostatDevice } from "@/lib/devices/types";
+import { addDemoHome, deleteScene, saveLayout } from "@/lib/actions";
+import { cameraTileId, isStyled, resolveLayout, updateTile, type TileConfig, type TileSource } from "@/lib/dashboard/layout";
+import { defaultStyle } from "@/lib/dashboard/style";
+import { shownByDefault, type Device, type ThermostatDevice } from "@/lib/devices/types";
+import { sceneTileId, type HearthScene } from "@/lib/scenes/types";
 import { CameraTile } from "./camera-tile";
 import { HiddenTilesDrawer } from "./hidden-tiles-drawer";
+import { DoorbellBanner } from "./doorbell-banner";
 import { HomeGrid } from "./home-grid";
+import { SceneEditor } from "./scene-editor";
+import { IntegrationCameraTile } from "./integration-camera-tile";
 import { Thermostat, formatTemperature } from "./thermostat";
 import { TileEditor, type EditableTile } from "./tile-editor";
 import { DeviceTile } from "./tiles/device-tile";
+import { SceneTile } from "./tiles/scene-tile";
 import { useHome } from "./use-home";
 import styles from "./dashboard.module.css";
 
@@ -39,10 +45,11 @@ function summarize(devices: Device[]) {
   return parts.join(" · ");
 }
 
-const adjustable = (device: Device) => (device.kind === "light" && device.dimmable) || (device.kind === "fan" && device.adjustable);
+const adjustable = (device: Device) => (device.kind === "light" && device.dimmable) || (device.kind === "fan" && device.adjustable) || (device.kind === "cover" && device.canSetPosition);
 
 export function DashboardView({ userName }: { userName: string }) {
-  const { home, error, isLoading, live, refresh, send } = useHome();
+  const { home, error, isLoading, live, refresh, send, runScene } = useHome();
+  const [sceneEditing, setSceneEditing] = useState<HearthScene | "new" | null>(null);
   const hour = useSyncExternalStore(subscribeNever, () => new Date().getHours(), () => null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<TileConfig[] | null>(null);
@@ -53,10 +60,12 @@ export function DashboardView({ userName }: { userName: string }) {
 
   const devices = useMemo(() => new Map((home?.devices ?? []).map(device => [device.id, device])), [home?.devices]);
   const cameras = useMemo(() => new Map((home?.cameras ?? []).map(camera => [cameraTileId(camera.id), camera])), [home?.cameras]);
+  const scenes = useMemo(() => new Map((home?.scenes ?? []).map(scene => [sceneTileId(scene.id), scene])), [home?.scenes]);
   const sources = useMemo<TileSource[]>(() => [
-    ...[...devices.values()].map(device => ({ id: device.id, kind: device.kind, adjustable: adjustable(device) })),
+    ...[...devices.values()].map(device => ({ id: device.id, kind: device.kind, adjustable: adjustable(device), hidden: !shownByDefault(device) })),
+    ...[...scenes.keys()].map(id => ({ id, kind: "scene" as const })),
     ...[...cameras.keys()].map(id => ({ id, kind: "camera" as const })),
-  ], [devices, cameras]);
+  ], [devices, cameras, scenes]);
   const tiles = useMemo(() => resolveLayout(draft ?? home?.layout ?? [], sources), [draft, home?.layout, sources]);
   const rooms = useMemo(() => [...new Set([...devices.values()].map(device => device.room).filter((value): value is string => Boolean(value)))].sort(), [devices]);
 
@@ -66,7 +75,7 @@ export function DashboardView({ userName }: { userName: string }) {
   if (error && !home) return <Alert tone="danger" title="Could not load your home">Check that Hearth is running, then reload the page.</Alert>;
   if (!home || (home.integrations.length === 0 && home.cameras.length === 0)) return <Welcome onCreated={() => refresh()} />;
 
-  const nameOf = (tile: TileConfig) => devices.get(tile.id)?.name ?? cameras.get(tile.id)?.name ?? "Tile";
+  const nameOf = (tile: TileConfig) => devices.get(tile.id)?.name ?? scenes.get(tile.id)?.name ?? cameras.get(tile.id)?.name ?? "Tile";
 
   const change = (next: TileConfig[]) => {
     setDraft(next);
@@ -85,14 +94,18 @@ export function DashboardView({ userName }: { userName: string }) {
   const shownTiles = room === ALL_ROOMS || editing ? tiles : tiles.filter(tile => devices.get(tile.id)?.room === room);
   const failing = home.integrations.filter(integration => !integration.ok);
   const hiddenCount = tiles.filter(tile => tile.hidden).length;
-  const editable = customizing ? editableTile(tiles.find(tile => tile.id === customizing), devices, cameras) : null;
+  const editable = customizing ? editableTile(tiles.find(tile => tile.id === customizing), devices, cameras, scenes) : null;
+  const customizingScene = customizing ? scenes.get(customizing) ?? null : null;
 
   const renderTile = (tile: TileConfig, preview = false) => {
+    const scene = scenes.get(tile.id);
+    if (scene) return <SceneTile scene={scene} config={tile} interactive={!editing && !preview} onRun={() => runScene(scene)} />;
     const camera = cameras.get(tile.id);
     if (camera) return preview ? <CameraPreview name={camera.name} /> : <CameraTile camera={camera} fill />;
     const device = devices.get(tile.id);
     if (!device) return null;
     if (device.kind === "thermostat") return <Thermostat device={device} onCommand={command => send(device, command)} />;
+    if (device.kind === "camera") return preview ? <CameraPreview name={device.name} /> : <IntegrationCameraTile camera={device} />;
     return <DeviceTile device={device} config={tile} interactive={!editing && !preview} onCommand={command => send(device, command)} />;
   };
 
@@ -113,7 +126,10 @@ export function DashboardView({ userName }: { userName: string }) {
               <Button onClick={finishEditing}>Done</Button>
             </>
           ) : (
-            <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
+            <>
+              <Button variant="ghost" onClick={() => setSceneEditing("new")}>New scene</Button>
+              <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
+            </>
           )}
         </div>
       </header>
@@ -121,6 +137,8 @@ export function DashboardView({ userName }: { userName: string }) {
       {rooms.length > 1 && !editing && (
         <SegmentedControl label="Room" className={styles.rooms} value={room} onValueChange={setRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...rooms.map(value => ({ value, label: value }))]} />
       )}
+
+      <DoorbellBanner devices={home.devices} />
 
       {failing.map(integration => (
         <Alert key={integration.id} tone="warning" title={`${integration.name} is not responding`}>{integration.error ?? ""}</Alert>
@@ -134,7 +152,16 @@ export function DashboardView({ userName }: { userName: string }) {
         </Glass>
       )}
 
-      <TileEditor tile={editable} renderPreview={config => renderTile(config, true)} onOpenChange={open => !open && setCustomizing(null)} onChange={patch => customizing && change(updateTile(tiles, customizing, patch))} />
+      <SceneEditor open={sceneEditing !== null} onOpenChange={open => !open && setSceneEditing(null)} devices={home.devices} scene={sceneEditing === "new" ? null : sceneEditing} onSaved={() => refresh()} />
+      <TileEditor
+        tile={editable}
+        renderPreview={config => renderTile(config, true)}
+        extra={customizingScene && (
+          <>
+            <Button variant="secondary" onClick={() => { setSceneEditing(customizingScene); setCustomizing(null); }}>Edit scene</Button>
+            <Button variant="ghost" onClick={async () => { await deleteScene(customizingScene.id); setCustomizing(null); await refresh(); }}>Delete scene</Button>
+          </>
+        )} onOpenChange={open => !open && setCustomizing(null)} onChange={patch => customizing && change(updateTile(tiles, customizing, patch))} />
       <HiddenTilesDrawer open={showHidden} onOpenChange={setShowHidden} tiles={tiles} nameOf={nameOf} onShow={id => change(updateTile(tiles, id, { hidden: false }))} />
     </div>
   );
@@ -154,14 +181,17 @@ function mergeFiltered(all: TileConfig[], changed: TileConfig[]) {
   return all.map(tile => updates.get(tile.id) ?? tile);
 }
 
-function editableTile(tile: TileConfig | undefined, devices: Map<string, Device>, cameras: Map<string, { name: string }>): EditableTile | null {
+function editableTile(tile: TileConfig | undefined, devices: Map<string, Device>, cameras: Map<string, { name: string }>, scenes: Map<string, HearthScene>): EditableTile | null {
   if (!tile) return null;
+  const scene = scenes.get(tile.id);
+  if (scene) return { config: tile, kind: "scene", name: scene.name, adjustable: false, icon: tile.icon ?? (scene.icon as EditableTile["icon"]) ?? "clapperboard", color: tile.color ?? "violet" };
   const camera = cameras.get(tile.id);
   if (camera) return { config: tile, kind: "camera", name: camera.name, adjustable: false, icon: null, color: null };
   const device = devices.get(tile.id);
   if (!device) return null;
-  if (device.kind === "thermostat") return { config: tile, kind: "thermostat", name: device.name, adjustable: false, icon: null, color: null };
-  return { config: tile, kind: device.kind, name: device.name, adjustable: adjustable(device), icon: tile.icon ?? DEFAULT_ICON[device.kind], color: tile.color ?? DEFAULT_COLOR[device.kind] };
+  if (!isStyled(device.kind)) return { config: tile, kind: device.kind, name: device.name, adjustable: false, icon: null, color: null };
+  const style = defaultStyle(device);
+  return { config: tile, kind: device.kind, name: device.name, adjustable: adjustable(device), icon: tile.icon ?? style.icon, color: tile.color ?? style.color };
 }
 
 function Welcome({ onCreated }: { onCreated: () => void }) {

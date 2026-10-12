@@ -62,6 +62,11 @@ export function IntegrationsSection({ integrations }: { integrations: Integratio
               <div className={styles.rowText}>
                 <span className={styles.rowTitle}>{integration.name}</span>
                 <span className={styles.rowMeta}>{integration.address ?? (integration.kind === "demo" ? "Simulated devices" : INTEGRATION_LABELS[integration.kind])}</span>
+                {status && Object.keys(status.unsupported).length > 0 && (
+                  <span className={styles.rowNote} title="Hearth can see these but cannot show them yet">
+                    Not shown yet: {Object.entries(status.unsupported).sort((a, b) => b[1] - a[1]).map(([type, count]) => `${type.replaceAll("_", " ")} ${count}`).join(" · ")}
+                  </span>
+                )}
               </div>
               <div className={styles.rowActions}>
                 {status && (

@@ -26,6 +26,8 @@ interface TileEditorProps {
   onChange: (patch: Partial<Omit<TileConfig, "id">>) => void;
   /** Renders the real tile for a config, without side effects such as opening a camera stream. */
   renderPreview: (config: TileConfig) => ReactNode;
+  /** Extra actions for this kind of tile, such as editing a scene. */
+  extra?: ReactNode;
 }
 
 interface Preview {
@@ -46,7 +48,7 @@ const SIZE_NOTES: Partial<Record<TileSize, string>> = {
 
 const capitalize = (value: string) => value[0].toUpperCase() + value.slice(1);
 
-export function TileEditor({ tile, onOpenChange, onChange, renderPreview }: TileEditorProps) {
+export function TileEditor({ tile, onOpenChange, onChange, renderPreview, extra }: TileEditorProps) {
   const [preview, setPreview] = useState<Preview>({});
   const styled = tile && tile.icon !== null;
   const options = tile ? SIZE_OPTIONS[tile.kind] : [];
@@ -124,7 +126,10 @@ export function TileEditor({ tile, onOpenChange, onChange, renderPreview }: Tile
               </>
             )}
             <div className={styles.actions}>
-              <Button variant="ghost" onClick={() => { onChange({ hidden: true }); close(false); }}>Hide tile</Button>
+              <div className={styles.extra}>
+                <Button variant="ghost" onClick={() => { onChange({ hidden: true }); close(false); }}>Hide tile</Button>
+                {extra}
+              </div>
               <DialogClose asChild><Button>Done</Button></DialogClose>
             </div>
             </div>

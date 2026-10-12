@@ -10,8 +10,9 @@ import { checkAssistantKey } from "@/lib/assistant/run";
 import { seal } from "@/lib/crypto";
 import { TILE_COLORS, TILE_ICONS, TILE_SIZES } from "@/lib/dashboard/layout";
 import { db } from "@/lib/db";
-import { assistant, camera, integration, preference } from "@/lib/db/schema";
+import { assistant, camera, integration, preference, scene } from "@/lib/db/schema";
 import { getPreferences, readableError, streamRelayUrl } from "@/lib/home";
+import { saveScene } from "@/lib/scenes/service";
 import { MatterProvider } from "@/lib/integrations/matter/provider";
 import { createProvider } from "@/lib/integrations/registry";
 import { INTEGRATION_LABELS, IntegrationError, type IntegrationConfig } from "@/lib/integrations/types";
@@ -198,6 +199,27 @@ export async function setDefaultAssistant(id: string): Promise<ActionResult> {
       await tx.update(assistant).set({ isDefault: true }).where(and(eq(assistant.id, id), eq(assistant.userId, userId)));
     });
     revalidatePath("/", "layout");
+    return OK;
+  });
+}
+
+export async function createScene(input: unknown): Promise<ActionResult> {
+  return authed(async userId => {
+    const result = await saveScene(userId, input);
+    return result.ok ? OK : result;
+  });
+}
+
+export async function updateScene(id: string, input: unknown): Promise<ActionResult> {
+  return authed(async userId => {
+    const result = await saveScene(userId, input, id);
+    return result.ok ? OK : result;
+  });
+}
+
+export async function deleteScene(id: string): Promise<ActionResult> {
+  return authed(async userId => {
+    await db.delete(scene).where(and(eq(scene.id, id), eq(scene.userId, userId)));
     return OK;
   });
 }

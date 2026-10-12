@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { HomeGrid } from "@/components/dashboard/home-grid";
 import { Thermostat } from "@/components/dashboard/thermostat";
-import { DeviceTile, type ToggleDevice } from "@/components/dashboard/tiles/device-tile";
+import { DeviceTile, type TileDevice } from "@/components/dashboard/tiles/device-tile";
 import { glassClass } from "@/components/glass/glass";
 import type { TileConfig } from "@/lib/dashboard/layout";
 import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/types";
@@ -44,7 +44,7 @@ export function PreviewWindow() {
     const device = byId.get(tile.id);
     if (!device) return null;
     if (device.kind === "thermostat") return <Thermostat device={device} onCommand={send(device.id)} />;
-    return <DeviceTile device={device as ToggleDevice} config={tile} onCommand={send(device.id)} />;
+    return <DeviceTile device={device as TileDevice} config={tile} onCommand={send(device.id)} />;
   };
 
   return (

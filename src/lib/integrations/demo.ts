@@ -1,5 +1,5 @@
 import { applyCommand, deviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
-import { IntegrationError, type Provider } from "./types";
+import { IntegrationError, type DeviceList, type Provider } from "./types";
 
 interface DemoHome {
   devices: Map<string, Device>;
@@ -16,9 +16,11 @@ const HEATING_RATE = 0.02;
 const AMBIENT = 20.5;
 /** How often a watched demo home advances its simulation and pushes the result. */
 const TICK_MS = 5000;
+/** How long the demo garage door takes to travel. */
+const TRAVEL_MS = 3000;
 
 export function seedDemoDevices(integrationId: string): Device[] {
-  const base = (nativeId: string, name: string, room: string) => ({ id: deviceId(integrationId, nativeId), integrationId, name, room, available: true });
+  const base = (nativeId: string, name: string, room: string | null) => ({ id: deviceId(integrationId, nativeId), integrationId, name, room, available: true });
   return [
     { ...base("thermostat", "Living room", "Living room"), kind: "thermostat", unit: "C", current: 20.5, target: 22, min: 10, max: 30, step: 0.5, mode: "heat", modes: ["off", "heat", "cool", "auto"], action: "heating" },
     { ...base("kitchen-pendants", "Pendants", "Kitchen"), kind: "light", on: true, dimmable: true, brightness: 80 },
@@ -29,6 +31,13 @@ export function seedDemoDevices(integrationId: string): Device[] {
     { ...base("office-plug", "Desk", "Office"), kind: "switch", on: true },
     { ...base("bedside", "Bedside lamp", "Bedroom"), kind: "light", on: false, dimmable: true, brightness: 0 },
     { ...base("tv", "Television", "Living room"), kind: "switch", on: false },
+    { ...base("front-lock", "Front door", "Entry"), kind: "lock", state: "locked" },
+    { ...base("garage", "Garage door", "Garage"), kind: "cover", coverClass: "garage", state: "closed", position: 0, canStop: true, canSetPosition: false },
+    { ...base("back-door", "Back door", "Kitchen"), kind: "binary_sensor", sensorClass: "door", active: false },
+    { ...base("back-door-battery", "Back door battery", "Kitchen"), kind: "sensor", sensorClass: "battery", value: 82, unit: "%" },
+    { ...base("hall-temp", "Hallway", "Entry"), kind: "sensor", sensorClass: "temperature", value: 21.4, unit: "°C" },
+    { ...base("doorbell", "Doorbell", "Entry"), kind: "event", eventClass: "doorbell", last: null },
+    { ...base("evening", "Evening", null), kind: "scene", variant: "scene" },
   ];
 }
 
@@ -83,8 +92,8 @@ export class DemoProvider implements Provider {
     };
   }
 
-  async listDevices() {
-    return [...this.home().devices.values()];
+  async listDevices(): Promise<DeviceList> {
+    return { devices: [...this.home().devices.values()], unsupported: {} };
   }
 
   async execute(nativeId: string, command: DeviceCommand) {
@@ -95,5 +104,14 @@ export class DemoProvider implements Provider {
     await new Promise(resolve => setTimeout(resolve, 180));
     home.devices.set(id, applyCommand(device, command));
     notify(home);
+    if (device.kind === "cover" && command.type === "cover" && command.action !== "stop") {
+      setTimeout(() => {
+        const current = home.devices.get(id);
+        if (current?.kind !== "cover" || current.state === "stopped") return;
+        const open = command.action === "open";
+        home.devices.set(id, { ...current, state: open ? "open" : "closed", position: open ? 100 : 0 });
+        notify(home);
+      }, TRAVEL_MS);
+    }
   }
 }

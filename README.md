@@ -21,8 +21,9 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 ## What it does
 
 - **A grid you arrange.** Every tile sits on square cells and comes in sizes from 1×1 to 4×3. Lights and fans have four templates: **Icon** (tap to switch), **Card** (name, room, status), **Slider** (a tall vertical brightness or speed control), and **Large** (details beside a slider). Choose **Edit** to drag tiles, resize them, pick an icon and a colour, or hide them. Filter by room.
-- **Home Assistant**: lights with brightness, switches, input booleans, fans with speed, and climate entities, with rooms taken from your Home Assistant areas.
-- **Matter**: connects straight to a Matter server, lists and controls devices, and pairs new ones from a setup code.
+- **Home Assistant** and **Matter**: lights, switches, fans, thermostats, locks, garage doors, gates, blinds and shades, door and window sensors, motion and leak sensors, temperature, humidity, light level and battery readings, doorbells and buttons, cameras, and Home Assistant scenes, scripts, and buttons. Rooms come from your Home Assistant areas. Anything Hearth cannot show yet is listed under the connection in Settings.
+- **Scenes**: set your devices the way you want them, choose **New scene**, and Hearth saves their current state as one tap. Run scenes from their tile or ask the assistant.
+- **Doorbell**: a ring that arrives while the dashboard is open shows a banner.
 - **Cameras**: RTSP cameras with a username and password, streamed to the browser over WebRTC through [go2rtc](https://github.com/AlexxIT/go2rtc), with a snapshot fallback.
 - **Assistant**: a pill in the corner (or Cmd or Ctrl K) opens a chat. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, or point it at a model you run yourself.
 - **Accounts**: email and password sign up and sign in. Each person has their own connections, cameras, layout, and assistants.
@@ -44,11 +45,28 @@ npm run dev
 
 Open http://localhost:3000, create an account, and choose **Open the demo home**. The database and its tables are created on first start.
 
+### What each device can do
+
+| Kind | Home Assistant | Matter | Tile |
+| --- | --- | --- | --- |
+| Lights, switches, fans | `light`, `switch`, `input_boolean`, `fan` | OnOff, LevelControl, FanControl | Icon, card, vertical slider, large |
+| Thermostats | `climate` | Thermostat | Compact or large dial |
+| Locks | `lock` | Door Lock | Lock and unlock, unlocking asks first |
+| Garage doors, gates, blinds | `cover` | Window Covering | Open, close, stop, and a position slider for blinds; opening a garage, door, or gate asks first |
+| Door, window, motion, leak, smoke | `binary_sensor` | Boolean State, Occupancy | Reading |
+| Temperature, humidity, light, battery | `sensor` with a device class | Temperature, Humidity, Illuminance, Power Source | Reading; batteries start hidden |
+| Doorbells and buttons | `event` | Switch events | Last ring, and a banner on a new ring |
+| Cameras | `camera` (streamed through Home Assistant) | Recognised, not streamed | Live view |
+| Scenes and scripts | `scene`, `script`, `button` | | Run |
+
+For safety, the assistant and scenes can lock doors and close garage doors and gates, but never unlock or open them; that stays a deliberate tap with a confirmation.
+
 ### Where your data lives
 
 Hearth stores accounts, sessions, connections, cameras, layouts, and assistants in Postgres.
 
-- **By default** it runs [PGlite](https://pglite.dev), Postgres compiled to WebAssembly, inside the app, saving to `data/pglite` (or the `hearth-data` volume in Docker). Nothing to install.
+- **With Docker Compose**, a Postgres server runs beside Hearth (the `db` service) and Hearth connects to it automatically. This is the setup to use at home: Postgres recovers cleanly from crashes and power cuts.
+- **With `npm run dev`**, Hearth runs [PGlite](https://pglite.dev), Postgres compiled to WebAssembly, inside the app, saving to `data/pglite`. Nothing to install, which makes it ideal for trying Hearth and for development. Stop it with Ctrl C so it can close the database cleanly; a process that is killed outright can leave PGlite unable to open its folder.
 - **Set `DATABASE_URL`** to use any Postgres instead, such as [Neon](https://neon.tech) or [Supabase](https://supabase.com). Hearth creates its tables on the next start.
 
 Passwords are hashed (scrypt) by Better Auth and never stored in readable form. Home Assistant tokens, camera passwords, and AI keys are encrypted with a key derived from `BETTER_AUTH_SECRET` before they reach the database, so a hosted database only ever sees ciphertext. Keep that secret on your server: lose it and the stored secrets cannot be decrypted.
@@ -146,7 +164,8 @@ The best way to learn this codebase is to follow one request end to end. Here is
 | Demo home | `src/lib/integrations/demo.ts` |
 | Dashboard layout (sizes, order, icons, colours) | `src/lib/dashboard/layout.ts`, rendered by `src/components/dashboard/home-grid.tsx` |
 | Tiles and the vertical slider | `src/components/dashboard/tiles` |
-| Assistant (prompt, tool, provider adapters) | `src/lib/assistant`, UI in `src/components/assistant` |
+| Assistant (prompt, tools, provider adapters) | `src/lib/assistant`, UI in `src/components/assistant` |
+| Scenes | `src/lib/scenes`, editor in `src/components/dashboard/scene-editor.tsx` |
 | Server actions (forms) | `src/lib/actions.ts` |
 | API routes (snapshot, live stream, commands, assistant) | `src/app/api` |
 | Camera signalling | `src/app/api/cameras/[id]/webrtc/route.ts` and `src/components/dashboard/camera-tile.tsx` |
@@ -215,8 +234,7 @@ Each push sends a fresh snapshot, throttled to a few per second, to every open d
 
 Good exercises if you are learning with this project:
 
-1. **Scenes**: a tile that sends several commands at once, and an assistant tool to create them.
-2. **Colour lights**: extend `LightDevice` with colour temperature and map it for Home Assistant and Matter (cluster 768).
-3. **Several dashboards**: one layout per room or per wall tablet.
-4. **Household sharing**: let several accounts share one set of connections.
-5. **A new integration**: Philips Hue's local API is a good first one.
+1. **Colour lights**: extend `LightDevice` with colour temperature and map it for Home Assistant and Matter (cluster 768).
+2. **Several dashboards**: one layout per room or per wall tablet.
+3. **Household sharing**: let several accounts share one set of connections.
+4. **A new integration**: Philips Hue's local API is a good first one.

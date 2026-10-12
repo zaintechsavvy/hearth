@@ -2,7 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { IntegrationError } from "@/lib/integrations/types";
 import { ASSISTANT_PROVIDERS, type AssistantProvider } from "./providers";
-import { CONTROL_TOOL } from "./tools";
+import { ASSISTANT_TOOLS } from "./tools";
 
 export interface ChatTurn {
   role: "user" | "assistant";
@@ -17,8 +17,8 @@ export interface AssistantRun {
   baseUrl?: string | null;
   system: string;
   history: ChatTurn[];
-  /** Runs one control_device call and returns the text the model reads back. */
-  callTool: (input: unknown) => Promise<string>;
+  /** Runs one tool call by name and returns the text the model reads back. */
+  callTool: (name: string, input: unknown) => Promise<string>;
 }
 
 const MAX_STEPS = 6;
@@ -73,7 +73,7 @@ async function runClaude({ model, apiKey, system, history, callTool }: Assistant
         max_tokens: 4096,
         system,
         messages,
-        tools: [{ name: CONTROL_TOOL.name, description: CONTROL_TOOL.description, input_schema: CONTROL_TOOL.parameters }],
+        tools: ASSISTANT_TOOLS.map(tool => ({ name: tool.name, description: tool.description, input_schema: tool.parameters as Anthropic.Beta.BetaTool["input_schema"] })),
         ...(supportsEffort(model) ? { output_config: { effort: "low" as const } } : {}),
         ...(fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
       });
@@ -82,7 +82,7 @@ async function runClaude({ model, apiKey, system, history, callTool }: Assistant
       if (toolUses.length === 0 || response.stop_reason !== "tool_use") return textOf(response.content);
       messages.push({ role: "assistant", content: response.content });
       const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
-      for (const use of toolUses) results.push({ type: "tool_result", tool_use_id: use.id, content: await callTool(use.input) });
+      for (const use of toolUses) results.push({ type: "tool_result", tool_use_id: use.id, content: await callTool(use.name, use.input) });
       messages.push({ role: "user", content: results });
     }
     return "I made several changes. Check the dashboard for the result.";
@@ -130,6 +130,7 @@ export function providerError(provider: AssistantProvider, status: number, data:
 
 interface ResponsesItem {
   type: string;
+  name?: string;
   call_id?: string;
   arguments?: string;
   content?: { type: string; text?: string }[];
@@ -139,7 +140,7 @@ interface ResponsesItem {
 async function runResponses({ provider, model, apiKey, baseUrl, system, history, callTool }: AssistantRun) {
   const p = provider as "openai" | "xai";
   const input: unknown[] = history.map(turn => ({ role: turn.role, content: turn.text }));
-  const tools = [{ type: "function", name: CONTROL_TOOL.name, description: CONTROL_TOOL.description, parameters: CONTROL_TOOL.parameters }];
+  const tools = ASSISTANT_TOOLS.map(tool => ({ type: "function", name: tool.name, description: tool.description, parameters: tool.parameters }));
   for (let step = 0; step < MAX_STEPS; step++) {
     const data = await post(p, baseUrl, "responses", apiKey, { model, instructions: system, input, tools, ...(p === "openai" ? { reasoning: { effort: "low" } } : {}) }) as { output?: ResponsesItem[] };
     const output = data.output ?? [];
@@ -148,7 +149,7 @@ async function runResponses({ provider, model, apiKey, baseUrl, system, history,
       return output.filter(item => item.type === "message").flatMap(item => item.content ?? []).filter(part => part.type === "output_text").map(part => part.text).join("\n").trim() || "Done.";
     }
     input.push(...output);
-    for (const call of calls) input.push({ type: "function_call_output", call_id: call.call_id, output: await callTool(call.arguments ?? "{}") });
+    for (const call of calls) input.push({ type: "function_call_output", call_id: call.call_id, output: await callTool(call.name ?? "", call.arguments ?? "{}") });
   }
   return "I made several changes. Check the dashboard for the result.";
 }
@@ -163,14 +164,14 @@ interface ChatMessage {
 async function runChatCompletions({ provider, model, apiKey, baseUrl, system, history, callTool }: AssistantRun) {
   const p = provider as "gemini" | "meta" | "groq" | "custom";
   const messages: unknown[] = [{ role: "system", content: system }, ...history.map(turn => ({ role: turn.role, content: turn.text }))];
-  const tools = [{ type: "function", function: { name: CONTROL_TOOL.name, description: CONTROL_TOOL.description, parameters: CONTROL_TOOL.parameters } }];
+  const tools = ASSISTANT_TOOLS.map(tool => ({ type: "function", function: { name: tool.name, description: tool.description, parameters: tool.parameters } }));
   for (let step = 0; step < MAX_STEPS; step++) {
     const data = await post(p, baseUrl, "chat/completions", apiKey, { model, messages, tools }) as { choices?: { message: ChatMessage }[] };
     const message = data.choices?.[0]?.message;
     if (!message) throw new IntegrationError(`${ASSISTANT_PROVIDERS[p].company} sent an empty response.`);
     if (!message.tool_calls?.length) return message.content?.trim() || "Done.";
     messages.push(message);
-    for (const call of message.tool_calls) messages.push({ role: "tool", tool_call_id: call.id, content: await callTool(call.function.arguments) });
+    for (const call of message.tool_calls) messages.push({ role: "tool", tool_call_id: call.id, content: await callTool(call.function.name, call.function.arguments) });
   }
   return "I made several changes. Check the dashboard for the result.";
 }

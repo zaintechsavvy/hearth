@@ -8,8 +8,8 @@ type Message =
   | { type: "event"; id: number; event: { event_type: string; data: { entity_id: string; new_state: HassState | null } } }
   | { type: "pong"; id: number };
 
-/** Sensors can change many times a second; only these domains are shown, so only they wake listeners. */
-const WATCHED = new Set(["light", "switch", "input_boolean", "fan", "climate"]);
+/** Only domains Hearth shows wake listeners; the rest (updates, numbers, device trackers) change often and matter to no tile. */
+const WATCHED = new Set(["light", "switch", "input_boolean", "fan", "climate", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", "script", "button", "input_button"]);
 const RECONNECT_MIN_MS = 2000;
 const RECONNECT_MAX_MS = 30_000;
 const IDLE_CLOSE_MS = 60_000;

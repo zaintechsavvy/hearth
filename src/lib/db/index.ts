@@ -1,5 +1,5 @@
-import { mkdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, rmSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
@@ -33,9 +33,24 @@ function connect(): Connection {
   }
   const building = process.env.NEXT_PHASE === "phase-production-build";
   const directory = resolve(/*turbopackIgnore: true*/ process.env.DATABASE_PATH ?? "data/pglite");
-  if (!building) mkdirSync(directory, { recursive: true });
-  const db = drizzlePglite(building ? new PGlite() : new PGlite(directory), { schema });
+  if (!building) {
+    mkdirSync(directory, { recursive: true });
+    // PGlite lives inside this process, so a lock file here can only be left over from a run that was killed.
+    rmSync(join(directory, "postmaster.pid"), { force: true });
+  }
+  const client = building ? new PGlite() : new PGlite(directory);
+  if (!building) closeOnExit(client);
+  const db = drizzlePglite(client, { schema });
   return { db: db as unknown as Db, migrate: () => migratePglite(db, { migrationsFolder: migrationsFolder() }) };
+}
+
+/** Flushes and releases the data folder when the server is stopped, so the next start opens cleanly. */
+function closeOnExit(client: PGlite) {
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => {
+      void client.close().finally(() => process.exit(0));
+    });
+  }
 }
 
 const cache = globalThis as unknown as { hearthDatabase?: Connection };

@@ -51,7 +51,7 @@ describe("HomeAssistantLive", () => {
     expect(live.unit).toBe("F");
     const afterLoad = listener.mock.calls.length;
 
-    ha.push("sensor.power", "120");
+    ha.push("update.home_assistant_core", "on");
     ha.push("light.hall", "on");
     await vi.waitFor(() => expect(live.snapshot()?.find(state => state.entity_id === "light.hall")?.state).toBe("on"));
     expect(listener.mock.calls.length).toBe(afterLoad + 1);

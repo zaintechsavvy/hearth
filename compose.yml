@@ -5,15 +5,36 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
-      # Leave DATABASE_URL out of .env to keep everything in the hearth-data volume.
-      DATABASE_PATH: /data/pglite
+      # Set DATABASE_URL in .env to use Neon or Supabase instead of the database below.
+      DATABASE_URL: ${DATABASE_URL:-postgres://hearth:${POSTGRES_PASSWORD:-hearth}@db:5432/hearth}
       STREAM_RELAY_URL: http://host.docker.internal:1984
+    depends_on:
+      db:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - hearth-data:/data
+
+  # A real Postgres server: it recovers cleanly from crashes and power cuts, which matters for a box that runs all day.
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hearth
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hearth}
+      POSTGRES_DB: hearth
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hearth -d hearth"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   # Turns RTSP cameras into WebRTC. Host networking lets browsers on your LAN reach its media port.
   go2rtc:
@@ -25,3 +46,4 @@ services:
 
 volumes:
   hearth-data:
+  db-data:

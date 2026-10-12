@@ -29,7 +29,7 @@ describe("Chat Completions adapter", () => {
     const calls = stubFetch([{ choices: [{ message: toolMessage }] }, { choices: [{ message: { role: "assistant", content: "The fan is on." } }] }]);
     const run = base("gemini", "gemini-3.8-flash");
     expect(await runAssistant(run)).toBe("The fan is on.");
-    expect(run.callTool).toHaveBeenCalledWith("{\"device_id\":\"a:fan\",\"action\":\"turn_on\"}");
+    expect(run.callTool).toHaveBeenCalledWith("control_device", "{\"device_id\":\"a:fan\",\"action\":\"turn_on\"}");
     expect(calls[0].url).toBe("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions");
     expect(calls[0].headers.authorization).toBe("Bearer test-key-1234567890");
     expect(calls[1].body.messages).toEqual([
@@ -70,7 +70,7 @@ describe("Responses adapter", () => {
     expect(await runAssistant(base("openai", "gpt-6.1-sol"))).toBe("Fan on.");
     expect(calls[0].url).toBe("https://api.openai.com/v1/responses");
     expect(calls[0].body.reasoning).toEqual({ effort: "low" });
-    expect(calls[0].body.tools).toEqual([expect.objectContaining({ type: "function", name: "control_device" })]);
+    expect((calls[0].body.tools as { name: string }[]).map(tool => tool.name)).toEqual(["control_device", "run_scene", "create_scene"]);
     expect(calls[1].body.input).toEqual([
       { role: "user", content: "Turn on the fan" },
       reasoning,
@@ -99,7 +99,7 @@ describe("Claude adapter", () => {
     const calls = stubFetch([toolTurn, finalTurn]);
     const run = base("anthropic", "claude-opus-5-5");
     expect(await runAssistant(run)).toBe("The fan is on.");
-    expect(run.callTool).toHaveBeenCalledWith({ device_id: "a:fan", action: "turn_on" });
+    expect(run.callTool).toHaveBeenCalledWith("control_device", { device_id: "a:fan", action: "turn_on" });
     expect(calls[0].url).toBe("https://api.anthropic.com/v1/messages?beta=true");
     expect(calls[0].headers["x-api-key"]).toBe("test-key-1234567890");
     expect(calls[0].headers["anthropic-beta"]).toBe("server-side-fallback-2026-07-01");

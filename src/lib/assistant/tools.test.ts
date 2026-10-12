@@ -5,6 +5,19 @@ import { parseToolInput, toCommand } from "./tools";
 const lamp: Device = { id: "a:lamp", integrationId: "a", name: "Lamp", room: "Bedroom", available: true, kind: "light", on: false, dimmable: false, brightness: 0 };
 const thermostat: Device = { id: "a:t", integrationId: "a", name: "Hall", room: null, available: true, kind: "thermostat", unit: "C", current: 20, target: 21, min: 10, max: 30, step: 0.5, mode: "heat", modes: ["off", "heat"], action: "idle" };
 
+const lock: Device = { id: "a:lock", integrationId: "a", name: "Front door", room: null, available: true, kind: "lock", state: "locked" };
+const garage: Device = { id: "a:g", integrationId: "a", name: "Garage", room: null, available: true, kind: "cover", coverClass: "garage", state: "closed", position: 0, canStop: true, canSetPosition: false };
+
+describe("assistant safety", () => {
+  it("locks and closes, but leaves unlocking and opening to a person", () => {
+    expect(toCommand(lock, { device_id: "a:lock", action: "lock" })).toEqual({ type: "lock", locked: true });
+    expect(toCommand(lock, { device_id: "a:lock", action: "unlock" })).toContain("only be unlocked from the dashboard");
+    expect(toCommand(garage, { device_id: "a:g", action: "close" })).toEqual({ type: "cover", action: "close" });
+    expect(toCommand(garage, { device_id: "a:g", action: "open" })).toContain("only be opened from the dashboard");
+    expect(toCommand(garage, { device_id: "a:g", action: "turn_on" })).toContain("only be opened");
+  });
+});
+
 describe("assistant tools", () => {
   it("parses JSON string arguments and rejects junk", () => {
     expect(parseToolInput("{\"device_id\":\"a:lamp\",\"action\":\"turn_on\"}")).toEqual({ device_id: "a:lamp", action: "turn_on" });

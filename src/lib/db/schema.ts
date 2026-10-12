@@ -1,6 +1,7 @@
 import { boolean, index, jsonb, pgTable, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
-import type { TileConfig } from "@/lib/dashboard/layout";
+import type { TileConfig, TileIcon } from "@/lib/dashboard/layout";
+import type { SceneAction } from "@/lib/scenes/types";
 
 const timestamp = (name: string) => pgTimestamp(name, { withTimezone: true, mode: "date" });
 const createdAt = () => timestamp("created_at").notNull().$defaultFn(() => new Date());
@@ -91,3 +92,13 @@ export const assistant = pgTable("assistant", {
   isDefault: boolean("is_default").notNull().default(false),
   createdAt: createdAt(),
 }, t => [index("assistant_user_idx").on(t.userId)]);
+
+export const scene = pgTable("scene", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  icon: text("icon").$type<TileIcon>(),
+  /** Run in order when the scene is activated. Device ids may point at devices that no longer exist; those are skipped. */
+  actions: jsonb("actions").$type<SceneAction[]>().notNull(),
+  createdAt: createdAt(),
+}, t => [index("scene_user_idx").on(t.userId)]);

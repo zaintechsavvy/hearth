@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/types";
-import type { HomeSnapshot } from "@/lib/home";
+import type { HomeSnapshot, SceneRun } from "@/lib/home";
+import { applyScene, type HearthScene } from "@/lib/scenes/types";
 
 const KEY = "/api/home";
 const STREAM = "/api/home/stream";
@@ -69,5 +70,31 @@ export function useHome() {
     }
   }, [mutate]);
 
-  return { home: data, error, isLoading, live, refresh: mutate, send };
+  const runScene = useCallback(async (scene: HearthScene): Promise<SceneRun> => {
+    inFlight.current++;
+    try {
+      let outcome: SceneRun = { ran: 0, failed: [] };
+      await mutate(async current => {
+        const response = await fetch(`/api/scenes/${scene.id}`, { method: "POST" });
+        const body = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(body?.error ?? "The scene did not run.");
+        outcome = body as SceneRun;
+        return current && { ...current, devices: applyScene(current.devices, scene.actions) };
+      }, {
+        optimisticData: current => current ? { ...current, devices: applyScene(current.devices, scene.actions) } : (current as unknown as HomeSnapshot),
+        rollbackOnError: true,
+        revalidate: false,
+      });
+      return outcome;
+    } finally {
+      inFlight.current--;
+      if (inFlight.current === 0 && held.current) {
+        const snapshot = held.current;
+        held.current = null;
+        void mutate(snapshot, { revalidate: false });
+      }
+    }
+  }, [mutate]);
+
+  return { home: data, error, isLoading, live, refresh: mutate, send, runScene };
 }

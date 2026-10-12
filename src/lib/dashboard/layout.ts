@@ -12,7 +12,8 @@ export const TILE_ICONS = [
   "fan", "air-vent", "wind", "plug", "power", "zap", "tv", "monitor", "speaker", "music", "gamepad",
   "coffee", "cooking-pot", "refrigerator", "microwave", "washing-machine", "bed", "sofa", "armchair", "bath",
   "shower", "door", "lock", "blinds", "heater", "flame", "snowflake", "droplets", "leaf", "flower", "router",
-  "car", "baby", "dog", "cat", "bell", "house",
+  "car", "baby", "dog", "cat", "bell", "house", "lock-open", "door-closed", "garage", "activity", "thermometer",
+  "battery", "gauge", "clapperboard", "play", "shield", "bell-ring", "camera",
 ] as const;
 export type TileIcon = (typeof TILE_ICONS)[number];
 
@@ -28,8 +29,10 @@ export interface TileConfig {
 export interface TileSource {
   id: string;
   kind: TileKind;
-  /** Lights and fans with a level get a slider template by default. */
+  /** Lights, fans, and covers with a level get a slider template by default. */
   adjustable?: boolean;
+  /** New tiles from this source start hidden, such as battery levels and diagnostic buttons. */
+  hidden?: boolean;
 }
 
 export interface SizeOption {
@@ -46,15 +49,22 @@ const LEVELLED: SizeOption[] = [...SWITCHABLE, { size: "1x2", label: "Slider" },
 export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   light: LEVELLED,
   fan: LEVELLED,
+  cover: LEVELLED,
   switch: SWITCHABLE,
+  lock: SWITCHABLE,
+  binary_sensor: SWITCHABLE,
+  sensor: SWITCHABLE,
+  event: SWITCHABLE,
+  scene: SWITCHABLE,
   thermostat: [{ size: "2x2", label: "Compact" }, { size: "3x3", label: "Large" }],
   camera: [{ size: "2x2", label: "Square" }, { size: "4x2", label: "Wide" }, { size: "4x3", label: "Large" }],
 };
 
-export const DEFAULT_ICON: Record<"light" | "fan" | "switch", TileIcon> = { light: "lightbulb", fan: "fan", switch: "plug" };
-export const DEFAULT_COLOR: Record<"light" | "fan" | "switch", TileColor> = { light: "amber", fan: "teal", switch: "green" };
+/** Kinds whose tiles take an icon and a colour. */
+export type StyledKind = Exclude<TileKind, "thermostat" | "camera">;
+export const isStyled = (kind: TileKind): kind is StyledKind => kind !== "thermostat" && kind !== "camera";
 
-const KIND_ORDER: TileKind[] = ["thermostat", "light", "fan", "switch", "camera"];
+const KIND_ORDER: TileKind[] = ["thermostat", "scene", "light", "fan", "switch", "lock", "cover", "binary_sensor", "sensor", "event", "camera"];
 
 export const cameraTileId = (cameraId: string) => `camera:${cameraId}`;
 
@@ -69,7 +79,15 @@ export function defaultSize(source: TileSource, isFirstOfKind: boolean): TileSiz
       return isFirstOfKind ? "3x3" : "2x2";
     case "camera":
       return "4x3";
+    case "lock":
+    case "event":
+    case "scene":
+      return "2x1";
+    case "cover":
+      return source.adjustable ? "1x2" : "2x1";
     case "switch":
+    case "sensor":
+    case "binary_sensor":
       return "1x1";
     default:
       return source.adjustable ? "1x2" : "1x1";
@@ -104,7 +122,7 @@ export function resolveLayout(saved: TileConfig[], sources: TileSource[]): TileC
   const added = sources
     .filter(source => !placed.has(source.id))
     .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind))
-    .map(source => ({ id: source.id, size: fallback(source) }));
+    .map((source): TileConfig => ({ id: source.id, size: fallback(source), ...(source.hidden ? { hidden: true } : {}) }));
 
   return [...kept, ...added];
 }

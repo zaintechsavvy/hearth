@@ -47,6 +47,8 @@ export class MatterServerClient {
   private readonly pending = new Map<string, Pending>();
   private sequence = 0;
   private readonly listeners = new Set<() => void>();
+  /** When each `node/endpoint` last fired an event, such as a button or doorbell press. */
+  readonly lastEvents = new Map<string, string>();
   info: MatterServerInfo | null = null;
 
   constructor(readonly url: string) {}
@@ -170,6 +172,11 @@ export class MatterServerClient {
       case "node_removed":
         this.nodes.delete(String(data));
         break;
+      case "node_event": {
+        const { node_id, endpoint_id } = data as { node_id: number | bigint; endpoint_id: number };
+        this.lastEvents.set(`${node_id}/${endpoint_id}`, new Date().toISOString());
+        break;
+      }
       case "attribute_updated": {
         const [nodeId, path, value] = data as [number | bigint, string, unknown];
         const node = this.nodes.get(String(nodeId));

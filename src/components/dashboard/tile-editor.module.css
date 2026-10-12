@@ -128,3 +128,9 @@
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
+
+.extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

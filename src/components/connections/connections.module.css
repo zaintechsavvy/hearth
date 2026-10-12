@@ -196,3 +196,10 @@
   text-decoration-color: var(--border-strong);
   text-underline-offset: 3px;
 }
+
+.rowNote {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  white-space: normal;
+}

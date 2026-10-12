@@ -1,6 +1,9 @@
-import { clamp, deviceId, type Device, type DeviceCommand, type TemperatureUnit, type ThermostatAction, type ThermostatMode } from "@/lib/devices/types";
+import {
+  clamp, deviceId, type BinarySensorClass, type CoverClass, type CoverState, type Device, type DeviceCommand, type EventClass, type LockState,
+  type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode,
+} from "@/lib/devices/types";
 import { homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
-import { IntegrationError, type Provider } from "./types";
+import { IntegrationError, countBy, type DeviceList, type Provider } from "./types";
 
 export interface HassState {
   entity_id: string;
@@ -12,11 +15,24 @@ interface HassConfig {
   unit_system?: { temperature?: string };
 }
 
-const SUPPORTED = new Set(["light", "switch", "input_boolean", "fan", "climate"]);
 const FAN_SET_SPEED = 1;
+const COVER = { open: 1, close: 2, setPosition: 4, stop: 8 };
 
 const HVAC_TO_MODE: Record<string, ThermostatMode> = { off: "off", heat: "heat", cool: "cool", heat_cool: "auto", auto: "auto" };
 const ACTIONS: Record<string, ThermostatAction> = { heating: "heating", preheating: "heating", cooling: "cooling", idle: "idle", off: "off" };
+const LOCK_STATES: Record<string, LockState> = { locked: "locked", unlocked: "unlocked", locking: "locking", unlocking: "unlocking", jammed: "jammed", open: "open", opening: "unlocking" };
+const COVER_CLASSES: Record<string, CoverClass> = { garage: "garage", door: "door", gate: "gate", blind: "blind", shutter: "blind", awning: "blind", shade: "shade", curtain: "curtain", window: "window" };
+const COVER_STATES: Record<string, CoverState> = { open: "open", closed: "closed", opening: "opening", closing: "closing", stopped: "stopped" };
+const BINARY_CLASSES: Record<string, BinarySensorClass> = {
+  door: "door", window: "window", garage_door: "garage", opening: "opening", motion: "motion", occupancy: "occupancy", presence: "occupancy",
+  moisture: "leak", smoke: "smoke", gas: "smoke", carbon_monoxide: "smoke",
+};
+const SENSOR_CLASSES: Record<string, SensorClass> = {
+  temperature: "temperature", humidity: "humidity", battery: "battery", illuminance: "illuminance", power: "power", energy: "energy",
+  carbon_dioxide: "co2", pm25: "pm25",
+};
+const EVENT_CLASSES: Record<string, EventClass> = { doorbell: "doorbell", button: "button", motion: "motion" };
+const SCENE_DOMAINS: Record<string, SceneVariant> = { scene: "scene", script: "script", button: "button", input_button: "button" };
 
 /** Areas are not in the REST state objects; a template renders `entity_id<TAB>area` for every entity in one request. */
 const AREA_TEMPLATE = "{% for s in states %}{{ s.entity_id }}\t{{ area_name(s.entity_id) or '' }}\n{% endfor %}";
@@ -31,19 +47,22 @@ export function parseAreas(rendered: string) {
 }
 
 const num = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
+const str = (value: unknown) => typeof value === "string" ? value : null;
+const timestamp = (value: string) => Number.isNaN(Date.parse(value)) ? null : value;
 
 export function mapHassState(integrationId: string, entity: HassState, unit: TemperatureUnit, room: string | null = null): Device | null {
   const domain = entity.entity_id.split(".")[0];
-  if (!SUPPORTED.has(domain)) return null;
   const { attributes } = entity;
+  const deviceClass = str(attributes.device_class);
   const base = {
     id: deviceId(integrationId, entity.entity_id),
     integrationId,
-    name: typeof attributes.friendly_name === "string" ? attributes.friendly_name : entity.entity_id,
+    name: str(attributes.friendly_name) ?? entity.entity_id,
     room,
-    available: entity.state !== "unavailable" && entity.state !== "unknown",
+    available: entity.state !== "unavailable",
   };
   const on = entity.state === "on";
+  const features = num(attributes.supported_features) ?? 0;
 
   switch (domain) {
     case "light": {
@@ -52,10 +71,11 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
       const brightness = num(attributes.brightness);
       return { ...base, kind: "light", on, dimmable, brightness: on && brightness !== null ? Math.round(brightness / 255 * 100) : 0 };
     }
-    case "fan": {
-      const features = num(attributes.supported_features) ?? 0;
+    case "switch":
+    case "input_boolean":
+      return { ...base, kind: "switch", on };
+    case "fan":
       return { ...base, kind: "fan", on, adjustable: (features & FAN_SET_SPEED) !== 0, speed: on ? num(attributes.percentage) ?? 100 : 0 };
-    }
     case "climate": {
       const hvacModes = Array.isArray(attributes.hvac_modes) ? attributes.hvac_modes.map(String) : [];
       const modes = [...new Set(hvacModes.map(mode => HVAC_TO_MODE[mode]).filter(Boolean))];
@@ -76,8 +96,34 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
         action: typeof attributes.hvac_action === "string" ? ACTIONS[attributes.hvac_action] ?? "idle" : null,
       };
     }
-    default:
-      return { ...base, kind: "switch", on };
+    case "lock":
+      return { ...base, kind: "lock", state: LOCK_STATES[entity.state] ?? "unknown" };
+    case "cover":
+      return {
+        ...base,
+        kind: "cover",
+        coverClass: COVER_CLASSES[deviceClass ?? ""] ?? "other",
+        state: COVER_STATES[entity.state] ?? "unknown",
+        position: num(attributes.current_position),
+        canStop: (features & COVER.stop) !== 0,
+        canSetPosition: (features & COVER.setPosition) !== 0,
+      };
+    case "binary_sensor":
+      return { ...base, kind: "binary_sensor", sensorClass: BINARY_CLASSES[deviceClass ?? ""] ?? "other", active: on };
+    case "sensor": {
+      const sensorClass = SENSOR_CLASSES[deviceClass ?? ""];
+      if (!sensorClass) return null;
+      const value = Number.parseFloat(entity.state);
+      return { ...base, kind: "sensor", sensorClass, value: Number.isFinite(value) ? value : null, unit: str(attributes.unit_of_measurement) };
+    }
+    case "camera":
+      return { ...base, kind: "camera", streamable: true };
+    case "event":
+      return { ...base, kind: "event", eventClass: EVENT_CLASSES[deviceClass ?? ""] ?? "other", last: timestamp(entity.state) };
+    default: {
+      const variant = SCENE_DOMAINS[domain];
+      return variant ? { ...base, kind: "scene", variant, available: true } : null;
+    }
   }
 }
 
@@ -140,7 +186,28 @@ export class HomeAssistantProvider implements Provider {
         this.request<HassState[]>("api/states"),
         this.areas(),
       ]);
-    return states.map(state => mapHassState(this.integrationId, state, unit, areas.get(state.entity_id) ?? null)).filter((device): device is Device => device !== null);
+    const devices: Device[] = [];
+    const skipped: string[] = [];
+    for (const state of states) {
+      const device = mapHassState(this.integrationId, state, unit, areas.get(state.entity_id) ?? null);
+      if (device) devices.push(device);
+      else skipped.push(state.entity_id.split(".")[0]);
+    }
+    return { devices, unsupported: countBy(skipped) } satisfies DeviceList;
+  }
+
+  /** Home Assistant already turns every camera it knows into MJPEG and JPEG, whatever the camera speaks. */
+  async camera(entityId: string, mode: "stream" | "snapshot", signal: AbortSignal) {
+    if (!entityId.startsWith("camera.")) throw new IntegrationError("That device is not a camera.");
+    try {
+      return await fetch(new URL(`api/${mode === "stream" ? "camera_proxy_stream" : "camera_proxy"}/${entityId}`, this.base), {
+        headers: { Authorization: `Bearer ${this.token}` },
+        cache: "no-store",
+        signal,
+      });
+    } catch {
+      throw new IntegrationError(`Could not reach Home Assistant at ${this.base.origin}.`);
+    }
   }
 
   private call(domain: string, service: string, data: Record<string, unknown>) {
@@ -172,6 +239,14 @@ export class HomeAssistantProvider implements Provider {
         const hvacMode = command.mode === "auto" ? modes.find(mode => mode === "heat_cool") ?? "auto" : command.mode;
         return void await this.call("climate", "set_hvac_mode", { ...target, hvac_mode: hvacMode });
       }
+      case "lock":
+        return void await this.call("lock", command.locked ? "lock" : "unlock", target);
+      case "cover":
+        return void await this.call("cover", `${command.action}_cover`, target);
+      case "coverPosition":
+        return void await this.call("cover", "set_cover_position", { ...target, position: clamp(Math.round(command.value), 0, 100) });
+      case "activate":
+        return void await this.call(domain, domain === "button" || domain === "input_button" ? "press" : "turn_on", target);
     }
   }
 

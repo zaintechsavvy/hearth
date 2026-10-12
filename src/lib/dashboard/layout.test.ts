@@ -40,6 +40,22 @@ describe("resolveLayout", () => {
   });
 });
 
+describe("defaults for new kinds", () => {
+  it("starts quiet sources hidden and gives locks and scenes cards", () => {
+    expect(resolveLayout([], [
+      { id: "lock", kind: "lock" },
+      { id: "battery", kind: "sensor", hidden: true },
+      { id: "scene", kind: "scene" },
+      { id: "blind", kind: "cover", adjustable: true },
+    ])).toEqual([
+      { id: "scene", size: "2x1" },
+      { id: "lock", size: "2x1" },
+      { id: "blind", size: "1x2" },
+      { id: "battery", size: "1x1", hidden: true },
+    ]);
+  });
+});
+
 describe("moveTile", () => {
   it("moves a tile to another tile's position", () => {
     const tiles = [{ id: "1", size: "1x1" as const }, { id: "2", size: "1x1" as const }, { id: "3", size: "1x1" as const }];

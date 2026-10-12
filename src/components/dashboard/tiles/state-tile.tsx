@@ -1,0 +1,201 @@
+"use client";
+
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { Button } from "@/components/arc/button/button";
+import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
+import { glassClass, glassSheetClass } from "@/components/glass/glass";
+import type { TileConfig } from "@/lib/dashboard/layout";
+import { defaultStyle } from "@/lib/dashboard/style";
+import {
+  isSensitive, type BinarySensorDevice, type CoverDevice, type DeviceCommand, type EventDevice, type LockDevice, type SceneDevice, type SensorDevice,
+} from "@/lib/devices/types";
+import { LevelPill } from "./level-pill";
+import { TILE_ICON_COMPONENTS } from "./tile-icons";
+import styles from "./tile.module.css";
+import level from "./level-tile.module.css";
+
+export type StateDevice = LockDevice | CoverDevice | BinarySensorDevice | SensorDevice | EventDevice | SceneDevice;
+
+interface StateTileProps {
+  device: StateDevice;
+  config: TileConfig;
+  onCommand: (command: DeviceCommand) => Promise<void>;
+  interactive?: boolean;
+}
+
+const LOCK_TEXT: Record<LockDevice["state"], string> = { locked: "Locked", unlocked: "Unlocked", locking: "Locking", unlocking: "Unlocking", jammed: "Jammed", open: "Open", unknown: "Unknown" };
+const COVER_TEXT: Record<CoverDevice["state"], string> = { open: "Open", closed: "Closed", opening: "Opening", closing: "Closing", stopped: "Stopped", unknown: "Unknown" };
+const BINARY_TEXT: Record<BinarySensorDevice["sensorClass"], [string, string]> = {
+  door: ["Open", "Closed"], window: ["Open", "Closed"], garage: ["Open", "Closed"], opening: ["Open", "Closed"],
+  motion: ["Motion", "Clear"], occupancy: ["Occupied", "Clear"], leak: ["Leak", "Dry"], smoke: ["Smoke", "Clear"], other: ["On", "Off"],
+};
+
+const subscribeMinute = (onChange: () => void) => {
+  const timer = setInterval(onChange, 30_000);
+  return () => clearInterval(timer);
+};
+const minute = () => Math.floor(Date.now() / 30_000);
+
+export function relativeTime(iso: string, now: number) {
+  const seconds = Math.max(0, Math.round((now - Date.parse(iso)) / 1000));
+  if (seconds < 60) return "just now";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function formatReading(device: SensorDevice) {
+  if (device.value === null) return "No reading";
+  const value = Number.isInteger(device.value) ? device.value : device.value.toFixed(1);
+  if (device.sensorClass === "temperature") return `${value}°`;
+  return device.unit === "%" ? `${value}%` : `${value}${device.unit ? ` ${device.unit}` : ""}`;
+}
+
+/** What the tile says, and whether it is in its noteworthy state (unlocked, open, motion, a recent ring). */
+function describe(device: StateDevice, now: number): { text: string; active: boolean } {
+  if (!device.available) return { text: "Unavailable", active: false };
+  switch (device.kind) {
+    case "lock":
+      return { text: LOCK_TEXT[device.state], active: device.state !== "locked" && device.state !== "locking" };
+    case "cover": {
+      const moving = device.state === "opening" || device.state === "closing";
+      const partly = device.position !== null && device.position > 0 && device.position < 100 && !moving;
+      return { text: partly ? `${device.position}% open` : COVER_TEXT[device.state], active: device.state !== "closed" };
+    }
+    case "binary_sensor":
+      return { text: BINARY_TEXT[device.sensorClass][device.active ? 0 : 1], active: device.active };
+    case "sensor":
+      return { text: formatReading(device), active: false };
+    case "event": {
+      if (!device.last) return { text: device.eventClass === "doorbell" ? "No rings yet" : "No presses yet", active: false };
+      const recent = now * 30_000 - Date.parse(device.last) < 120_000;
+      return { text: `${device.eventClass === "doorbell" ? "Rang" : "Pressed"} ${relativeTime(device.last, now * 30_000)}`, active: recent };
+    }
+    case "scene":
+      return { text: device.variant === "button" ? "Press" : "Run", active: false };
+  }
+}
+
+/** The command a tap sends, or null for read-only tiles. */
+function tapCommand(device: StateDevice): DeviceCommand | null {
+  switch (device.kind) {
+    case "lock":
+      return { type: "lock", locked: device.state !== "locked" && device.state !== "locking" };
+    case "cover":
+      return { type: "cover", action: device.state === "opening" && device.canStop ? "stop" : device.state === "closed" || device.state === "closing" ? "open" : "close" };
+    case "scene":
+      return { type: "activate" };
+    default:
+      return null;
+  }
+}
+
+function confirmText(device: StateDevice) {
+  return device.kind === "lock" ? { title: `Unlock ${device.name}?`, action: "Unlock" } : { title: `Open ${device.name}?`, action: "Open" };
+}
+
+export function StateTile({ device, config, onCommand, interactive = true }: StateTileProps) {
+  const now = useSyncExternalStore(subscribeMinute, minute, () => 0);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<DeviceCommand | null>(null);
+  const [ran, setRan] = useState(false);
+  const style = defaultStyle(device);
+  const Icon = TILE_ICON_COMPONENTS[config.icon ?? style.icon];
+  const color = config.color ?? style.color;
+  const { text, active } = describe(device, now);
+  const command = tapCommand(device);
+  const disabled = !device.available || !interactive || !command;
+
+  useEffect(() => {
+    if (!ran) return;
+    const timer = setTimeout(() => setRan(false), 2000);
+    return () => clearTimeout(timer);
+  }, [ran]);
+
+  const run = (next: DeviceCommand) => {
+    setError(null);
+    onCommand(next).then(() => device.kind === "scene" && setRan(true), cause => setError(cause instanceof Error ? cause.message : "The device did not respond."));
+  };
+  const request = (next: DeviceCommand) => isSensitive(device, next) ? setPending(next) : run(next);
+
+  const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-template": "toggle", "data-on": active || undefined };
+  const meta = error ?? (ran ? "Done" : `${device.room && config.size !== "1x1" ? `${device.room} · ` : ""}${text}`);
+  const isReading = device.kind === "sensor";
+  const confirm = pending && (
+    <Dialog open onOpenChange={open => !open && setPending(null)}>
+      <DialogContent className={glassSheetClass} title={confirmText(device).title} description="This opens your home. Make sure it is what you want.">
+        <div className={styles.confirmActions}>
+          <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+          <Button onClick={() => { run(pending); setPending(null); }}>{confirmText(device).action}</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (device.kind === "cover" && device.canSetPosition && (config.size === "1x2" || config.size === "2x2")) {
+    const commit = (value: number) => request({ type: "coverPosition", value });
+    const toggle = () => request(tapCommand(device) as DeviceCommand);
+    const pill = (className: string) => (
+      <LevelPill label={`${device.name} position`} value={device.position ?? 0} on={(device.position ?? 0) > 0} disabled={!device.available || !interactive} onToggle={toggle} onCommit={commit} className={className}>
+        {config.size === "1x2" ? shown => (
+          <span className={level.overlay} data-top={shown > 80 || undefined} data-bottom={shown > 26 || undefined}>
+            <span className={level.reading}>{shown === 0 ? "Closed" : `${shown}%`}</span>
+            <span className={level.foot}>
+              <span className={styles.icon} aria-hidden="true"><Icon size={22} strokeWidth={1.75} /></span>
+              <span className={styles.name}>{device.name}</span>
+            </span>
+          </span>
+        ) : undefined}
+      </LevelPill>
+    );
+    return (
+      <>
+        {config.size === "1x2" ? (
+          <div className={`${glassClass("panel")} ${styles.tile} ${level.tall}`} {...shared} data-template="slider" data-on={undefined}>{pill(level.fullPill)}</div>
+        ) : (
+          <div className={`${glassClass("panel")} ${styles.tile} ${level.large}`} {...shared} data-template="large">
+            <button type="button" className={level.largeBody} onClick={toggle} disabled={disabled} aria-label={`${device.name}, ${text}`}>
+              <span className={styles.badge}><span className={styles.icon} aria-hidden="true"><Icon size={24} strokeWidth={1.75} /></span></span>
+              <span className={styles.text}>
+                <span className={styles.name}>{device.name}</span>
+                <span className={`${styles.meta} ${error ? styles.error : ""}`}>{meta}</span>
+              </span>
+            </button>
+            {pill(level.sidePill)}
+          </div>
+        )}
+        {confirm}
+      </>
+    );
+  }
+
+  const Root = command ? "button" : "div";
+  return (
+    <>
+      <Root
+        {...(command ? { type: "button" as const, onClick: () => request(command), disabled, "aria-label": `${device.name}${device.room ? ` in ${device.room}` : ""}, ${text}` } : { role: "group", "aria-label": `${device.name}, ${text}` })}
+        className={`${glassClass("panel")} ${styles.tile} ${styles.press} ${isReading ? styles.reading : ""}`}
+        {...shared}
+        title={error ?? undefined}
+      >
+        {config.size === "1x1" ? (
+          <>
+            {isReading ? <span className={styles.value}>{text}</span> : <span className={styles.icon} aria-hidden="true"><Icon size={28} strokeWidth={1.75} /></span>}
+            <span className={styles.name}>{device.name}</span>
+          </>
+        ) : (
+          <>
+            <span className={styles.badge}><span className={styles.icon} aria-hidden="true"><Icon size={22} strokeWidth={1.75} /></span></span>
+            <span className={styles.text}>
+              <span className={styles.name}>{device.name}</span>
+              <span className={`${styles.meta} ${error ? styles.error : ""}`}>{meta}</span>
+            </span>
+          </>
+        )}
+      </Root>
+      {confirm}
+    </>
+  );
+}

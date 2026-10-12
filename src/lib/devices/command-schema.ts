@@ -8,4 +8,8 @@ export const deviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("fanSpeed"), value: z.number().min(0).max(100) }),
   z.object({ type: z.literal("targetTemperature"), value: z.number().min(-20).max(120) }),
   z.object({ type: z.literal("thermostatMode"), mode }),
+  z.object({ type: z.literal("lock"), locked: z.boolean() }),
+  z.object({ type: z.literal("cover"), action: z.enum(["open", "close", "stop"]) }),
+  z.object({ type: z.literal("coverPosition"), value: z.number().min(0).max(100) }),
+  z.object({ type: z.literal("activate") }),
 ]);

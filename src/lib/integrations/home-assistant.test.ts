@@ -30,4 +30,20 @@ describe("mapHassState", () => {
     expect(mapHassState("ha", { entity_id: "fan.bed", state: "on", attributes: { supported_features: 1, percentage: 33 } }, "C")).toMatchObject({ adjustable: true, speed: 33 });
     expect(mapHassState("ha", { entity_id: "fan.bath", state: "on", attributes: { supported_features: 0 } }, "C")).toMatchObject({ adjustable: false, speed: 100 });
   });
+
+  it("maps locks, covers, sensors, cameras, doorbells, and scenes", () => {
+    const map = (entity_id: string, state: string, attributes: Record<string, unknown> = {}) => mapHassState("ha", { entity_id, state, attributes }, "C", "Entry");
+    expect(map("lock.front", "locked")).toMatchObject({ kind: "lock", state: "locked", room: "Entry" });
+    expect(map("cover.garage", "opening", { device_class: "garage", supported_features: 11 })).toMatchObject({ kind: "cover", coverClass: "garage", state: "opening", canStop: true, canSetPosition: false });
+    expect(map("cover.blinds", "open", { device_class: "blind", current_position: 40, supported_features: 15 })).toMatchObject({ coverClass: "blind", position: 40, canSetPosition: true });
+    expect(map("binary_sensor.back_door", "on", { device_class: "door" })).toMatchObject({ kind: "binary_sensor", sensorClass: "door", active: true });
+    expect(map("sensor.hall_temperature", "21.5", { device_class: "temperature", unit_of_measurement: "°C" })).toMatchObject({ kind: "sensor", sensorClass: "temperature", value: 21.5, unit: "°C" });
+    expect(map("sensor.uptime", "12")).toBeNull();
+    expect(map("camera.porch", "streaming")).toMatchObject({ kind: "camera", streamable: true });
+    expect(map("event.doorbell", "2026-10-11T20:00:00.000+00:00", { device_class: "doorbell" })).toMatchObject({ kind: "event", eventClass: "doorbell", last: "2026-10-11T20:00:00.000+00:00" });
+    expect(map("event.doorbell", "unknown", { device_class: "doorbell" })).toMatchObject({ last: null });
+    expect(map("scene.movie_night", "2026-10-11T19:00:00+00:00")).toMatchObject({ kind: "scene", variant: "scene", available: true });
+    expect(map("button.restart", "unknown")).toMatchObject({ kind: "scene", variant: "button" });
+    expect(map("update.core", "off")).toBeNull();
+  });
 });

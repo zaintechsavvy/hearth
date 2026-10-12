@@ -116,3 +116,10 @@
 @media (prefers-reduced-motion: reduce) {
   .tile[data-state="live"] .dot { animation: none; }
 }
+
+.offline p {
+  max-width: 34ch;
+  padding-inline: var(--space-4);
+  text-align: center;
+  line-height: 1.45;
+}

@@ -1,6 +1,12 @@
 import { z } from "zod";
-import type { Device, DeviceCommand } from "@/lib/devices/types";
+import { isSensitive, type Device, type DeviceCommand } from "@/lib/devices/types";
 import { describeState } from "./describe";
+
+export interface ToolSpec {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
 
 export const CONTROL_TOOL = {
   name: "control_device",
@@ -9,21 +15,69 @@ export const CONTROL_TOOL = {
     type: "object",
     properties: {
       device_id: { type: "string", description: "The device id, exactly as it appears in the device list." },
-      action: { type: "string", enum: ["turn_on", "turn_off", "set_brightness", "set_fan_speed", "set_temperature", "set_mode"] },
-      value: { type: "number", description: "Brightness or fan speed from 0 to 100, or a target temperature in the thermostat's own unit." },
+      action: { type: "string", enum: ["turn_on", "turn_off", "set_brightness", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate"] },
+      value: { type: "number", description: "Brightness, fan speed, or cover position (0 closed, 100 open) from 0 to 100, or a target temperature in the thermostat's own unit." },
       mode: { type: "string", enum: ["off", "heat", "cool", "auto"], description: "The thermostat mode, for set_mode." },
     },
     required: ["device_id", "action"],
     additionalProperties: false,
   },
-} as const;
+} as const satisfies ToolSpec;
 
-const toolInput = z.object({
-  device_id: z.string(),
-  action: z.enum(["turn_on", "turn_off", "set_brightness", "set_fan_speed", "set_temperature", "set_mode"]),
-  value: z.number().optional(),
-  mode: z.enum(["off", "heat", "cool", "auto"]).optional(),
-});
+export const RUN_SCENE_TOOL = {
+  name: "run_scene",
+  description: "Run one of the person's saved Hearth scenes.",
+  parameters: {
+    type: "object",
+    properties: { scene_id: { type: "string", description: "The scene id, exactly as it appears in the scene list." } },
+    required: ["scene_id"],
+    additionalProperties: false,
+  },
+} as const satisfies ToolSpec;
+
+export const CREATE_SCENE_TOOL = {
+  name: "create_scene",
+  description: "Save a new Hearth scene that sets several devices at once. Only create one when the person asks for it.",
+  parameters: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "A short name, such as Movie night." },
+      devices: {
+        type: "array",
+        description: "What each device should do when the scene runs.",
+        items: CONTROL_TOOL.parameters,
+      },
+    },
+    required: ["name", "devices"],
+    additionalProperties: false,
+  },
+} as const satisfies ToolSpec;
+
+export const ASSISTANT_TOOLS: ToolSpec[] = [CONTROL_TOOL, RUN_SCENE_TOOL, CREATE_SCENE_TOOL];
+
+const sceneRun = z.object({ scene_id: z.string() });
+const sceneCreate = z.object({ name: z.string().min(1).max(60), devices: z.array(toolInputShape()).min(1).max(100) });
+
+function toolInputShape() {
+  return z.object({
+    device_id: z.string(),
+    action: z.enum(["turn_on", "turn_off", "set_brightness", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate"]),
+    value: z.number().optional(),
+    mode: z.enum(["off", "heat", "cool", "auto"]).optional(),
+  });
+}
+
+export function parseSceneRun(raw: unknown) {
+  const parsed = sceneRun.safeParse(typeof raw === "string" ? safeJson(raw) : raw);
+  return parsed.success ? parsed.data : "Pass scene_id.";
+}
+
+export function parseSceneCreate(raw: unknown) {
+  const parsed = sceneCreate.safeParse(typeof raw === "string" ? safeJson(raw) : raw);
+  return parsed.success ? parsed.data : "Pass a name and a devices list.";
+}
+
+const toolInput = toolInputShape();
 
 export type ToolInput = z.infer<typeof toolInput>;
 
@@ -42,11 +96,38 @@ function safeJson(text: string): unknown {
 
 /** Turns a tool call into a device command, or explains why it does not fit the device. */
 export function toCommand(device: Device, input: ToolInput): DeviceCommand | string {
+  const command = commandFor(device, input);
+  if (typeof command !== "string" && isSensitive(device, command)) {
+    return `For safety, ${device.name} can only be ${command.type === "lock" ? "unlocked" : "opened"} from the dashboard. Tell the person to do it there.`;
+  }
+  return command;
+}
+
+const TOGGLES = new Set(["light", "switch", "fan", "thermostat"]);
+
+function commandFor(device: Device, input: ToolInput): DeviceCommand | string {
   switch (input.action) {
     case "turn_on":
-      return { type: "power", on: true };
     case "turn_off":
-      return { type: "power", on: false };
+      if (device.kind === "cover") return { type: "cover", action: input.action === "turn_on" ? "open" : "close" };
+      if (device.kind === "lock") return { type: "lock", locked: input.action === "turn_off" };
+      if (device.kind === "scene" && input.action === "turn_on") return { type: "activate" };
+      if (!TOGGLES.has(device.kind)) return `${device.name} cannot be switched on or off.`;
+      return { type: "power", on: input.action === "turn_on" };
+    case "lock":
+    case "unlock":
+      return device.kind === "lock" ? { type: "lock", locked: input.action === "lock" } : `${device.name} is not a lock.`;
+    case "open":
+    case "close":
+    case "stop":
+      if (device.kind !== "cover") return `${device.name} is not a door, gate, or blind.`;
+      if (input.action === "stop" && !device.canStop) return `${device.name} cannot be stopped.`;
+      return { type: "cover", action: input.action };
+    case "set_position":
+      if (device.kind !== "cover" || !device.canSetPosition) return `${device.name} does not take a position.`;
+      return input.value === undefined ? "set_position needs a value from 0 to 100." : { type: "coverPosition", value: Math.max(0, Math.min(100, input.value)) };
+    case "activate":
+      return device.kind === "scene" ? { type: "activate" } : `${device.name} is not a scene, script, or button.`;
     case "set_brightness":
       if (device.kind !== "light" || !device.dimmable) return `${device.name} cannot be dimmed.`;
       return input.value === undefined ? "set_brightness needs a value from 0 to 100." : { type: "brightness", value: Math.max(0, Math.min(100, input.value)) };
@@ -63,7 +144,8 @@ export function toCommand(device: Device, input: ToolInput): DeviceCommand | str
   }
 }
 
-export function systemPrompt(devices: Device[]) {
+export function systemPrompt(devices: Device[], scenes: { id: string; name: string; actions: unknown[] }[] = []) {
+  const sceneList = scenes.length ? scenes.map(scene => `- id ${scene.id} | ${scene.name} | ${scene.actions.length} steps`).join("\n") : "(no saved scenes)";
   const list = devices.length
     ? devices.map(device => `- id ${device.id} | ${device.name} | ${device.room ?? "no room"} | ${device.kind} | ${describeState(device)}`).join("\n")
     : "(no devices are connected yet)";
@@ -71,8 +153,13 @@ export function systemPrompt(devices: Device[]) {
 
 Act on clear requests straight away, without asking for permission. Match devices by name and room. When the person means a group, such as "all the kitchen lights", change each matching device. If a request could mean more than one device and nothing says which, ask one short question instead of guessing.
 
-Temperatures use each thermostat's own unit. After acting, reply in one short sentence that says what changed. If a device refuses or a request is outside what the tool can do, say so plainly.
+Temperatures use each thermostat's own unit. Sensors, doorbells, and cameras are read only: answer questions about them from the list. You can lock doors and close garage doors and gates, but unlocking and opening are left to the person, so say they can do it from the dashboard. After acting, reply in one short sentence that says what changed. If a device refuses or a request is outside what the tool can do, say so plainly.
+
+Saved scenes run with run_scene. When the person asks for a scene, create it with create_scene using device ids from the list.
 
 Devices right now:
-${list}`;
+${list}
+
+Scenes:
+${sceneList}`;
 }
