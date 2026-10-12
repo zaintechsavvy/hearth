@@ -2,6 +2,7 @@ import { boolean, customType, doublePrecision, index, integer, jsonb, pgTable, p
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { DashboardPage, SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
 import type { ItemKind } from "@/lib/widgets/items";
+import { DEFAULT_ALERTS, type ActivityCategory, type AlertSettings } from "@/lib/activity-types";
 import type { SceneAction } from "@/lib/scenes/types";
 
 const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataType: () => "bytea" });
@@ -84,6 +85,8 @@ export const preference = pgTable("preference", {
    * only page, called Home, and it stays in step with the first page afterwards.
    */
   pages: jsonb("pages").$type<DashboardPage[]>().notNull().default([]),
+  /** Which alerts reach this person's phones and tablets. */
+  alerts: jsonb("alerts").$type<AlertSettings>().notNull().default(DEFAULT_ALERTS),
   /** Rooms the person made in Hearth, in their chosen order. Rooms from integrations are added to these when shown. */
   rooms: jsonb("rooms").$type<string[]>().notNull().default([]),
   updatedAt: updatedAt(),
@@ -172,3 +175,37 @@ export const reading = pgTable("reading", {
   at: timestamp("at").notNull(),
   value: doublePrecision("value").notNull(),
 }, t => [index("reading_device_idx").on(t.userId, t.deviceId, t.at)]);
+
+/** What happened at home and who did it: lights, locks, doors, sensors, the doorbell, and alerts sent. Kept 60 days. */
+export const activity = pgTable("activity", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  at: timestamp("at").notNull(),
+  deviceId: text("device_id"),
+  /** The device's name and room when it happened, so the log reads the same after a rename. */
+  name: text("name").notNull(),
+  room: text("room"),
+  /** What happened, as the end of a sentence: "unlocked", "opened", "rang". */
+  what: text("what").notNull(),
+  category: text("category").$type<ActivityCategory>().notNull(),
+  tone: text("tone", { enum: ["info", "warning", "alert"] }).notNull(),
+  /** Who or what did it, when Hearth knows: a person, the assistant, a scene, or an automation. */
+  by: text("by"),
+}, t => [index("activity_user_at_idx").on(t.userId, t.at)]);
+
+/** A browser or phone that asked for alerts. Removed when the push service says it is gone. */
+export const pushSubscription = pgTable("push_subscription", {
+  endpoint: text("endpoint").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  label: text("label").notNull(),
+  createdAt: createdAt(),
+}, t => [index("push_subscription_user_idx").on(t.userId)]);
+
+/** Values the server makes once and keeps, such as its Web Push keys. Sealed. */
+export const serverSecret = pgTable("server_secret", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  createdAt: createdAt(),
+});

@@ -4,6 +4,7 @@ import { integration } from "@/lib/db/schema";
 import type { Device } from "@/lib/devices/types";
 import { loadHome, type HomeSnapshot } from "@/lib/home";
 import { createProvider } from "@/lib/integrations/registry";
+import { listenAll } from "@/lib/live/bus";
 
 export interface HomeChange {
   userId: string;
@@ -21,6 +22,7 @@ interface Watch {
   userId: string;
   stops: Map<string, () => void>;
   devices: Map<string, Device> | null;
+  home: HomeSnapshot | null;
   pending?: ReturnType<typeof setTimeout>;
   running: boolean;
   again: boolean;
@@ -58,6 +60,11 @@ export function onTick(handler: TickHandler) {
 
 export const latestDevices = (userId: string) => state.watches.get(userId)?.devices ?? null;
 
+/** Every home as of its last look, for jobs that run on the clock rather than on a change. */
+export function* latestHomes(): Generator<[string, HomeSnapshot]> {
+  for (const [userId, watch] of state.watches) if (watch.home) yield [userId, watch.home];
+}
+
 async function evaluate(watch: Watch) {
   if (watch.running) {
     watch.again = true;
@@ -69,6 +76,7 @@ async function evaluate(watch: Watch) {
     const after = new Map(home.devices.map(device => [device.id, device]));
     const change = { userId: watch.userId, before: watch.devices, home, after, at: new Date() };
     watch.devices = after;
+    watch.home = home;
     watch.last = Date.now();
     for (const handler of state.changeHandlers) {
       try {
@@ -102,7 +110,7 @@ async function discover() {
   for (const row of rows) {
     seen.add(row.id);
     let watch = state.watches.get(row.userId);
-    if (!watch) state.watches.set(row.userId, watch = { userId: row.userId, stops: new Map(), devices: null, running: false, again: false, last: 0 });
+    if (!watch) state.watches.set(row.userId, watch = { userId: row.userId, stops: new Map(), devices: null, home: null, running: false, again: false, last: 0 });
     if (watch.stops.has(row.id)) continue;
     const provider = createProvider(row);
     const changed = () => schedule(watch);
@@ -139,6 +147,18 @@ export function startMonitor() {
   const safely = (run: () => Promise<unknown>) => () => void run().catch(error => console.error("Home monitor failed", error));
   safely(discover)();
   setInterval(safely(discover), DISCOVER_MS).unref?.();
+  let rediscover: ReturnType<typeof setTimeout> | undefined;
+  listenAll(topic => {
+    if (topic.startsWith("user:")) {
+      clearTimeout(rediscover);
+      rediscover = setTimeout(safely(discover), SETTLE_MS);
+      const watch = state.watches.get(topic.slice(5));
+      if (watch) schedule(watch);
+    } else if (topic.startsWith("integration:")) {
+      const id = topic.slice(12);
+      for (const watch of state.watches.values()) if (watch.stops.has(id)) schedule(watch);
+    }
+  });
   setInterval(() => {
     const now = Date.now();
     for (const watch of state.watches.values()) if (now - watch.last >= SWEEP_MS) schedule(watch);

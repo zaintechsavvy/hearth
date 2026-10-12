@@ -85,7 +85,7 @@ export async function askAssistant(userId: string, history: ChatTurn[]) {
     const command = toCommand(device, input);
     if (typeof command === "string") return command;
     try {
-      await runCommand(userId, device.id, command);
+      await runCommand(userId, device.id, command, "the assistant");
       actions.push({ deviceId: device.id, name: device.name, summary: SUMMARIES[input.action](input.value, input.mode), ok: true });
       return `Done. ${device.name} accepted ${input.action}${input.value !== undefined ? ` ${input.value}` : ""}${input.mode ? ` ${input.mode}` : ""}.`;
     } catch (error) {

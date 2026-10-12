@@ -9,7 +9,7 @@ export async function POST(request: Request, { params }: RouteContext<"/api/devi
   const command = deviceCommandSchema.safeParse(await request.json().catch(() => null));
   if (!command.success) return NextResponse.json({ error: "That command is not valid." }, { status: 400 });
   try {
-    await runCommand(user.id, decodeURIComponent((await params).id), command.data);
+    await runCommand(user.id, decodeURIComponent((await params).id), command.data, user.name.split(" ")[0]);
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     return NextResponse.json({ error: readableError(error) }, { status: 502 });

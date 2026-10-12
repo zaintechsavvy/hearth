@@ -64,6 +64,13 @@
       "when": 1791844818053,
       "tag": "0008_readings",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791845600526,
+      "tag": "0009_activity_alerts",
+      "breakpoints": true
     }
   ]
 }

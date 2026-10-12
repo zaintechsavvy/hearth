@@ -426,3 +426,17 @@ export async function reorderRooms(order: unknown): Promise<ActionResult> {
     return OK;
   });
 }
+
+const alertSettings = z.object({
+  doorbell: z.boolean(), safety: z.boolean(), locks: z.boolean(), timers: z.boolean(), medications: z.boolean(),
+  openMinutes: z.number().int().min(0).max(240),
+});
+
+export async function saveAlerts(input: unknown): Promise<ActionResult> {
+  const parsed = alertSettings.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Those alert settings are not valid." };
+  return authed(async userId => {
+    await savePreferences(userId, { alerts: parsed.data });
+    return OK;
+  });
+}

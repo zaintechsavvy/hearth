@@ -10,6 +10,8 @@ import { parseDeviceId, type Device, type DeviceCommand } from "@/lib/devices/ty
 import { createProvider } from "@/lib/integrations/registry";
 import { integrationTopic, publish } from "@/lib/live/bus";
 import { IntegrationError, type IntegrationKind } from "@/lib/integrations/types";
+import { noteCommand } from "@/lib/monitor/attribution";
+import { DEFAULT_ALERTS } from "@/lib/activity-types";
 
 export interface IntegrationStatus {
   id: string;
@@ -89,7 +91,7 @@ export async function getPreferences(userId: string) {
   const row = await db.query.preference.findFirst({ where: eq(preference.userId, userId) });
   const layout = row?.layout ?? [];
   const pages: DashboardPage[] = row?.pages.length ? row.pages : [{ id: HOME_PAGE_ID, name: "Home", layout }];
-  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [] };
+  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [], alerts: { ...DEFAULT_ALERTS, ...row?.alerts } };
 }
 
 export async function loadHome(userId: string): Promise<HomeSnapshot> {
@@ -123,11 +125,13 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
   return { devices, integrations, cameras, scenes, layout: preferences.pages[0].layout, pages: preferences.pages, rooms: orderedRooms(preferences.rooms, devices), widgets };
 }
 
-export async function runCommand(userId: string, id: string, command: DeviceCommand) {
+/** Sends a device a command. `by` says who, for the activity log: a person, the assistant, a scene, or an automation. */
+export async function runCommand(userId: string, id: string, command: DeviceCommand, by?: string) {
   const parsed = parseDeviceId(id);
   if (!parsed) throw new IntegrationError("Unknown device.");
   const row = await db.query.integration.findFirst({ where: and(eq(integration.id, parsed.integrationId), eq(integration.userId, userId)) });
   if (!row) throw new IntegrationError("Unknown device.");
+  if (by) noteCommand(userId, id, by);
   await createProvider(row).execute(parsed.nativeId, command);
   publish(integrationTopic(row.id));
 }
@@ -161,7 +165,7 @@ export async function runScene(userId: string, sceneId: string): Promise<SceneRu
   const home = await loadHome(userId);
   const devices = new Map(home.devices.map(device => [device.id, device]));
   const steps = row.actions.filter(action => devices.has(action.deviceId));
-  const results = await Promise.allSettled(steps.map(action => runCommand(userId, action.deviceId, action.command)));
+  const results = await Promise.allSettled(steps.map(action => runCommand(userId, action.deviceId, action.command, `the ${row.name} scene`)));
   return {
     ran: results.filter(result => result.status === "fulfilled").length,
     failed: results.flatMap((result, index) => result.status === "rejected" ? [{ name: devices.get(steps[index].deviceId)?.name ?? "A device", error: readableError(result.reason) }] : []),

@@ -11,8 +11,17 @@ const bus = registry.hearthBus ??= new EventEmitter().setMaxListeners(0);
 export const integrationTopic = (integrationId: string) => `integration:${integrationId}`;
 export const userTopic = (userId: string) => `user:${userId}`;
 
+const ANY = "*";
+
 export function publish(topic: string) {
   bus.emit(topic);
+  bus.emit(ANY, topic);
+}
+
+/** Every topic as it is published, for the home monitor. */
+export function listenAll(listener: (topic: string) => void) {
+  bus.on(ANY, listener);
+  return () => void bus.off(ANY, listener);
 }
 
 export function listen(topic: string, listener: () => void) {

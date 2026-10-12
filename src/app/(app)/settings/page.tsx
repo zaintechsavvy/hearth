@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { AccountSection } from "@/components/connections/account-section";
+import { AlertsSection } from "@/components/connections/alerts-section";
 import { AppearanceSection } from "@/components/connections/appearance-section";
 import { AssistantsSection } from "@/components/connections/assistants-section";
 import { CalendarsSection } from "@/components/connections/calendars-section";
@@ -13,7 +14,7 @@ import type { CameraSource } from "@/lib/cameras/stream-relay";
 import { unseal } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { assistant, calendar, camera, integration } from "@/lib/db/schema";
-import { streamRelayUrl } from "@/lib/home";
+import { getPreferences, streamRelayUrl } from "@/lib/home";
 import { publicConfig } from "@/lib/integrations/registry";
 import { requireUser } from "@/lib/session";
 
@@ -29,12 +30,13 @@ function hostOf(url: string) {
 
 export default async function ConnectionsPage() {
   const user = await requireUser();
-  const [integrations, cameras, relayUrl, assistants, calendars] = await Promise.all([
+  const [integrations, cameras, relayUrl, assistants, calendars, preferences] = await Promise.all([
     db.select().from(integration).where(eq(integration.userId, user.id)).orderBy(integration.createdAt),
     db.select().from(camera).where(eq(camera.userId, user.id)).orderBy(camera.createdAt),
     streamRelayUrl(user.id),
     db.select({ id: assistant.id, provider: assistant.provider, model: assistant.model, baseUrl: assistant.baseUrl, isDefault: assistant.isDefault }).from(assistant).where(eq(assistant.userId, user.id)).orderBy(assistant.createdAt),
     db.select().from(calendar).where(eq(calendar.userId, user.id)).orderBy(calendar.createdAt),
+    getPreferences(user.id),
   ]);
 
   return (
@@ -45,6 +47,7 @@ export default async function ConnectionsPage() {
       </header>
       <IntegrationsSection integrations={integrations.map(row => ({ id: row.id, name: row.name, kind: row.kind, ...publicConfig(row) }))} />
       <RoomsSection />
+      <AlertsSection alerts={preferences.alerts} />
       <AssistantsSection assistants={assistants} />
       <CamerasSection cameras={cameras.map(row => ({ id: row.id, name: row.name, host: hostOf(unseal<CameraSource>(row.source).url) }))} relayUrl={relayUrl} />
       <CalendarsSection calendars={calendars.map(row => ({ id: row.id, name: row.name, color: row.color, host: hostOf(unseal<string>(row.url)) }))} />

@@ -15,6 +15,7 @@ import styles from "./app-header.module.css";
 
 const LINKS = [
   { href: "/dashboard", label: "Home" },
+  { href: "/activity", label: "Activity" },
   { href: "/settings", label: "Settings" },
 ] as const;
 
