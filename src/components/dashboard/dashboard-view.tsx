@@ -11,8 +11,9 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Glass, glassClass } from "@/components/glass/glass";
 import { addDemoHome, deleteScene, saveLayout } from "@/lib/actions";
 import { cameraTileId, isStyled, resolveLayout, updateTile, type TileConfig, type TileSource } from "@/lib/dashboard/layout";
+import { hasLevel, tileSources } from "@/lib/dashboard/sources";
 import { defaultStyle } from "@/lib/dashboard/style";
-import { shownByDefault, type Device, type ThermostatDevice } from "@/lib/devices/types";
+import type { Device, ThermostatDevice } from "@/lib/devices/types";
 import { sceneTileId, type HearthScene } from "@/lib/scenes/types";
 import { CameraTile } from "./camera-tile";
 import { HiddenTilesDrawer } from "./hidden-tiles-drawer";
@@ -45,9 +46,10 @@ function summarize(devices: Device[]) {
   return parts.join(" · ");
 }
 
-const adjustable = (device: Device) => (device.kind === "light" && device.dimmable) || (device.kind === "fan" && device.adjustable) || (device.kind === "cover" && device.canSetPosition);
+const adjustable = hasLevel;
 
 export function DashboardView({ userName }: { userName: string }) {
+  const router = useRouter();
   const { home, error, isLoading, live, refresh, send, runScene } = useHome();
   const [sceneEditing, setSceneEditing] = useState<HearthScene | "new" | null>(null);
   const hour = useSyncExternalStore(subscribeNever, () => new Date().getHours(), () => null);
@@ -61,11 +63,7 @@ export function DashboardView({ userName }: { userName: string }) {
   const devices = useMemo(() => new Map((home?.devices ?? []).map(device => [device.id, device])), [home?.devices]);
   const cameras = useMemo(() => new Map((home?.cameras ?? []).map(camera => [cameraTileId(camera.id), camera])), [home?.cameras]);
   const scenes = useMemo(() => new Map((home?.scenes ?? []).map(scene => [sceneTileId(scene.id), scene])), [home?.scenes]);
-  const sources = useMemo<TileSource[]>(() => [
-    ...[...devices.values()].map(device => ({ id: device.id, kind: device.kind, adjustable: adjustable(device), hidden: !shownByDefault(device) })),
-    ...[...scenes.keys()].map(id => ({ id, kind: "scene" as const })),
-    ...[...cameras.keys()].map(id => ({ id, kind: "camera" as const })),
-  ], [devices, cameras, scenes]);
+  const sources = useMemo<TileSource[]>(() => home ? tileSources(home) : [], [home]);
   const tiles = useMemo(() => resolveLayout(draft ?? home?.layout ?? [], sources), [draft, home?.layout, sources]);
   const rooms = useMemo(() => [...new Set([...devices.values()].map(device => device.room).filter((value): value is string => Boolean(value)))].sort(), [devices]);
 
@@ -93,6 +91,9 @@ export function DashboardView({ userName }: { userName: string }) {
 
   const shownTiles = room === ALL_ROOMS || editing ? tiles : tiles.filter(tile => devices.get(tile.id)?.room === room);
   const failing = home.integrations.filter(integration => !integration.ok);
+  const placed = new Set(home.layout.map(tile => tile.id));
+  const curated = new Set(home.integrations.filter(integration => integration.curated).map(integration => integration.id));
+  const unreviewed = home.devices.filter(device => curated.has(device.integrationId) && !placed.has(device.id)).length;
   const hiddenCount = tiles.filter(tile => tile.hidden).length;
   const editable = customizing ? editableTile(tiles.find(tile => tile.id === customizing), devices, cameras, scenes) : null;
   const customizingScene = customizing ? scenes.get(customizing) ?? null : null;
@@ -139,6 +140,15 @@ export function DashboardView({ userName }: { userName: string }) {
       )}
 
       <DoorbellBanner devices={home.devices} />
+
+      {unreviewed > 0 && !editing && (
+        <Alert tone="info" title={`${unreviewed} new ${unreviewed === 1 ? "device" : "devices"} found`}>
+          <span className={styles.notice}>
+            They stay hidden until you choose them.
+            <Button variant="secondary" size="sm" onClick={() => router.push("/settings")}>Review</Button>
+          </span>
+        </Alert>
+      )}
 
       {failing.map(integration => (
         <Alert key={integration.id} tone="warning" title={`${integration.name} is not responding`}>{integration.error ?? ""}</Alert>

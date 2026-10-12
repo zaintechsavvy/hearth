@@ -11,7 +11,9 @@ import { seal } from "@/lib/crypto";
 import { TILE_COLORS, TILE_ICONS, TILE_SIZES } from "@/lib/dashboard/layout";
 import { db } from "@/lib/db";
 import { assistant, camera, integration, preference, scene } from "@/lib/db/schema";
-import { getPreferences, readableError, streamRelayUrl } from "@/lib/home";
+import { resolveLayout } from "@/lib/dashboard/layout";
+import { tileSources } from "@/lib/dashboard/sources";
+import { getPreferences, loadHome, readableError, streamRelayUrl } from "@/lib/home";
 import { saveScene } from "@/lib/scenes/service";
 import { MatterProvider } from "@/lib/integrations/matter/provider";
 import { createProvider } from "@/lib/integrations/registry";
@@ -20,6 +22,7 @@ import { publish, userTopic } from "@/lib/live/bus";
 import { getUser } from "@/lib/session";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+export type CreatedResult = { ok: true; id: string } | { ok: false; error: string };
 
 const httpUrl = z.url({ protocol: /^https?$/, error: "Enter a full address, like http://homeassistant.local:8123" });
 const wsUrl = z.url({ protocol: /^wss?$/, error: "Enter a WebSocket address, like ws://homeassistant.local:5580/ws" });
@@ -54,22 +57,47 @@ async function authed(run: (userId: string) => Promise<ActionResult>): Promise<A
 
 const firstIssue = (error: z.ZodError) => error.issues[0]?.message ?? "Check the form and try again.";
 
-/** Connects before saving, so a saved integration is one that worked at least once. */
-export async function addIntegration(input: unknown): Promise<ActionResult> {
+/** Connects before saving, so a saved integration is one that worked at least once. Returns its id for the device review. */
+export async function addIntegration(input: unknown): Promise<CreatedResult> {
   const parsed = integrationInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
-  return authed(async userId => {
+  const id = crypto.randomUUID();
+  const result = await authed(async userId => {
     const { name, ...config } = parsed.data;
-    const row = { id: crypto.randomUUID(), userId, kind: config.kind, name: name || INTEGRATION_LABELS[config.kind], config: seal(config satisfies IntegrationConfig), createdAt: new Date() };
+    const row = { id, userId, kind: config.kind, name: name || INTEGRATION_LABELS[config.kind], config: seal(config satisfies IntegrationConfig), curatedAt: null, createdAt: new Date() };
     await createProvider(row).check();
     await db.insert(integration).values(row);
     revalidatePath("/", "layout");
     return OK;
   });
+  return result.ok ? { ok: true, id } : result;
 }
 
 export async function addDemoHome(): Promise<ActionResult> {
-  return addIntegration({ kind: "demo", name: "Demo home" });
+  const result = await addIntegration({ kind: "demo", name: "Demo home" });
+  return result.ok ? OK : result;
+}
+
+/**
+ * Saves which of a connection's devices appear on the dashboard and marks the connection reviewed. Every one of
+ * its devices gets a layout entry, so devices found later are recognisably new.
+ */
+export async function chooseDevices(integrationId: string, shown: unknown): Promise<ActionResult> {
+  const ids = z.array(z.string().max(300)).max(5000).safeParse(shown);
+  if (!ids.success) return { ok: false, error: "That selection is not valid." };
+  return authed(async userId => {
+    const row = await db.query.integration.findFirst({ where: and(eq(integration.id, integrationId), eq(integration.userId, userId)) });
+    if (!row) return { ok: false, error: "That connection no longer exists." };
+    const home = await loadHome(userId);
+    const visible = new Set(ids.data);
+    const tiles = resolveLayout(home.layout, tileSources(home)).map(tile => {
+      const device = home.devices.find(item => item.id === tile.id);
+      return device?.integrationId === integrationId ? { ...tile, hidden: !visible.has(tile.id) } : tile;
+    });
+    await savePreferences(userId, { layout: tiles });
+    await db.update(integration).set({ curatedAt: new Date() }).where(eq(integration.id, integrationId));
+    return OK;
+  });
 }
 
 export async function removeIntegration(id: string): Promise<ActionResult> {

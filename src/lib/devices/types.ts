@@ -10,6 +10,8 @@ interface DeviceBase {
   /** The room or area, when the integration knows it. */
   room: string | null;
   available: boolean;
+  /** A settings or diagnostic entity, or one hidden in its source, such as "Restart" or "Firmware". */
+  auxiliary?: boolean;
 }
 
 export interface LightDevice extends DeviceBase {
@@ -133,6 +135,7 @@ const QUIET_SENSORS: SensorClass[] = ["battery", "power", "energy", "other"];
 
 /** Whether a new device starts on the dashboard; the rest start hidden and can be shown from Edit. */
 export function shownByDefault(device: Device) {
+  if (device.auxiliary || !device.available) return false;
   switch (device.kind) {
     case "sensor":
       return !QUIET_SENSORS.includes(device.sensorClass);

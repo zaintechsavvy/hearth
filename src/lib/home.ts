@@ -18,6 +18,8 @@ export interface IntegrationStatus {
   deviceCount: number;
   /** Things the integration has that Hearth cannot show yet, counted by type. */
   unsupported: Record<string, number>;
+  /** The person has chosen which devices to show; new ones wait for review. */
+  curated: boolean;
 }
 
 export interface HomeSnapshot {
@@ -63,6 +65,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
       error: ok ? null : readableError(result.reason),
       deviceCount: ok ? result.value.devices.length : 0,
       unsupported: ok ? result.value.unsupported : {},
+      curated: row.curatedAt !== null,
     };
   });
   return { devices, integrations, cameras, scenes, layout: preferences.layout };

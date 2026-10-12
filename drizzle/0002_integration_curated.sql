@@ -1,0 +1,1 @@
+ALTER TABLE "integration" ADD COLUMN "curated_at" timestamp with time zone;

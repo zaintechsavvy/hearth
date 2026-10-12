@@ -21,7 +21,8 @@ const KINDS = [
 interface AddIntegrationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdded: () => void;
+  /** Called with the new connection, so its devices can be reviewed straight away. */
+  onAdded: (id: string, kind: IntegrationKind) => void;
 }
 
 export function AddIntegrationDialog({ open, onOpenChange, onAdded }: AddIntegrationDialogProps) {
@@ -38,7 +39,7 @@ export function AddIntegrationDialog({ open, onOpenChange, onAdded }: AddIntegra
     setPending(false);
     if (!result.ok) return setError(result.error);
     onOpenChange(false);
-    onAdded();
+    onAdded(result.id, kind);
   }
 
   return (

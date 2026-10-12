@@ -190,10 +190,16 @@ export class HomeAssistantProvider implements Provider {
     const skipped: string[] = [];
     for (const state of states) {
       const device = mapHassState(this.integrationId, state, unit, areas.get(state.entity_id) ?? null);
-      if (device) devices.push(device);
-      else skipped.push(state.entity_id.split(".")[0]);
+      if (!device) skipped.push(state.entity_id.split(".")[0]);
+      else devices.push(this.live.auxiliary.has(state.entity_id) ? { ...device, auxiliary: true } : device);
     }
     return { devices, unsupported: countBy(skipped) } satisfies DeviceList;
+  }
+
+  /** Waits briefly for the WebSocket mirror so diagnostic and settings entities are marked before anyone chooses. */
+  async review() {
+    await this.live.waitUntilReady(5000);
+    return this.listDevices();
   }
 
   /** Home Assistant already turns every camera it knows into MJPEG and JPEG, whatever the camera speaks. */

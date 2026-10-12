@@ -60,6 +60,8 @@ export const integration = pgTable("integration", {
   name: text("name").notNull(),
   /** Sealed with `lib/crypto`: holds URLs and access tokens. */
   config: text("config").notNull(),
+  /** When the person last chose which of its devices to show. After that, newly found devices start hidden. */
+  curatedAt: timestamp("curated_at"),
   createdAt: createdAt(),
 }, t => [index("integration_user_idx").on(t.userId)]);
 

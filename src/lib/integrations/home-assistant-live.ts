@@ -8,6 +8,10 @@ type Message =
   | { type: "event"; id: number; event: { event_type: string; data: { entity_id: string; new_state: HassState | null } } }
   | { type: "pong"; id: number };
 
+interface DisplayRegistry {
+  entities: { ei: string; ec?: number; hb?: boolean }[];
+}
+
 /** Only domains Hearth shows wake listeners; the rest (updates, numbers, device trackers) change often and matter to no tile. */
 const WATCHED = new Set(["light", "switch", "input_boolean", "fan", "climate", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", "script", "button", "input_button"]);
 const RECONNECT_MIN_MS = 2000;
@@ -28,6 +32,8 @@ export class HomeAssistantLive {
   private socket: WebSocket | null = null;
   private sequence = 0;
   private readonly states = new Map<string, HassState>();
+  /** Entities Home Assistant files under settings or diagnostics, or hides. */
+  readonly auxiliary = new Set<string>();
   private readonly listeners = new Set<() => void>();
   private ready = false;
   private retryMs = RECONNECT_MIN_MS;
@@ -41,6 +47,20 @@ export class HomeAssistantLive {
   /** The latest states, or null until the first full load has arrived. */
   snapshot(): HassState[] | null {
     return this.ready ? [...this.states.values()] : null;
+  }
+
+  /** Connects for a moment if needed and resolves once states have loaded, or after the timeout. */
+  waitUntilReady(timeoutMs: number) {
+    if (this.ready) return Promise.resolve(true);
+    return new Promise<boolean>(resolve => {
+      const done = (value: boolean) => {
+        clearTimeout(timer);
+        stop();
+        resolve(value);
+      };
+      const stop = this.subscribe(() => this.ready && done(true));
+      const timer = setTimeout(() => done(this.ready), timeoutMs);
+    });
   }
 
   subscribe(listener: () => void) {
@@ -73,7 +93,7 @@ export class HomeAssistantLive {
       return;
     }
     this.socket = socket;
-    const pending = new Map<number, "states" | "config" | "subscribe">();
+    const pending = new Map<number, "states" | "config" | "subscribe" | "registry">();
 
     socket.addEventListener("message", event => {
       const message = JSON.parse(String(event.data)) as Message;
@@ -88,6 +108,7 @@ export class HomeAssistantLive {
           return;
         case "auth_ok":
           pending.set(this.send({ type: "get_config" }), "config");
+          pending.set(this.send({ type: "config/entity_registry/list_for_display" }), "registry");
           pending.set(this.send({ type: "subscribe_events", event_type: "state_changed" }), "subscribe");
           pending.set(this.send({ type: "get_states" }), "states");
           return;
@@ -95,6 +116,10 @@ export class HomeAssistantLive {
           const kind = pending.get(message.id);
           pending.delete(message.id);
           if (!message.success) return;
+          if (kind === "registry") {
+            this.auxiliary.clear();
+            for (const entry of (message.result as DisplayRegistry).entities ?? []) if (entry.ec !== undefined || entry.hb) this.auxiliary.add(entry.ei);
+          }
           if (kind === "config") this.unit = (message.result as { unit_system?: { temperature?: string } })?.unit_system?.temperature === "°F" ? "F" : "C";
           if (kind === "states") {
             this.states.clear();

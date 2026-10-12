@@ -15,6 +15,13 @@
       "when": 1791777403888,
       "tag": "0001_scenes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791778640476,
+      "tag": "0002_integration_curated",
+      "breakpoints": true
     }
   ]
 }

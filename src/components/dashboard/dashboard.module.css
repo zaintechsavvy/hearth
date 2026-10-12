@@ -152,3 +152,10 @@
 @media (prefers-reduced-motion: reduce) {
   .live[data-live]::before { animation: none; }
 }
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}

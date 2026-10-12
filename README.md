@@ -119,7 +119,7 @@ If you connect both Home Assistant and its Matter Server, each Matter device app
 1. In Home Assistant, open your profile, then **Security**, then **Create token** under long-lived access tokens.
 2. In Hearth, open **Settings**, choose **Add** under Connections, then **Home Assistant**, and paste the address (`http://homeassistant.local:8123`) and the token.
 
-Hearth checks the connection before saving it.
+Hearth checks the connection before saving it, then lists everything it found so you can choose what goes on the dashboard. Each row shows the device's icon, room, type, and current state. Hearth ticks its suggestions to start: entries Home Assistant files under settings or diagnostics (identify buttons, firmware and battery entities, problem sensors), hidden entities, and unavailable ones start unticked. Search, filter by type, or tick a whole room at once. Reopen the list any time from **Choose devices** in Settings. Devices you add to Home Assistant later stay off the dashboard until you review them; Hearth tells you when there are new ones.
 
 ### Matter
 

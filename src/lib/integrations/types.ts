@@ -17,6 +17,8 @@ export interface Provider {
   /** Throws an `IntegrationError` with a readable message when the service cannot be reached. */
   check(): Promise<void>;
   listDevices(): Promise<DeviceList>;
+  /** A complete, careful listing for choosing what to show. May take a little longer than `listDevices`. */
+  review?(): Promise<DeviceList>;
   execute(nativeId: string, command: DeviceCommand): Promise<void>;
   /** Starts pushing changes for as long as someone listens. Calls `onChange` whenever any device may have changed. */
   subscribe?(onChange: () => void): () => void;
