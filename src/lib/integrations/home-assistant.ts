@@ -1,4 +1,5 @@
 import { clamp, deviceId, type Device, type DeviceCommand, type TemperatureUnit, type ThermostatAction, type ThermostatMode } from "@/lib/devices/types";
+import { homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
 import { IntegrationError, type Provider } from "./types";
 
 export interface HassState {
@@ -87,10 +88,26 @@ function roundTo(value: number, step: number) {
 export class HomeAssistantProvider implements Provider {
   private readonly base: URL;
   private readonly token: string;
+  private readonly live: HomeAssistantLive;
+  private static readonly areaCache = new Map<string, { at: number; areas: Map<string, string> }>();
 
   constructor(private readonly integrationId: string, config: { url: string; token: string }) {
     this.base = new URL(config.url.endsWith("/") ? config.url : `${config.url}/`);
     this.token = config.token;
+    this.live = homeAssistantLive(this.base.toString(), this.token, integrationId);
+  }
+
+  subscribe(onChange: () => void) {
+    return this.live.subscribe(onChange);
+  }
+
+  /** Areas change rarely and cost a template render, so they are cached for a few minutes. */
+  private async areas() {
+    const cached = HomeAssistantProvider.areaCache.get(this.integrationId);
+    if (cached && Date.now() - cached.at < 300_000) return cached.areas;
+    const areas = await this.request<string>("api/template", { method: "POST", body: JSON.stringify({ template: AREA_TEMPLATE }) }, "text").then(parseAreas, () => new Map<string, string>());
+    HomeAssistantProvider.areaCache.set(this.integrationId, { at: Date.now(), areas });
+    return areas;
   }
 
   private async request<T>(path: string, init?: RequestInit, parse: "json" | "text" = "json"): Promise<T> {
@@ -115,12 +132,14 @@ export class HomeAssistantProvider implements Provider {
   }
 
   async listDevices() {
-    const [config, states, areas] = await Promise.all([
-      this.request<HassConfig>("api/config"),
-      this.request<HassState[]>("api/states"),
-      this.request<string>("api/template", { method: "POST", body: JSON.stringify({ template: AREA_TEMPLATE }) }, "text").then(parseAreas, () => new Map<string, string>()),
-    ]);
-    const unit: TemperatureUnit = config.unit_system?.temperature === "°F" ? "F" : "C";
+    const mirrored = this.live.snapshot();
+    const [unit, states, areas] = mirrored
+      ? [this.live.unit, mirrored, await this.areas()] as const
+      : await Promise.all([
+        this.request<HassConfig>("api/config").then((config): TemperatureUnit => config.unit_system?.temperature === "°F" ? "F" : "C"),
+        this.request<HassState[]>("api/states"),
+        this.areas(),
+      ]);
     return states.map(state => mapHassState(this.integrationId, state, unit, areas.get(state.entity_id) ?? null)).filter((device): device is Device => device !== null);
   }
 

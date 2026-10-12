@@ -46,6 +46,7 @@ export class MatterServerClient {
   private readonly nodes = new Map<string, MatterNode>();
   private readonly pending = new Map<string, Pending>();
   private sequence = 0;
+  private readonly listeners = new Set<() => void>();
   info: MatterServerInfo | null = null;
 
   constructor(readonly url: string) {}
@@ -53,6 +54,17 @@ export class MatterServerClient {
   connect(): Promise<void> {
     if (this.socket?.readyState === WebSocket.OPEN) return Promise.resolve();
     return this.connecting ??= this.open().finally(() => { this.connecting = null; });
+  }
+
+  /** Listens for node and attribute changes, connecting if needed. */
+  subscribe(listener: () => void) {
+    this.listeners.add(listener);
+    this.connect().catch(() => undefined);
+    return () => void this.listeners.delete(listener);
+  }
+
+  private notify() {
+    for (const listener of this.listeners) listener();
   }
 
   async getNodes(): Promise<MatterNode[]> {
@@ -99,6 +111,7 @@ export class MatterServerClient {
           for (const node of nodes) this.nodes.set(String(node.node_id), node);
           clearTimeout(timer);
           resolve();
+          this.notify();
         }, error => {
           socket.close();
           fail(error instanceof Error ? error.message : "The Matter server refused to stream updates.");
@@ -108,6 +121,7 @@ export class MatterServerClient {
       socket.addEventListener("close", () => {
         if (this.socket === socket) this.socket = null;
         this.nodes.clear();
+        this.notify();
         for (const pending of this.pending.values()) {
           clearTimeout(pending.timer);
           pending.reject(new IntegrationError("The connection to the Matter server closed."));
@@ -162,7 +176,10 @@ export class MatterServerClient {
         if (node) node.attributes[path] = value;
         break;
       }
+      default:
+        return;
     }
+    this.notify();
   }
 }
 

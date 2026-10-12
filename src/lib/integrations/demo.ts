@@ -4,6 +4,8 @@ import { IntegrationError, type Provider } from "./types";
 interface DemoHome {
   devices: Map<string, Device>;
   updatedAt: number;
+  listeners: Set<() => void>;
+  timer?: ReturnType<typeof setInterval>;
 }
 
 const registry = globalThis as unknown as { hearthDemoHomes?: Map<string, DemoHome> };
@@ -12,6 +14,8 @@ const homes = registry.hearthDemoHomes ??= new Map();
 /** Degrees per second the simulated room moves toward its setpoint. */
 const HEATING_RATE = 0.02;
 const AMBIENT = 20.5;
+/** How often a watched demo home advances its simulation and pushes the result. */
+const TICK_MS = 5000;
 
 export function seedDemoDevices(integrationId: string): Device[] {
   const base = (nativeId: string, name: string, room: string) => ({ id: deviceId(integrationId, nativeId), integrationId, name, room, available: true });
@@ -43,13 +47,17 @@ function simulate(home: DemoHome, now: number) {
   }
 }
 
+function notify(home: DemoHome) {
+  for (const listener of home.listeners) listener();
+}
+
 export class DemoProvider implements Provider {
   constructor(private readonly integrationId: string) {}
 
   private home() {
     let home = homes.get(this.integrationId);
     if (!home) {
-      home = { devices: new Map(seedDemoDevices(this.integrationId).map(device => [device.id, device])), updatedAt: Date.now() };
+      home = { devices: new Map(seedDemoDevices(this.integrationId).map(device => [device.id, device])), updatedAt: Date.now(), listeners: new Set() };
       homes.set(this.integrationId, home);
     }
     simulate(home, Date.now());
@@ -57,6 +65,23 @@ export class DemoProvider implements Provider {
   }
 
   async check() {}
+
+  subscribe(onChange: () => void) {
+    const home = this.home();
+    home.listeners.add(onChange);
+    home.timer ??= setInterval(() => {
+      const before = JSON.stringify([...home.devices.values()]);
+      simulate(home, Date.now());
+      if (JSON.stringify([...home.devices.values()]) !== before) notify(home);
+    }, TICK_MS);
+    return () => {
+      home.listeners.delete(onChange);
+      if (home.listeners.size === 0 && home.timer) {
+        clearInterval(home.timer);
+        home.timer = undefined;
+      }
+    };
+  }
 
   async listDevices() {
     return [...this.home().devices.values()];
@@ -69,5 +94,6 @@ export class DemoProvider implements Provider {
     if (!device) throw new IntegrationError("That demo device does not exist.");
     await new Promise(resolve => setTimeout(resolve, 180));
     home.devices.set(id, applyCommand(device, command));
+    notify(home);
   }
 }

@@ -54,7 +54,7 @@ export function AddIntegrationDialog({ open, onOpenChange, onAdded }: AddIntegra
             </>
           )}
           {kind === "matter" && (
-            <Input key="matter-url" label="Matter server address" name="url" placeholder="ws://homeassistant.local:5580/ws" required autoComplete="off" description="Home Assistant users: enable the Matter Server add-on and expose port 5580. Devices it controls already appear through Home Assistant, so connect one or the other to avoid seeing them twice." />
+            <Input key="matter-url" label="Matter server address" name="url" placeholder="ws://homeassistant.local:5580/ws" required autoComplete="off" description="Home Assistant users: in Settings, Apps, Matter Server, Configuration, show disabled ports and set 5580. Devices it controls already appear through Home Assistant, so connect one or the other to avoid seeing them twice." />
           )}
           <Alert tone="danger" title="Could not connect" open={Boolean(error)}>{error ?? ""}</Alert>
           <div className={styles.formActions}>

@@ -42,7 +42,7 @@ function summarize(devices: Device[]) {
 const adjustable = (device: Device) => (device.kind === "light" && device.dimmable) || (device.kind === "fan" && device.adjustable);
 
 export function DashboardView({ userName }: { userName: string }) {
-  const { home, error, isLoading, refresh, send } = useHome();
+  const { home, error, isLoading, live, refresh, send } = useHome();
   const hour = useSyncExternalStore(subscribeNever, () => new Date().getHours(), () => null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<TileConfig[] | null>(null);
@@ -101,7 +101,10 @@ export function DashboardView({ userName }: { userName: string }) {
       <header className={styles.intro}>
         <div>
           <h1 className={styles.title}>{greeting(hour, userName)}</h1>
-          <p className={styles.summary}>{summarize(home.devices)}</p>
+          <p className={styles.summary}>
+            {summarize(home.devices)}
+            <span className={styles.live} data-live={live || undefined} title={live ? "Updates arrive as they happen" : "Connecting to live updates"}>{live ? "Live" : "Connecting"}</span>
+          </p>
         </div>
         <div className={styles.actions}>
           {editing ? (

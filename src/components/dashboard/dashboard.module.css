@@ -122,3 +122,33 @@
   font-size: var(--text-sm);
   font-weight: 500;
 }
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.live[data-live]::before {
+  background: var(--success);
+  animation: live 2.4s var(--ease-standard) infinite;
+}
+
+@keyframes live {
+  50% { opacity: .35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live[data-live]::before { animation: none; }
+}

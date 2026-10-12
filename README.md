@@ -105,7 +105,7 @@ Hearth checks the connection before saving it.
 
 ### Matter
 
-- **Home Assistant OS**: install the **Matter Server** add-on, open its configuration, and expose port 5580. Use `ws://<home-assistant-ip>:5580/ws` as the address.
+- **Home Assistant OS**: open **Settings**, then **Apps** (called Add-ons before Home Assistant 2026.2), then **Matter Server**, then the **Configuration** tab. Under **Network**, choose **Show disabled ports**, enter `5580` for the WebSocket server port, save, and restart the app. Use `ws://<home-assistant-ip>:5580/ws` as the address.
 - **Standalone**: run `ghcr.io/matter-js/matterjs-server:stable` with host networking.
 
 ### Cameras
@@ -148,7 +148,7 @@ The best way to learn this codebase is to follow one request end to end. Here is
 | Tiles and the vertical slider | `src/components/dashboard/tiles` |
 | Assistant (prompt, tool, provider adapters) | `src/lib/assistant`, UI in `src/components/assistant` |
 | Server actions (forms) | `src/lib/actions.ts` |
-| API routes (polling, commands, assistant) | `src/app/api` |
+| API routes (snapshot, live stream, commands, assistant) | `src/app/api` |
 | Camera signalling | `src/app/api/cameras/[id]/webrtc/route.ts` and `src/components/dashboard/camera-tile.tsx` |
 | Liquid glass surfaces and wallpapers | `src/components/glass` |
 
@@ -184,9 +184,15 @@ Voice input uses the browser's Web Speech API, and a spoken request gets a spoke
 
 Browsers cannot play RTSP. go2rtc reads the camera and offers it as WebRTC. The browser creates an SDP offer, Hearth's server forwards it to go2rtc and returns the answer, and the video then flows straight from go2rtc to the browser. The camera password stays on the server.
 
-### Polling with optimistic updates
+### Live updates
 
-The dashboard polls `/api/home` every four seconds with [SWR](https://swr.vercel.app). When you flip a switch, the UI updates immediately and rolls back if the device refuses (`src/components/dashboard/use-home.ts`).
+The dashboard does not poll. The browser opens one Server-Sent Events stream (`/api/home/stream`), and the server keeps a push connection to each integration for as long as someone is watching:
+
+- **Home Assistant**: its WebSocket API (`/api/websocket`). Hearth authenticates with the same token, loads every state with `get_states`, subscribes to `state_changed`, and keeps an in-memory mirror, so a light switched from the Home Assistant app or a wall switch reaches the dashboard in a fraction of a second.
+- **Matter Server**: the `attribute_updated` and `node_updated` events it already streams.
+- **Demo home**: its own simulation.
+
+Each push sends a fresh snapshot, throttled to a few per second, to every open dashboard. Changes made in Hearth (a tile press, the assistant, a new connection) publish too, so two open tabs or a wall tablet stay in sync. Taps still update instantly and roll back if a device refuses (`src/components/dashboard/use-home.ts`). If the stream drops, the browser reconnects on its own and polls every 15 seconds until it is back. The pieces are `src/lib/live/bus.ts`, `src/lib/integrations/home-assistant-live.ts`, and `src/app/api/home/stream/route.ts`.
 
 ## UI
 
@@ -209,9 +215,8 @@ The dashboard polls `/api/home` every four seconds with [SWR](https://swr.vercel
 
 Good exercises if you are learning with this project:
 
-1. **Live updates without polling**: subscribe to Home Assistant's WebSocket API (`/api/websocket`) on the server and stream changes to the browser with Server-Sent Events.
-2. **Scenes**: a tile that sends several commands at once, and an assistant tool to create them.
-3. **Colour lights**: extend `LightDevice` with colour temperature and map it for Home Assistant and Matter (cluster 768).
-4. **Several dashboards**: one layout per room or per wall tablet.
-5. **Household sharing**: let several accounts share one set of connections.
-6. **A new integration**: Philips Hue's local API is a good first one.
+1. **Scenes**: a tile that sends several commands at once, and an assistant tool to create them.
+2. **Colour lights**: extend `LightDevice` with colour temperature and map it for Home Assistant and Matter (cluster 768).
+3. **Several dashboards**: one layout per room or per wall tablet.
+4. **Household sharing**: let several accounts share one set of connections.
+5. **A new integration**: Philips Hue's local API is a good first one.

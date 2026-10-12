@@ -15,6 +15,7 @@ import { getPreferences, readableError, streamRelayUrl } from "@/lib/home";
 import { MatterProvider } from "@/lib/integrations/matter/provider";
 import { createProvider } from "@/lib/integrations/registry";
 import { INTEGRATION_LABELS, IntegrationError, type IntegrationConfig } from "@/lib/integrations/types";
+import { publish, userTopic } from "@/lib/live/bus";
 import { getUser } from "@/lib/session";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -37,11 +38,14 @@ const cameraInput = z.object({
 
 const OK: ActionResult = { ok: true };
 
+/** Runs an action for the signed-in person, then tells their live dashboards to refresh. */
 async function authed(run: (userId: string) => Promise<ActionResult>): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Your session ended. Sign in again." };
   try {
-    return await run(user.id);
+    const result = await run(user.id);
+    if (result.ok) publish(userTopic(user.id));
+    return result;
   } catch (error) {
     return { ok: false, error: readableError(error) };
   }

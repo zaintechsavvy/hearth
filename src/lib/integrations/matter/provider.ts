@@ -22,6 +22,10 @@ export class MatterProvider implements Provider {
     await this.client.connect();
   }
 
+  subscribe(onChange: () => void) {
+    return this.client.subscribe(onChange);
+  }
+
   async listDevices(): Promise<Device[]> {
     return (await this.client.getNodes()).flatMap(node => mapMatterNode(this.integrationId, node));
   }

@@ -12,6 +12,8 @@ export interface Provider {
   check(): Promise<void>;
   listDevices(): Promise<Device[]>;
   execute(nativeId: string, command: DeviceCommand): Promise<void>;
+  /** Starts pushing changes for as long as someone listens. Calls `onChange` whenever any device may have changed. */
+  subscribe?(onChange: () => void): () => void;
 }
 
 /** An error whose message is safe and useful to show the person who owns the integration. */

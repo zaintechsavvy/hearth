@@ -1,10 +1,14 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/types";
 import type { HomeSnapshot } from "@/lib/home";
 
-const POLL_MS = 4000;
+const KEY = "/api/home";
+const STREAM = "/api/home/stream";
+/** Only while the live stream is down. */
+const FALLBACK_POLL_MS = 15_000;
 
 async function fetchHome(url: string): Promise<HomeSnapshot> {
   const response = await fetch(url, { cache: "no-store" });
@@ -16,25 +20,54 @@ function patch(snapshot: HomeSnapshot, id: string, command: DeviceCommand): Home
   return { ...snapshot, devices: snapshot.devices.map(device => device.id === id ? applyCommand(device, command) : device) };
 }
 
-/** Polls the home and applies commands optimistically, rolling back if the device refuses. */
+/**
+ * The home, kept current by Server-Sent Events, with polling only as a fallback. Commands apply optimistically
+ * and roll back if the device refuses; pushed snapshots wait until in-flight commands settle so a toggle never
+ * flickers back to its old state.
+ */
 export function useHome() {
-  const { data, error, isLoading, mutate } = useSWR<HomeSnapshot>("/api/home", fetchHome, { refreshInterval: POLL_MS, keepPreviousData: true });
+  const [live, setLive] = useState(false);
+  const inFlight = useRef(0);
+  const held = useRef<HomeSnapshot | null>(null);
+  const { data, error, isLoading, mutate } = useSWR<HomeSnapshot>(KEY, fetchHome, { refreshInterval: live ? 0 : FALLBACK_POLL_MS, keepPreviousData: true });
 
-  async function send(device: Device, command: DeviceCommand) {
-    await mutate(async current => {
-      const response = await fetch(`/api/devices/${encodeURIComponent(device.id)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(command),
-      });
-      if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? "The device did not respond.");
-      return current && patch(current, device.id, command);
-    }, {
-      optimisticData: current => current ? patch(current, device.id, command) : (current as unknown as HomeSnapshot),
-      rollbackOnError: true,
-      revalidate: true,
+  useEffect(() => {
+    const source = new EventSource(STREAM);
+    source.addEventListener("snapshot", event => {
+      setLive(true);
+      const snapshot = JSON.parse((event as MessageEvent<string>).data) as HomeSnapshot;
+      if (inFlight.current > 0) held.current = snapshot;
+      else void mutate(snapshot, { revalidate: false });
     });
-  }
+    source.addEventListener("error", () => setLive(false));
+    return () => source.close();
+  }, [mutate]);
 
-  return { home: data, error, isLoading, refresh: mutate, send };
+  const send = useCallback(async (device: Device, command: DeviceCommand) => {
+    inFlight.current++;
+    try {
+      await mutate(async current => {
+        const response = await fetch(`/api/devices/${encodeURIComponent(device.id)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(command),
+        });
+        if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? "The device did not respond.");
+        return current && patch(current, device.id, command);
+      }, {
+        optimisticData: current => current ? patch(current, device.id, command) : (current as unknown as HomeSnapshot),
+        rollbackOnError: true,
+        revalidate: false,
+      });
+    } finally {
+      inFlight.current--;
+      if (inFlight.current === 0 && held.current) {
+        const snapshot = held.current;
+        held.current = null;
+        void mutate(snapshot, { revalidate: false });
+      }
+    }
+  }, [mutate]);
+
+  return { home: data, error, isLoading, live, refresh: mutate, send };
 }

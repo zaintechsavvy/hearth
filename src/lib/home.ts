@@ -5,6 +5,7 @@ import { camera, integration, preference } from "@/lib/db/schema";
 import type { TileConfig } from "@/lib/dashboard/layout";
 import { parseDeviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
 import { createProvider } from "@/lib/integrations/registry";
+import { integrationTopic, publish } from "@/lib/live/bus";
 import { IntegrationError, type IntegrationKind } from "@/lib/integrations/types";
 
 export interface IntegrationStatus {
@@ -63,6 +64,7 @@ export async function runCommand(userId: string, id: string, command: DeviceComm
   const row = await db.query.integration.findFirst({ where: and(eq(integration.id, parsed.integrationId), eq(integration.userId, userId)) });
   if (!row) throw new IntegrationError("Unknown device.");
   await createProvider(row).execute(parsed.nativeId, command);
+  publish(integrationTopic(row.id));
 }
 
 export async function findCamera(userId: string, cameraId: string) {
