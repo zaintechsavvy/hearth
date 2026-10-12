@@ -1,4 +1,4 @@
-import { boolean, customType, index, integer, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
+import { boolean, customType, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { DashboardPage, SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
 import type { ItemKind } from "@/lib/widgets/items";
@@ -164,3 +164,11 @@ export const widgetItem = pgTable("widget_item", {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, t => [index("widget_item_user_idx").on(t.userId)]);
+
+/** Readings Hearth recorded itself, for sensors whose integration keeps no history. Kept for 30 days. */
+export const reading = pgTable("reading", {
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  deviceId: text("device_id").notNull(),
+  at: timestamp("at").notNull(),
+  value: doublePrecision("value").notNull(),
+}, t => [index("reading_device_idx").on(t.userId, t.deviceId, t.at)]);

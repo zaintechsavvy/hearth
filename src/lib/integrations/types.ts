@@ -28,8 +28,16 @@ export interface Provider {
   cameraWebRtcConfig?(nativeId: string): Promise<{ supported: boolean; iceServers: IceServer[] }>;
   /** Starts an HLS stream for a camera and returns the playlist's path upstream, for `cameraHlsFetch`. */
   cameraHls?(nativeId: string): Promise<string>;
+  /** A device's readings between two times, from the integration's own history, or null when it keeps none. */
+  history?(nativeId: string, from: Date, to: Date): Promise<HistoryPoint[] | null>;
   /** Fetches a playlist or segment of a stream `cameraHls` started. */
   cameraHlsFetch?(path: string, search: string, signal: AbortSignal): Promise<Response>;
+}
+
+export interface HistoryPoint {
+  /** Epoch milliseconds. */
+  t: number;
+  v: number;
 }
 
 export interface IceServer {

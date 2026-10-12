@@ -14,9 +14,10 @@ interface DeviceTileProps {
   /** False while the dashboard is being edited, so a tap selects instead of changing the device. */
   interactive?: boolean;
   onOpenControls?: () => void;
+  onOpenHistory?: () => void;
 }
 
-export function DeviceTile({ device, onOpenControls, ...props }: DeviceTileProps) {
+export function DeviceTile({ device, onOpenControls, onOpenHistory, ...props }: DeviceTileProps) {
   if (device.kind === "light" || device.kind === "switch" || device.kind === "fan") return <ToggleTile device={device} onOpenControls={onOpenControls} {...props} />;
-  return <StateTile device={device} {...props} />;
+  return <StateTile device={device} onOpenHistory={onOpenHistory} {...props} />;
 }

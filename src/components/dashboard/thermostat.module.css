@@ -141,3 +141,24 @@
   .modes { display: none; }
   .root { grid-template-rows: auto 1fr; }
 }
+
+.headerEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.history {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+
+.history:hover {
+  background: oklch(50% 0 0 / .1);
+  color: var(--foreground);
+}

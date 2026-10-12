@@ -1,5 +1,5 @@
 import { applyCommand, deviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
-import { IntegrationError, type DeviceList, type Provider } from "./types";
+import { IntegrationError, type DeviceList, type HistoryPoint, type Provider } from "./types";
 
 interface DemoHome {
   devices: Map<string, Device>;
@@ -90,6 +90,24 @@ export class DemoProvider implements Provider {
         home.timer = undefined;
       }
     };
+  }
+
+  /** A believable day for demo readings: a gentle daily swing around the current value, with a little noise. */
+  async history(nativeId: string, from: Date, to: Date): Promise<HistoryPoint[] | null> {
+    const device = this.home().devices.get(deviceId(this.integrationId, nativeId));
+    const current = device?.kind === "sensor" ? device.value : device?.kind === "thermostat" ? device.current : null;
+    if (current === null || current === undefined) return null;
+    const swing = device?.kind === "sensor" && device.sensorClass === "humidity" ? 6 : device?.kind === "sensor" && device.sensorClass === "battery" ? 0 : 1.6;
+    const step = Math.max(5 * 60_000, (to.getTime() - from.getTime()) / 288);
+    const points: HistoryPoint[] = [];
+    for (let t = from.getTime(); t <= to.getTime(); t += step) {
+      const hour = new Date(t).getHours() + new Date(t).getMinutes() / 60;
+      const daily = Math.sin((hour - 9) / 24 * Math.PI * 2) * swing;
+      const noise = Math.sin(t / 3_600_000 * 1.7) * swing * 0.15;
+      const drain = device?.kind === "sensor" && device.sensorClass === "battery" ? (to.getTime() - t) / 86_400_000 * 0.4 : 0;
+      points.push({ t, v: Math.round((current + daily + noise + drain) * 10) / 10 });
+    }
+    return points;
   }
 
   async listDevices(): Promise<DeviceList> {

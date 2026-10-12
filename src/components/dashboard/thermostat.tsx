@@ -1,7 +1,7 @@
 "use client";
 
 import { animate, motion, useMotionValue, useReducedMotion } from "motion/react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, ChartLine } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { SlotText } from "@/components/arc/slot-text/slot-text";
@@ -18,11 +18,12 @@ const MODE_LABELS: Record<ThermostatMode, string> = { off: "Off", heat: "Heat", 
 export const formatTemperature = (value: number) => Number.isInteger(value) ? String(value) : value.toFixed(1);
 
 interface ThermostatProps {
+  onOpenHistory?: () => void;
   device: ThermostatDevice;
   onCommand: (command: DeviceCommand) => Promise<void>;
 }
 
-export function Thermostat({ device, onCommand }: ThermostatProps) {
+export function Thermostat({ device, onCommand, onOpenHistory }: ThermostatProps) {
   const reduce = useReducedMotion();
   const [draft, setDraft] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
@@ -93,7 +94,14 @@ export function Thermostat({ device, onCommand }: ThermostatProps) {
 
       <header className={styles.header}>
         <h2 id={`${device.id}-name`} className={styles.name}>{device.name}</h2>
-        <span className={styles.unit}>°{device.unit}</span>
+        <span className={styles.headerEnd}>
+          {onOpenHistory && (
+            <button type="button" className={styles.history} onClick={onOpenHistory} aria-label={`${device.name} temperature history`} title="History">
+              <ChartLine size={15} strokeWidth={1.75} aria-hidden="true" />
+            </button>
+          )}
+          <span className={styles.unit}>°{device.unit}</span>
+        </span>
       </header>
 
       <div className={styles.dial}>

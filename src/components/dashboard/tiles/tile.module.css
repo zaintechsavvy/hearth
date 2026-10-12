@@ -179,7 +179,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.reading {
+div.reading {
   cursor: default;
 }
 
@@ -236,4 +236,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .swatch { transition: none; }
+}
+
+.press.reading {
+  position: relative;
+  overflow: hidden;
 }

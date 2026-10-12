@@ -70,3 +70,13 @@ describe("wall tablet night", async () => {
     expect(isNight({ dimFrom: "13:00", dimTo: "15:00" }, new Date("2026-10-12T14:00:00"))).toBe(true);
   });
 });
+
+describe("history downsampling", async () => {
+  const { downsample } = await import("@/lib/downsample");
+  it("averages into buckets", () => {
+    const points = Array.from({ length: 1000 }, (_, index) => ({ t: index, v: index % 2 }));
+    const shown = downsample(points, 0, 1000, 10);
+    expect(shown).toHaveLength(10);
+    expect(shown.every(point => point.v === 0.5)).toBe(true);
+  });
+});

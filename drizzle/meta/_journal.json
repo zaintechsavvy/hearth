@@ -57,6 +57,13 @@
       "when": 1791844336903,
       "tag": "0007_pages",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791844818053,
+      "tag": "0008_readings",
+      "breakpoints": true
     }
   ]
 }

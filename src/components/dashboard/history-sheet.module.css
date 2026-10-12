@@ -1,0 +1,41 @@
+.dialog.dialog {
+  width: min(calc(100vw - var(--space-8)), 640px);
+}
+
+.body {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.stats div {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: oklch(50% 0 0 / .06);
+}
+
+.stats dt {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.stats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.source {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}

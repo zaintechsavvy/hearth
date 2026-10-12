@@ -16,12 +16,16 @@ interface Connection {
   migrate: () => Promise<void>;
 }
 
+/** A pool worker Next starts for side jobs, never the process that serves requests. */
+export const isHelperWorker = () => process.argv.some(argument => argument.includes("jest-worker"));
+
 const migrationsFolder = () => resolve(/*turbopackIgnore: true*/ process.env.MIGRATIONS_PATH ?? "drizzle");
 
 /**
  * DATABASE_URL points at any Postgres (Neon, Supabase, self-hosted). Without it Hearth runs PGlite, Postgres
- * compiled to WebAssembly, in a folder on disk. `next build` runs many workers that import this module, so the
- * build gets throwaway in-memory databases instead of fighting over one folder.
+ * compiled to WebAssembly, in a folder on disk, which only one process may open. `next build`, and the helper
+ * workers `next dev` spawns (jest-worker children), import this module too, so they get throwaway
+ * in-memory databases instead of opening the folder a second time, which aborts and risks corrupting it.
  */
 function connect(): Connection {
   const url = process.env.DATABASE_URL;
@@ -31,7 +35,7 @@ function connect(): Connection {
     const db = drizzlePostgres(client, { schema });
     return { db, migrate: () => migratePostgres(db, { migrationsFolder: migrationsFolder() }) };
   }
-  const building = process.env.NEXT_PHASE === "phase-production-build";
+  const building = process.env.NEXT_PHASE === "phase-production-build" || isHelperWorker();
   const directory = resolve(/*turbopackIgnore: true*/ process.env.DATABASE_PATH ?? "data/pglite");
   if (!building) {
     mkdirSync(directory, { recursive: true });

@@ -12,6 +12,7 @@ import {
   isSensitive, type BinarySensorDevice, type CoverDevice, type DeviceCommand, type EventDevice, type LockDevice, type SceneDevice, type SensorDevice,
 } from "@/lib/devices/types";
 import { LevelPill } from "./level-pill";
+import { MiniTrend } from "./mini-trend";
 import { TILE_ICON_COMPONENTS } from "./tile-icons";
 import styles from "./tile.module.css";
 import level from "./level-tile.module.css";
@@ -23,6 +24,8 @@ interface StateTileProps {
   config: TileConfig;
   onCommand: (command: DeviceCommand) => Promise<void>;
   interactive?: boolean;
+  /** Readings open their history when tapped. */
+  onOpenHistory?: () => void;
 }
 
 const LOCK_TEXT: Record<LockDevice["state"], string> = { locked: "Locked", unlocked: "Unlocked", locking: "Locking", unlocking: "Unlocking", jammed: "Jammed", open: "Open", unknown: "Unknown" };
@@ -135,7 +138,7 @@ function SensitiveConfirm({ device, state, onConfirm, onClose }: { device: State
   );
 }
 
-export function StateTile({ device, config, onCommand, interactive = true }: StateTileProps) {
+export function StateTile({ device, config, onCommand, interactive = true, onOpenHistory }: StateTileProps) {
   const now = useSyncExternalStore(subscribeMinute, minute, () => 0);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<DeviceCommand | null>(null);
@@ -201,11 +204,14 @@ export function StateTile({ device, config, onCommand, interactive = true }: Sta
     );
   }
 
-  const Root = command ? "button" : "div";
+  const charted = isReading && onOpenHistory && interactive;
+  const Root = command || charted ? "button" : "div";
   return (
     <>
       <Root
-        {...(command ? { type: "button" as const, onClick: () => request(command), disabled, "aria-label": `${device.name}${device.room ? ` in ${device.room}` : ""}, ${text}` } : { role: "group", "aria-label": `${device.name}, ${text}` })}
+        {...(command ? { type: "button" as const, onClick: () => request(command), disabled, "aria-label": `${device.name}${device.room ? ` in ${device.room}` : ""}, ${text}` }
+          : charted ? { type: "button" as const, onClick: onOpenHistory, "aria-label": `${device.name}, ${text}. Show history` }
+            : { role: "group", "aria-label": `${device.name}, ${text}` })}
         className={`${glassClass("panel")} ${styles.tile} ${styles.press} ${isReading ? styles.reading : ""}`}
         {...shared}
         title={error ?? undefined}
@@ -222,6 +228,7 @@ export function StateTile({ device, config, onCommand, interactive = true }: Sta
               <span className={styles.name}>{device.name}</span>
               <span className={`${styles.meta} ${error ? styles.error : ""}`}>{meta}</span>
             </span>
+            {isReading && <MiniTrend deviceId={device.id} />}
           </>
         )}
       </Root>

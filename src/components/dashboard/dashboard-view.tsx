@@ -33,6 +33,7 @@ import type { Candidate } from "./entity-chooser";
 import { HomeGrid } from "./home-grid";
 import { IntegrationCameraTile } from "./integration-camera-tile";
 import { LightControls } from "./light-controls";
+import { HistorySheet } from "./history-sheet";
 import { SceneEditor } from "./scene-editor";
 import { Thermostat, formatTemperature } from "./thermostat";
 import { TileDialog, type TileDialogMode } from "./tile-dialog";
@@ -101,6 +102,7 @@ export function DashboardView({ userName }: { userName: string }) {
   const [dialog, setDialog] = useState<TileDialogMode | null>(null);
   const [controlling, setControlling] = useState<string | null>(null);
   const [managing, setManaging] = useState<WidgetEditorState | null>(null);
+  const [charting, setCharting] = useState<string | null>(null);
   const [room, setRoom] = useState(ALL_ROOMS);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const latest = useRef<TileConfig[] | null>(null);
@@ -290,11 +292,13 @@ export function DashboardView({ userName }: { userName: string }) {
     if (linked.type === "scene") return <SceneTile scene={linked.scene} config={tile} interactive={interactive} onRun={() => runScene(linked.scene)} />;
     if (linked.type === "camera") return preview ? <CameraPreview name={linked.camera.name} /> : <CameraTile camera={linked.camera} fill />;
     const device = linked.device;
-    if (device.kind === "thermostat") return <Thermostat device={device} onCommand={command => send(device, command)} />;
+    if (device.kind === "thermostat") return <Thermostat device={device} onCommand={command => send(device, command)} onOpenHistory={interactive ? () => setCharting(device.id) : undefined} />;
     if (device.kind === "camera") return preview ? <CameraPreview name={device.name} /> : <IntegrationCameraTile camera={device} />;
-    return <DeviceTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} onOpenControls={() => setControlling(device.id)} />;
+    return <DeviceTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} onOpenControls={() => setControlling(device.id)} onOpenHistory={() => setCharting(device.id)} />;
   };
 
+  const charted = charting ? devices.get(charting) : undefined;
+  const chartedDevice = charted?.kind === "sensor" || charted?.kind === "thermostat" ? charted : null;
   const controlled = controlling ? devices.get(controlling) : undefined;
   const controlledLight = controlled?.kind === "light" ? controlled : null;
   const dialogs = (
@@ -310,6 +314,7 @@ export function DashboardView({ userName }: { userName: string }) {
       <WidgetEditor state={managing} items={home.widgets} onOpenChange={open => !open && setManaging(null)}
         onLink={(tileId, itemId) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, itemId } } : tile))} />
       <HouseholdAlerts items={home.widgets} />
+      <HistorySheet device={chartedDevice} onOpenChange={open => !open && setCharting(null)} />
       <LightControls device={controlledLight} onOpenChange={open => !open && setControlling(null)} onCommand={send} />
       <SceneEditor open={sceneEditing !== null} onOpenChange={open => !open && setSceneEditing(null)} devices={home.devices} scene={sceneEditing === "new" ? null : sceneEditing} onSaved={() => refresh()} />
       <TileEditor

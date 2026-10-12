@@ -3,7 +3,7 @@ import {
   type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode,
 } from "@/lib/devices/types";
 import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
-import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type IceCandidate, type IceServer, type Provider, type WebRtcAnswer } from "./types";
+import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type HistoryPoint, type IceCandidate, type IceServer, type Provider, type WebRtcAnswer } from "./types";
 
 export interface HassState {
   entity_id: string;
@@ -287,6 +287,23 @@ export class HomeAssistantProvider implements Provider {
       supported: !capabilities || Boolean(capabilities.result.frontend_stream_types?.includes("web_rtc")),
       iceServers: config?.result.configuration?.iceServers ?? [],
     };
+  }
+
+  /** Home Assistant's recorder: sensor states as numbers, and a thermostat's room temperature from its attributes. */
+  async history(entityId: string, from: Date, to: Date): Promise<HistoryPoint[] | null> {
+    const climate = entityId.startsWith("climate.");
+    if (!climate && !entityId.startsWith("sensor.")) return null;
+    const params = new URLSearchParams({ filter_entity_id: entityId, end_time: to.toISOString() });
+    if (!climate) {
+      params.set("minimal_response", "");
+      params.set("no_attributes", "");
+    }
+    const rows = await this.request<{ state: string; last_changed?: string; last_updated?: string; attributes?: Record<string, unknown> }[][]>(`api/history/period/${from.toISOString()}?${params}`);
+    return (rows[0] ?? []).flatMap(entry => {
+      const value = climate ? num(entry.attributes?.current_temperature) : Number.parseFloat(entry.state);
+      const t = Date.parse(entry.last_changed ?? entry.last_updated ?? "");
+      return Number.isFinite(value) && value !== null && Number.isFinite(t) ? [{ t, v: value }] : [];
+    });
   }
 
   /** HLS through Home Assistant's stream integration: slower to start than WebRTC, but it only needs plain HTTP, which Hearth relays. */
