@@ -172,8 +172,10 @@
 }
 
 .backgroundPopover.backgroundPopover {
-  width: min(calc(100vw - var(--space-6)), 420px);
+  width: min(calc(100vw - var(--space-6)), 440px);
   max-width: none;
+  max-height: min(calc(100dvh - 120px), 760px);
+  overflow-y: auto;
   display: grid;
   gap: var(--space-4);
   padding: var(--space-5);

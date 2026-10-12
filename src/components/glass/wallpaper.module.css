@@ -72,7 +72,7 @@
 :root[data-theme="dark"][data-wallpaper="dusk"] .wallpaper { --m1: #26121a; --m2: #552235; --m3: #36204d; --m4: #4f3018; }
 :root[data-theme="dark"][data-wallpaper="meadow"] .wallpaper { --m1: #0d1f16; --m2: #1b4430; --m3: #373f17; --m4: #12303b; }
 
-:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"]) .wallpaper {
+:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="gradient"]) .wallpaper {
   background:
     radial-gradient(60% 60% at 15% 20%, var(--m2), transparent 70%),
     radial-gradient(55% 55% at 85% 25%, var(--m4), transparent 70%),
@@ -94,15 +94,36 @@
   display: none;
 }
 
-:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"]) .veil {
+:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="gradient"]) .veil {
   display: block;
   background: oklch(100% 0 0 / .18);
 }
 
-:root[data-theme="dark"]:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"]) .veil {
+:root[data-theme="dark"]:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="gradient"]) .veil {
   background: oklch(0% 0 0 / .28);
 }
 
-:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"]) .light {
+:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="gradient"], [data-wallpaper="photo"]) .light {
   opacity: .5;
+}
+
+/* A photo of your own: cover the screen, blur and dim to taste. Slightly oversized so the blur has no soft edges. */
+.photo {
+  position: absolute;
+  inset: calc(var(--photo-blur, 0px) * -2);
+  background: var(--photo) center / cover no-repeat;
+  filter: blur(var(--photo-blur, 0px));
+}
+
+:root[data-wallpaper="photo"] .veil {
+  display: block;
+  background: oklch(100% 0 0 / var(--photo-dim, 0));
+}
+
+:root[data-theme="dark"][data-wallpaper="photo"] .veil {
+  background: oklch(0% 0 0 / var(--photo-dim, 0));
+}
+
+:root[data-wallpaper="photo"] .wallpaper {
+  background: oklch(50% 0 0);
 }

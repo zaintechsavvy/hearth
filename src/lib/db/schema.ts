@@ -1,8 +1,9 @@
-import { boolean, index, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
+import { boolean, customType, index, integer, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
 import type { SceneAction } from "@/lib/scenes/types";
 
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataType: () => "bytea" });
 const timestamp = (name: string) => pgTimestamp(name, { withTimezone: true, mode: "date" });
 const createdAt = () => timestamp("created_at").notNull().$defaultFn(() => new Date());
 const updatedAt = () => timestamp("updated_at").notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date());
@@ -134,3 +135,14 @@ export const deviceOverride = pgTable("device_override", {
   room: text("room"),
   updatedAt: updatedAt(),
 }, t => [primaryKey({ columns: [t.userId, t.deviceId] })]);
+
+/** Photos uploaded as backdrops, already resized in the browser. Kept per account so a wall tablet sees them too. */
+export const background = pgTable("background", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  mime: text("mime", { enum: ["image/webp", "image/jpeg", "image/png"] }).notNull(),
+  data: bytea("data").notNull(),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  createdAt: createdAt(),
+}, t => [index("background_user_idx").on(t.userId)]);

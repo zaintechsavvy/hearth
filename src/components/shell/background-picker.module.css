@@ -57,3 +57,76 @@
   color: var(--text-secondary);
   font-size: var(--text-xs);
 }
+
+.group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.heading {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.item {
+  position: relative;
+  display: grid;
+  min-width: 0;
+}
+
+.item .option {
+  width: 100%;
+}
+
+.itemTools {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.item:hover .itemTools,
+.itemTools:focus-within {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .itemTools { opacity: 1; }
+}
+
+.itemTool {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: oklch(100% 0 0 / .85);
+  color: oklch(20% 0 0);
+  box-shadow: 0 1px 2px oklch(0% 0 0 / .15);
+}
+
+.swatch.addSwatch {
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  background: oklch(50% 0 0 / .05);
+  box-shadow: none;
+  border: 1.5px dashed color-mix(in oklab, var(--foreground) 28%, transparent);
+  transition: color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+
+.add:hover .addSwatch {
+  color: var(--foreground);
+  border-color: color-mix(in oklab, var(--foreground) 55%, transparent);
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
