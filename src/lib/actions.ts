@@ -1,5 +1,6 @@
 "use server";
 
+import { authed, firstIssue, OK, type ActionResult, type CreatedResult } from "@/lib/action-helpers";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -12,19 +13,16 @@ import { createTile, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_S
 import { tileSources } from "@/lib/dashboard/sources";
 import { db } from "@/lib/db";
 import { assistant, calendar, camera, deviceOverride, integration, preference, reminder, scene } from "@/lib/db/schema";
-import { getPreferences, loadHome, orderedRooms, readableError, streamRelayUrl } from "@/lib/home";
+import { getPreferences, loadHome, orderedRooms, streamRelayUrl } from "@/lib/home";
 import { parseDeviceId } from "@/lib/devices/types";
 import { saveScene } from "@/lib/scenes/service";
 import { MatterProvider } from "@/lib/integrations/matter/provider";
 import { createProvider } from "@/lib/integrations/registry";
 import { INTEGRATION_LABELS, IntegrationError, type IntegrationConfig } from "@/lib/integrations/types";
-import { publish, userTopic } from "@/lib/live/bus";
-import { getUser } from "@/lib/session";
 import { feedUrl, fetchFeed, forgetCalendar } from "@/lib/widgets/calendar";
 import { eventsBetween } from "@/lib/widgets/ical";
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
-export type CreatedResult = { ok: true; id: string } | { ok: false; error: string };
+export type { ActionResult, CreatedResult } from "@/lib/action-helpers";
 
 const httpUrl = z.url({ protocol: /^https?$/, error: "Enter a full address, like http://homeassistant.local:8123" });
 const wsUrl = z.url({ protocol: /^wss?$/, error: "Enter a WebSocket address, like ws://homeassistant.local:5580/ws" });
@@ -42,22 +40,9 @@ const cameraInput = z.object({
   password: z.string().max(200).optional(),
 });
 
-const OK: ActionResult = { ok: true };
 
-/** Runs an action for the signed-in person, then tells their live dashboards to refresh. */
-async function authed(run: (userId: string) => Promise<ActionResult>): Promise<ActionResult> {
-  const user = await getUser();
-  if (!user) return { ok: false, error: "Your session ended. Sign in again." };
-  try {
-    const result = await run(user.id);
-    if (result.ok) publish(userTopic(user.id));
-    return result;
-  } catch (error) {
-    return { ok: false, error: readableError(error) };
-  }
-}
 
-const firstIssue = (error: z.ZodError) => error.issues[0]?.message ?? "Check the form and try again.";
+
 
 /** Connects before saving, so a saved integration is one that worked at least once. */
 export async function addIntegration(input: unknown): Promise<CreatedResult> {
@@ -160,6 +145,7 @@ const tileSchema = z.object({
     place: placeSchema.optional(),
     units: z.enum(["C", "F"]).optional(),
     calendars: z.array(z.string().max(100)).max(20).optional(),
+    itemId: z.string().max(100).optional(),
   }).optional(),
 });
 

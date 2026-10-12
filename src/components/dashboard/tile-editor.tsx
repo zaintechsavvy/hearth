@@ -80,6 +80,10 @@ const SIZE_NOTES: Partial<Record<TileSize, string>> = {
   "4x3": "Big picture",
 };
 
+const MANAGE_LABELS: Partial<Record<TileKind, string>> = {
+  bins: "Edit bins", medications: "Edit medications", countdown: "Edit countdown", notes: "Manage notes", wifi: "Edit network", timers: "New timer", plants: "Edit plants",
+};
+
 const capitalize = (value: string) => value[0].toUpperCase() + value.slice(1);
 
 export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, rooms, onIdentity, renderPreview, extra }: TileEditorProps) {
@@ -191,6 +195,17 @@ function LinkSection({ tile, onChange, onRelink, rooms, onIdentity }: Pick<TileE
     );
   }
   if (tile.kind === "calendar") return <CalendarChoice config={config} onChange={onChange} />;
+  if (MANAGE_LABELS[tile.kind]) {
+    return (
+      <section aria-labelledby="tile-link" className={styles.section}>
+        <h3 id="tile-link" className={styles.heading}>Shows</h3>
+        <div className={styles.link}>
+          <span className={styles.linkName}>{KIND_INFO[tile.kind].description}</span>
+          <Button variant="secondary" size="sm" onClick={onRelink}>{MANAGE_LABELS[tile.kind]}</Button>
+        </div>
+      </section>
+    );
+  }
   if (isWidget(tile.kind)) return null;
   return (
     <section aria-labelledby="tile-link" className={styles.section}>

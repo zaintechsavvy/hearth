@@ -42,6 +42,16 @@ import { CalendarTile } from "./widgets/calendar-tile";
 import { ClockTile } from "./widgets/clock-tile";
 import { RemindersTile } from "./widgets/reminders-tile";
 import { WeatherTile } from "./widgets/weather-tile";
+import { BinsTile } from "./household/bins-tile";
+import { CountdownTile } from "./household/countdown-tile";
+import { HouseholdAlerts } from "./household/household-alerts";
+import { MedicationsTile } from "./household/medications-tile";
+import { NotesTile } from "./household/notes-tile";
+import { PlantsTile } from "./household/plants-tile";
+import { TimersTile } from "./household/timers-tile";
+import { WidgetEditor, isHousehold, ITEM_KIND_FOR, type WidgetEditorState } from "./household/widget-editor";
+import { WifiTile } from "./household/wifi-tile";
+import { itemsOf } from "@/lib/widgets/items";
 import styles from "./dashboard.module.css";
 
 const SAVE_DELAY_MS = 500;
@@ -85,6 +95,7 @@ export function DashboardView({ userName }: { userName: string }) {
   const [customizing, setCustomizing] = useState<string | null>(null);
   const [dialog, setDialog] = useState<TileDialogMode | null>(null);
   const [controlling, setControlling] = useState<string | null>(null);
+  const [managing, setManaging] = useState<WidgetEditorState | null>(null);
   const [room, setRoom] = useState(ALL_ROOMS);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const latest = useRef<TileConfig[] | null>(null);
@@ -148,7 +159,11 @@ export function DashboardView({ userName }: { userName: string }) {
 
   const addTile = (kind: TileKind, link: string | null, options?: TileConfig["options"]) => {
     const source = link ? sourceById.get(link) : undefined;
-    change([...tiles, createTile(source?.kind ?? kind, link, source?.adjustable ?? false, options ? { options } : {})]);
+    const tile = createTile(source?.kind ?? kind, link, source?.adjustable ?? false, options ? { options } : {});
+    change([...tiles, tile]);
+    if (isHousehold(kind) && (kind === "countdown" || kind === "wifi" || (["bins", "medications", "plants"].includes(kind) && itemsOf(home.widgets, ITEM_KIND_FOR[kind]).length === 0))) {
+      setManaging({ kind, tile });
+    }
   };
 
   const linkTile = (tileId: string, link: string) => {
@@ -218,6 +233,20 @@ export function DashboardView({ userName }: { userName: string }) {
         return <RemindersTile tile={tile} interactive={interactive} />;
       case "clock":
         return <ClockTile tile={tile} />;
+      case "bins":
+        return <BinsTile tile={tile} items={itemsOf(home.widgets, "bin")} interactive={interactive} onManage={itemId => setManaging({ kind: "bins", tile, itemId })} />;
+      case "medications":
+        return <MedicationsTile tile={tile} items={itemsOf(home.widgets, "medication")} interactive={interactive} onManage={itemId => setManaging({ kind: "medications", tile, itemId })} />;
+      case "countdown":
+        return <CountdownTile tile={tile} items={itemsOf(home.widgets, "countdown")} interactive={interactive} onManage={itemId => setManaging({ kind: "countdown", tile, itemId })} />;
+      case "notes":
+        return <NotesTile tile={tile} items={itemsOf(home.widgets, "note")} interactive={interactive} author={userName.split(" ")[0]} onManage={() => setManaging({ kind: "notes", tile })} />;
+      case "wifi":
+        return <WifiTile tile={tile} items={itemsOf(home.widgets, "wifi")} interactive={interactive} onManage={itemId => setManaging({ kind: "wifi", tile, itemId })} />;
+      case "timers":
+        return <TimersTile tile={tile} items={itemsOf(home.widgets, "timer")} interactive={interactive} onManage={() => setManaging({ kind: "timers", tile })} />;
+      case "plants":
+        return <PlantsTile tile={tile} items={itemsOf(home.widgets, "plant")} interactive={interactive} onManage={itemId => setManaging({ kind: "plants", tile, itemId })} />;
     }
     const linked = resolve(tile);
     if (!linked) return <PlaceholderTile tile={tile} missing={tile.link !== null} interactive={interactive} onLink={() => setDialog({ mode: "link", tile })} />;
@@ -241,6 +270,9 @@ export function DashboardView({ userName }: { userName: string }) {
         onLink={linkTile}
         onPlace={(tileId, place, units) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, place, units } } : tile))}
       />
+      <WidgetEditor state={managing} items={home.widgets} onOpenChange={open => !open && setManaging(null)}
+        onLink={(tileId, itemId) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, itemId } } : tile))} />
+      <HouseholdAlerts items={home.widgets} />
       <LightControls device={controlledLight} onOpenChange={open => !open && setControlling(null)} onCommand={send} />
       <SceneEditor open={sceneEditing !== null} onOpenChange={open => !open && setSceneEditing(null)} devices={home.devices} scene={sceneEditing === "new" ? null : sceneEditing} onSaved={() => refresh()} />
       <TileEditor
@@ -256,7 +288,15 @@ export function DashboardView({ userName }: { userName: string }) {
           await refresh();
         }}
         onRemove={() => { if (customizing) change(removeTile(tiles, customizing)); setCustomizing(null); }}
-        onRelink={() => { if (customizingTile) setDialog(isWidget(customizingTile.kind) ? { mode: "place", tile: customizingTile } : { mode: "link", tile: customizingTile }); }}
+        onRelink={() => {
+          if (!customizingTile) return;
+          if (isHousehold(customizingTile.kind)) {
+            setManaging({ kind: customizingTile.kind, tile: customizingTile, itemId: customizingTile.options?.itemId });
+            setCustomizing(null);
+          } else {
+            setDialog(isWidget(customizingTile.kind) ? { mode: "place", tile: customizingTile } : { mode: "link", tile: customizingTile });
+          }
+        }}
         extra={customizingScene && (
           <>
             <Button variant="secondary" onClick={() => { setSceneEditing(customizingScene); setCustomizing(null); }}>Edit scene</Button>

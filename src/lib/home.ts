@@ -1,7 +1,9 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { camera, deviceOverride, integration, preference, scene } from "@/lib/db/schema";
+import { camera, deviceOverride, integration, preference, scene, widgetItem } from "@/lib/db/schema";
+import { unseal } from "@/lib/crypto";
+import type { WidgetItem } from "@/lib/widgets/items";
 import type { SavedTile } from "@/lib/dashboard/layout";
 import type { HearthScene } from "@/lib/scenes/types";
 import { parseDeviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
@@ -34,6 +36,8 @@ export interface HomeSnapshot {
   layout: SavedTile[];
   /** Every room in display order: the person's own first, as they arranged them, then the rest alphabetically. */
   rooms: string[];
+  /** Bins, medications, countdowns, notes, Wi-Fi, timers, and plants, so every screen updates live. */
+  widgets: WidgetItem[];
 }
 
 type Override = { name: string | null; room: string | null };
@@ -51,6 +55,14 @@ export function applyOverride<T extends Device>(device: T, override: Override | 
     next.room = override.room || null;
   }
   return next;
+}
+
+function openWifi(data: Record<string, unknown>) {
+  try {
+    return { ...data, password: typeof data.password === "string" && data.password ? unseal<string>(data.password) : "" };
+  } catch {
+    return { ...data, password: "" };
+  }
 }
 
 export function orderedRooms(custom: string[], devices: { room: string | null }[]) {
@@ -77,12 +89,13 @@ export async function getPreferences(userId: string) {
 }
 
 export async function loadHome(userId: string): Promise<HomeSnapshot> {
-  const [rows, preferences, cameraRows, scenes, overrideRows] = await Promise.all([
+  const [rows, preferences, cameraRows, scenes, overrideRows, itemRows] = await Promise.all([
     db.select().from(integration).where(eq(integration.userId, userId)).orderBy(integration.createdAt),
     getPreferences(userId),
     db.select({ id: camera.id, name: camera.name }).from(camera).where(eq(camera.userId, userId)).orderBy(camera.createdAt),
     db.select({ id: scene.id, name: scene.name, icon: scene.icon, actions: scene.actions }).from(scene).where(eq(scene.userId, userId)).orderBy(scene.createdAt),
     db.select().from(deviceOverride).where(eq(deviceOverride.userId, userId)),
+    db.select().from(widgetItem).where(eq(widgetItem.userId, userId)).orderBy(widgetItem.position, widgetItem.createdAt),
   ]);
   const overrides = new Map(overrideRows.map(row => [row.deviceId, row]));
   const results = await Promise.allSettled(rows.map(row => withTimeout(createProvider(row).listDevices(), LIST_TIMEOUT_MS, `${row.name} took too long to answer.`)));
@@ -102,7 +115,8 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
     const name = overrides.get(`camera:${row.id}`)?.name;
     return name ? { ...row, name, sourceName: row.name } : row;
   });
-  return { devices, integrations, cameras, scenes, layout: preferences.layout, rooms: orderedRooms(preferences.rooms, devices) };
+  const widgets = itemRows.map(row => ({ id: row.id, kind: row.kind, position: row.position, data: row.kind === "wifi" ? openWifi(row.data) : row.data }) as WidgetItem);
+  return { devices, integrations, cameras, scenes, layout: preferences.layout, rooms: orderedRooms(preferences.rooms, devices), widgets };
 }
 
 export async function runCommand(userId: string, id: string, command: DeviceCommand) {

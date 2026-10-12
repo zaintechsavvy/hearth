@@ -1,14 +1,14 @@
 import type { Device } from "@/lib/devices/types";
 
-export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock"] as const;
+export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants"] as const;
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
 export type TileKind = Device["kind"] | WidgetKind;
-export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x2" | "4x3";
+export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x1" | "4x2" | "4x3";
 
 export const TILE_KINDS = [
   "light", "switch", "fan", "thermostat", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", ...WIDGET_KINDS,
 ] as const satisfies readonly TileKind[];
-export const TILE_SIZES = ["1x1", "2x1", "1x2", "2x2", "2x3", "2x4", "3x3", "4x2", "4x3"] as const satisfies readonly TileSize[];
+export const TILE_SIZES = ["1x1", "2x1", "1x2", "2x2", "2x3", "2x4", "3x3", "4x1", "4x2", "4x3"] as const satisfies readonly TileSize[];
 export const TILE_COLORS = ["amber", "orange", "rose", "violet", "blue", "teal", "green", "graphite"] as const;
 export type TileColor = (typeof TILE_COLORS)[number];
 
@@ -19,6 +19,7 @@ export const TILE_ICONS = [
   "shower", "door", "lock", "blinds", "heater", "flame", "snowflake", "droplets", "leaf", "flower", "router",
   "car", "baby", "dog", "cat", "bell", "house", "lock-open", "door-closed", "garage", "activity", "thermometer",
   "battery", "gauge", "clapperboard", "play", "shield", "bell-ring", "camera", "calendar", "list-checks", "clock",
+  "trash", "recycle", "pill", "hourglass", "sticky-note", "wifi", "timer", "sprout",
 ] as const;
 export type TileIcon = (typeof TILE_ICONS)[number];
 
@@ -35,6 +36,8 @@ export interface TileOptions {
   units?: "C" | "F";
   /** Calendar: which saved calendars to show; all of them when absent. */
   calendars?: string[];
+  /** Countdown and Wi-Fi: the one item this tile shows. */
+  itemId?: string;
 }
 
 /** One tile someone put on their dashboard. */
@@ -88,6 +91,13 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   calendar: [{ size: "2x2", label: "Next up" }, { size: "2x3", label: "Agenda" }, { size: "2x4", label: "Tall" }, { size: "4x2", label: "Wide" }],
   reminders: [{ size: "2x2", label: "Short list" }, { size: "2x3", label: "List" }, { size: "2x4", label: "Tall" }],
   clock: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }],
+  bins: [{ size: "2x1", label: "Card" }, { size: "4x1", label: "Wide" }, { size: "2x2", label: "Large" }],
+  medications: [{ size: "2x2", label: "Today" }, { size: "2x3", label: "List" }, { size: "4x2", label: "Wide" }],
+  countdown: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }],
+  notes: [{ size: "2x2", label: "Small board" }, { size: "2x3", label: "Tall board" }, { size: "4x2", label: "Wide board" }, { size: "4x3", label: "Big board" }],
+  wifi: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "With QR code" }],
+  timers: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x2", label: "Wide" }],
+  plants: [{ size: "2x2", label: "Small" }, { size: "2x3", label: "Tall" }, { size: "4x2", label: "Wide" }],
 };
 
 /** Kinds whose tiles take an icon and a colour. */
@@ -119,6 +129,16 @@ export function defaultSize(kind: TileKind, adjustable = false): TileSize {
     case "calendar":
     case "reminders":
       return "2x3";
+    case "bins":
+      return "4x1";
+    case "countdown":
+    case "timers":
+      return "2x1";
+    case "medications":
+    case "notes":
+    case "wifi":
+    case "plants":
+      return "2x2";
     case "cover":
       return adjustable ? "1x2" : "2x1";
     case "switch":

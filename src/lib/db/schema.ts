@@ -1,6 +1,7 @@
 import { boolean, customType, index, integer, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
+import type { ItemKind } from "@/lib/widgets/items";
 import type { SceneAction } from "@/lib/scenes/types";
 
 const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataType: () => "bytea" });
@@ -146,3 +147,15 @@ export const background = pgTable("background", {
   height: integer("height").notNull(),
   createdAt: createdAt(),
 }, t => [index("background_user_idx").on(t.userId)]);
+
+/** Everything the household widgets keep: bins, medications, countdowns, notes, Wi-Fi, timers, and plants. */
+export const widgetItem = pgTable("widget_item", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  kind: text("kind").$type<ItemKind>().notNull(),
+  /** Checked against `ITEM_SCHEMAS` on every write. A Wi-Fi password inside is sealed. */
+  data: jsonb("data").$type<Record<string, unknown>>().notNull(),
+  position: integer("position").notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, t => [index("widget_item_user_idx").on(t.userId)]);

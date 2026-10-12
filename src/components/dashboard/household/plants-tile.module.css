@@ -1,0 +1,84 @@
+.plant {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.emoji {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.place {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* Drains from full to empty between waterings; turns warm once the plant is due. */
+.meter {
+  height: 4px;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .12);
+  overflow: hidden;
+}
+
+.meter span {
+  display: block;
+  width: calc(var(--level) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: oklch(68% .14 225);
+  transition: width var(--duration-standard) var(--ease-standard);
+}
+
+.plant[data-thirsty] .meter span {
+  background: oklch(68% .17 50);
+}
+
+.words {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.plant[data-thirsty] .words {
+  color: oklch(58% .17 45);
+  font-weight: 500;
+}
+
+.water {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: oklch(68% .14 225 / .14);
+  color: oklch(52% .14 230);
+  transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-spring) var(--ease-spring);
+}
+
+.water:hover {
+  background: oklch(68% .14 225 / .24);
+}
+
+.water:active {
+  transform: scale(.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meter span, .water { transition: none; }
+}

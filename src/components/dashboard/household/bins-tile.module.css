@@ -1,0 +1,135 @@
+.cards {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.cards[data-size="2x2"] {
+  grid-auto-flow: row;
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  height: 100%;
+  padding: var(--space-3) var(--space-4);
+  text-align: start;
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+/* Due today or tomorrow: the card takes on the bin's colour so it is noticed from across the room. */
+.card[data-urgent] {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--bin) 26%, transparent), color-mix(in oklab, var(--bin) 10%, transparent));
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--bin) 55%, transparent);
+}
+
+.icons {
+  display: flex;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bin);
+  color: white;
+  box-shadow: 0 0 0 2px var(--background);
+}
+
+.icon + .icon {
+  margin-left: -10px;
+}
+
+.text {
+  display: grid;
+  min-width: 0;
+}
+
+.when {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.what {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+}
+
+.count b {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.count small {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.cards[data-size="2x2"] .card[data-first] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr;
+  align-items: end;
+}
+
+.cards[data-size="2x2"] .card[data-first] .icons {
+  grid-column: 1 / -1;
+  align-self: start;
+}
+
+.cards[data-size="2x2"][data-count="1"] .when {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+}
+
+/* Half of a small tile: icons on top, then when, then what, so the names still fit. */
+@container (max-width: 190px) {
+  .count { display: none; }
+  .card { grid-template-columns: minmax(0, 1fr); align-content: center; gap: var(--space-1); padding: var(--space-2) var(--space-3); }
+  .icon { width: 26px; height: 26px; }
+  .icon svg { width: 14px; height: 14px; }
+  .what { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+}
+
+.manage {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.cards:hover .manage,
+.manage:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .manage { opacity: 1; }
+}

@@ -24,6 +24,23 @@ export const KIND_INFO: Record<TileKind, KindInfo> = {
   calendar: { label: "Calendar", description: "What is coming up, from Google Calendar or any iCal feed", icon: "calendar", color: "rose" },
   reminders: { label: "Reminders", description: "A short list to check off", icon: "list-checks", color: "amber" },
   clock: { label: "Clock", description: "Time and date", icon: "clock", color: "graphite" },
+  bins: { label: "Bin day", description: "Countdown to trash and recycling pickup", icon: "recycle", color: "green" },
+  medications: { label: "Medications", description: "Today's doses, with a tap to mark them taken", icon: "pill", color: "rose" },
+  countdown: { label: "Countdown", description: "Days until a trip, birthday, or big day", icon: "hourglass", color: "violet" },
+  notes: { label: "Note board", description: "Sticky notes for everyone at home", icon: "sticky-note", color: "amber" },
+  wifi: { label: "Guest Wi-Fi", description: "Network name, password, and a QR code to join", icon: "wifi", color: "blue" },
+  timers: { label: "Timers", description: "Kitchen timers every screen hears", icon: "timer", color: "orange" },
+  plants: { label: "Plants", description: "Who needs water, and when", icon: "sprout", color: "green" },
 };
 
-export const ADDABLE_KINDS: TileKind[] = ["light", "switch", "fan", "thermostat", "lock", "cover", "camera", "event", "binary_sensor", "sensor", "scene", "weather", "calendar", "reminders", "clock"];
+export const ADDABLE_KINDS: TileKind[] = [
+  "light", "switch", "fan", "thermostat", "lock", "cover", "camera", "event", "binary_sensor", "sensor", "scene",
+  "weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants",
+];
+
+/** Widgets grouped for the gallery, under the devices. */
+export const GALLERY_SECTIONS: { title: string; kinds: TileKind[] }[] = [
+  { title: "Devices", kinds: ["light", "switch", "fan", "thermostat", "lock", "cover", "camera", "event", "binary_sensor", "sensor", "scene"] },
+  { title: "Everyday", kinds: ["weather", "calendar", "clock", "countdown", "timers"] },
+  { title: "Household", kinds: ["bins", "medications", "reminders", "notes", "plants", "wifi"] },
+];

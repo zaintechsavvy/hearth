@@ -5,7 +5,7 @@ import { Button } from "@/components/arc/button/button";
 import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { glassSheetClass } from "@/components/glass/glass";
-import { ADDABLE_KINDS, KIND_INFO } from "@/lib/dashboard/catalog";
+import { GALLERY_SECTIONS, KIND_INFO } from "@/lib/dashboard/catalog";
 import { isWidget, type TileConfig, type TileKind, type WeatherPlace } from "@/lib/dashboard/layout";
 import { EntityChooser, type Candidate } from "./entity-chooser";
 import { PlaceSearch } from "./place-search";
@@ -64,26 +64,33 @@ function Body({ state, kind, setKind, candidates, onAdd, onLink, onPlace, close 
 
   if (state.mode === "add" && !kind) {
     return (
-      <div className={styles.gallery}>
-        {ADDABLE_KINDS.map(option => {
-          const info = KIND_INFO[option];
-          const Icon = TILE_ICON_COMPONENTS[info.icon];
-          const count = isWidget(option) ? null : candidates(option).length;
-          return (
-            <button key={option} type="button" className={styles.kind} onClick={() => {
-              if (option === "calendar" || option === "reminders" || option === "clock") {
-                onAdd(option, null);
-                close();
-              } else {
-                setKind(option);
-              }
-            }}>
-              <span className={styles.kindIcon} data-color={info.color} aria-hidden="true"><Icon size={20} strokeWidth={1.75} /></span>
-              <span className={styles.kindName}>{info.label}</span>
-              <span className={styles.kindNote}>{count === null ? info.description : count === 0 ? "None connected yet" : `${count} available`}</span>
-            </button>
-          );
-        })}
+      <div className={styles.sections}>
+        {GALLERY_SECTIONS.map(section => (
+          <section key={section.title} className={styles.section} aria-label={section.title}>
+            <h3 className={styles.sectionTitle}>{section.title}</h3>
+            <div className={styles.gallery}>
+              {section.kinds.map(option => {
+                const info = KIND_INFO[option];
+                const Icon = TILE_ICON_COMPONENTS[info.icon];
+                const count = isWidget(option) ? null : candidates(option).length;
+                return (
+                  <button key={option} type="button" className={styles.kind} onClick={() => {
+                    if (isWidget(option) && option !== "weather") {
+                      onAdd(option, null);
+                      close();
+                    } else {
+                      setKind(option);
+                    }
+                  }}>
+                    <span className={styles.kindIcon} data-color={info.color} aria-hidden="true"><Icon size={20} strokeWidth={1.75} /></span>
+                    <span className={styles.kindName}>{info.label}</span>
+                    <span className={styles.kindNote}>{count === null ? info.description : count === 0 ? "None connected yet" : `${count} available`}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </div>
     );
   }

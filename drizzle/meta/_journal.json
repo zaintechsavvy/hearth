@@ -43,6 +43,13 @@
       "when": 1791842730835,
       "tag": "0005_backgrounds",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791843167008,
+      "tag": "0006_widget_items",
+      "breakpoints": true
     }
   ]
 }
