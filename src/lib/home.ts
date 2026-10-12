@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { camera, deviceOverride, integration, preference, scene, widgetItem } from "@/lib/db/schema";
 import { unseal } from "@/lib/crypto";
 import type { WidgetItem } from "@/lib/widgets/items";
-import type { SavedTile } from "@/lib/dashboard/layout";
+import { HOME_PAGE_ID, type DashboardPage, type SavedTile } from "@/lib/dashboard/layout";
 import type { HearthScene } from "@/lib/scenes/types";
 import { parseDeviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
 import { createProvider } from "@/lib/integrations/registry";
@@ -33,7 +33,9 @@ export interface HomeSnapshot {
   integrations: IntegrationStatus[];
   cameras: HomeCamera[];
   scenes: HearthScene[];
+  /** The first page's tiles; the same as `pages[0].layout`. */
   layout: SavedTile[];
+  pages: DashboardPage[];
   /** Every room in display order: the person's own first, as they arranged them, then the rest alphabetically. */
   rooms: string[];
   /** Bins, medications, countdowns, notes, Wi-Fi, timers, and plants, so every screen updates live. */
@@ -85,7 +87,9 @@ export function readableError(error: unknown) {
 
 export async function getPreferences(userId: string) {
   const row = await db.query.preference.findFirst({ where: eq(preference.userId, userId) });
-  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout: row?.layout ?? [], rooms: row?.rooms ?? [] };
+  const layout = row?.layout ?? [];
+  const pages: DashboardPage[] = row?.pages.length ? row.pages : [{ id: HOME_PAGE_ID, name: "Home", layout }];
+  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [] };
 }
 
 export async function loadHome(userId: string): Promise<HomeSnapshot> {
@@ -116,7 +120,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
     return name ? { ...row, name, sourceName: row.name } : row;
   });
   const widgets = itemRows.map(row => ({ id: row.id, kind: row.kind, position: row.position, data: row.kind === "wifi" ? openWifi(row.data) : row.data }) as WidgetItem);
-  return { devices, integrations, cameras, scenes, layout: preferences.layout, rooms: orderedRooms(preferences.rooms, devices), widgets };
+  return { devices, integrations, cameras, scenes, layout: preferences.pages[0].layout, pages: preferences.pages, rooms: orderedRooms(preferences.rooms, devices), widgets };
 }
 
 export async function runCommand(userId: string, id: string, command: DeviceCommand) {

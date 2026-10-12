@@ -9,7 +9,7 @@ import { StreamRelay, relayStreamName } from "@/lib/cameras/stream-relay";
 import { ASSISTANT_PROVIDER_IDS, ASSISTANT_PROVIDERS } from "@/lib/assistant/providers";
 import { checkAssistantKey } from "@/lib/assistant/run";
 import { seal } from "@/lib/crypto";
-import { createTile, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES } from "@/lib/dashboard/layout";
+import { createTile, HOME_PAGE_ID, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES } from "@/lib/dashboard/layout";
 import { tileSources } from "@/lib/dashboard/sources";
 import { db } from "@/lib/db";
 import { assistant, calendar, camera, deviceOverride, integration, preference, reminder, scene } from "@/lib/db/schema";
@@ -66,7 +66,10 @@ export async function addDemoHome(): Promise<ActionResult> {
   if (!result.ok) return result;
   return authed(async userId => {
     const home = await loadHome(userId);
-    if (home.layout.length === 0) await savePreferences(userId, { layout: [createTile("clock"), ...suggestedTiles(tileSources(home))] });
+    if (home.layout.length === 0) {
+      const layout = [createTile("clock"), ...suggestedTiles(tileSources(home))];
+      await savePreferences(userId, { layout, pages: home.pages.map((page, index) => index === 0 ? { ...page, layout } : page) });
+    }
     return OK;
   });
 }
@@ -149,11 +152,64 @@ const tileSchema = z.object({
   }).optional(),
 });
 
-export async function saveLayout(tiles: unknown): Promise<ActionResult> {
+/** Saves one page's tiles. The first page also keeps the original `layout` column current. */
+export async function saveLayout(tiles: unknown, pageId: string = HOME_PAGE_ID): Promise<ActionResult> {
   const parsed = z.array(tileSchema).max(500).safeParse(tiles);
   if (!parsed.success) return { ok: false, error: "That layout is not valid." };
   return authed(async userId => {
-    await savePreferences(userId, { layout: parsed.data });
+    const { pages } = await getPreferences(userId);
+    const index = pages.findIndex(page => page.id === pageId);
+    if (index < 0) throw new IntegrationError("That page is gone. Reload the page.");
+    const next = pages.map((page, position) => position === index ? { ...page, layout: parsed.data } : page);
+    await savePreferences(userId, { pages: next, layout: next[0].layout });
+    return OK;
+  });
+}
+
+const pageName = z.string().trim().min(1, "Give the page a name.").max(30, "Keep page names under 30 characters.");
+
+export async function addPage(name: unknown): Promise<CreatedResult> {
+  const parsed = pageName.safeParse(name);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const id = `page-${crypto.randomUUID()}`;
+  const result = await authed(async userId => {
+    const { pages } = await getPreferences(userId);
+    if (pages.length >= 12) throw new IntegrationError("You can have up to 12 pages.");
+    await savePreferences(userId, { pages: [...pages, { id, name: parsed.data, layout: [] }] });
+    return OK;
+  });
+  return result.ok ? { ok: true, id } : result;
+}
+
+export async function renamePage(id: string, name: unknown): Promise<ActionResult> {
+  const parsed = pageName.safeParse(name);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  return authed(async userId => {
+    const { pages } = await getPreferences(userId);
+    await savePreferences(userId, { pages: pages.map(page => page.id === id ? { ...page, name: parsed.data } : page) });
+    return OK;
+  });
+}
+
+export async function deletePage(id: string): Promise<ActionResult> {
+  return authed(async userId => {
+    const { pages } = await getPreferences(userId);
+    if (pages.length <= 1) throw new IntegrationError("Keep at least one page.");
+    const next = pages.filter(page => page.id !== id);
+    await savePreferences(userId, { pages: next, layout: next[0].layout });
+    return OK;
+  });
+}
+
+export async function movePage(id: string, by: number): Promise<ActionResult> {
+  return authed(async userId => {
+    const { pages } = await getPreferences(userId);
+    const from = pages.findIndex(page => page.id === id);
+    const to = from + Math.sign(by);
+    if (from < 0 || to < 0 || to >= pages.length) return OK;
+    const next = [...pages];
+    [next[from], next[to]] = [next[to], next[from]];
+    await savePreferences(userId, { pages: next, layout: next[0].layout });
     return OK;
   });
 }

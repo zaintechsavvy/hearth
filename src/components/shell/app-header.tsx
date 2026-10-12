@@ -9,6 +9,7 @@ import { UserMenu } from "@/components/arc/user-menu/user-menu";
 import { Logo } from "@/components/brand/logo";
 import GlassSurface from "@/components/reactbits/GlassSurface";
 import { authClient } from "@/lib/auth-client";
+import { CommandMenuButton } from "./command-menu";
 import { useThemePreference } from "./use-theme-preference";
 import styles from "./app-header.module.css";
 
@@ -40,6 +41,7 @@ export function AppHeader({ user }: { user: { name: string; email: string } }) {
         </nav>
       </GlassSurface>
       <div className={styles.account}>
+        <CommandMenuButton className={styles.search} />
         <UserMenu
           user={user}
           theme={theme}

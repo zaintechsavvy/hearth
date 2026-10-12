@@ -12,11 +12,14 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Glass, glassClass, glassSheetClass } from "@/components/glass/glass";
 import { BackgroundPicker } from "@/components/shell/background-picker";
 import { addDemoHome, deleteScene, saveLayout, updateDevice } from "@/lib/actions";
+import { useStoredJson } from "@/components/shell/use-stored-json";
+import { PageTabs } from "./page-tabs";
+import { ADD_TILE_EVENT } from "@/components/shell/command-menu";
 import type { HomeCamera } from "@/lib/home";
 import { INTEGRATION_LABELS } from "@/lib/integrations/types";
 import { KIND_INFO } from "@/lib/dashboard/catalog";
 import {
-  cameraTileId, createTile, defaultSize, isStyled, isWidget, removeTile, resolveLayout, SIZE_OPTIONS, suggestedTiles, updateTile,
+  cameraTileId, createTile, defaultSize, HOME_PAGE_ID, isStyled, isWidget, removeTile, resolveLayout, SIZE_OPTIONS, suggestedTiles, updateTile,
   type TileConfig, type TileKind, type TileSource,
 } from "@/lib/dashboard/layout";
 import { hasLevel, tileSources } from "@/lib/dashboard/sources";
@@ -55,6 +58,8 @@ import { itemsOf } from "@/lib/widgets/items";
 import styles from "./dashboard.module.css";
 
 const SAVE_DELAY_MS = 500;
+const PAGE_KEY = "hearth-page";
+const SWIPE_PX = 70;
 const ALL_ROOMS = "all";
 const LEVEL_SIZES = new Set(["1x2", "2x2"]);
 const subscribeNever = () => () => {};
@@ -106,9 +111,18 @@ export function DashboardView({ userName }: { userName: string }) {
   const scenes = useMemo(() => new Map((home?.scenes ?? []).map(scene => [sceneTileId(scene.id), scene])), [home?.scenes]);
   const sources = useMemo<TileSource[]>(() => home ? tileSources(home) : [], [home]);
   const sourceById = useMemo(() => new Map(sources.map(source => [source.id, source])), [sources]);
-  const tiles = useMemo(() => resolveLayout(draft ?? home?.layout ?? [], sources), [draft, home?.layout, sources]);
+  const [storedPage, setStoredPage] = useStoredJson<string>(PAGE_KEY, HOME_PAGE_ID);
+  const page = home?.pages.find(item => item.id === storedPage) ?? home?.pages[0];
+  const pageId = page?.id ?? HOME_PAGE_ID;
+  const tiles = useMemo(() => resolveLayout(draft ?? page?.layout ?? [], sources), [draft, page?.layout, sources]);
+  const swipe = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => () => clearTimeout(saveTimer.current), []);
+  useEffect(() => {
+    const onAdd = () => setDialog({ mode: "add" });
+    window.addEventListener(ADD_TILE_EVENT, onAdd);
+    return () => window.removeEventListener(ADD_TILE_EVENT, onAdd);
+  }, []);
   useEffect(() => { editingRef.current = editing; }, [editing]);
 
   if (isLoading && !home) return <DashboardSkeleton />;
@@ -136,17 +150,40 @@ export function DashboardView({ userName }: { userName: string }) {
     latest.current = next;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      await saveLayout(next);
+      await saveLayout(next, pageId);
       if (editingRef.current || latest.current !== next) return;
       await refresh();
       if (!editingRef.current && latest.current === next) setDraft(null);
     }, SAVE_DELAY_MS);
   };
 
+  const selectPage = (id: string) => {
+    if (id === pageId) return;
+    clearTimeout(saveTimer.current);
+    if (draft) void saveLayout(draft, pageId);
+    setDraft(null);
+    latest.current = null;
+    setRoom(ALL_ROOMS);
+    setStoredPage(id);
+  };
+  const pageIndex = home.pages.findIndex(item => item.id === pageId);
+  const swipeHandlers = home.pages.length > 1 && !editing ? {
+    onPointerDown: (event: React.PointerEvent) => { if (event.pointerType === "touch") swipe.current = { x: event.clientX, y: event.clientY }; },
+    onPointerUp: (event: React.PointerEvent) => {
+      const start = swipe.current;
+      swipe.current = null;
+      if (!start) return;
+      const dx = event.clientX - start.x, dy = event.clientY - start.y;
+      if (Math.abs(dx) < SWIPE_PX || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+      const next = home.pages[pageIndex + (dx < 0 ? 1 : -1)];
+      if (next) selectPage(next.id);
+    },
+  } : {};
+
   const finishEditing = async () => {
     clearTimeout(saveTimer.current);
     setEditing(false);
-    if (draft) await saveLayout(draft);
+    if (draft) await saveLayout(draft, pageId);
     await refresh();
     setDraft(null);
   };
@@ -352,6 +389,8 @@ export function DashboardView({ userName }: { userName: string }) {
         </div>
       </header>
 
+      <PageTabs pages={home.pages} current={pageId} editing={editing} onSelect={selectPage} onChanged={refresh} />
+
       {linkedRooms.length > 1 && !editing && (
         <SegmentedControl label="Room" className={styles.rooms} value={filtering ? room : ALL_ROOMS} onValueChange={setRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} />
       )}
@@ -363,7 +402,9 @@ export function DashboardView({ userName }: { userName: string }) {
       ))}
 
       {tiles.length > 0 ? (
+        <div {...swipeHandlers}>
         <HomeGrid tiles={shownTiles} editing={editing} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(filtering ? mergeFiltered(tiles, next) : next)} onCustomize={setCustomizing} onRemove={id => change(removeTile(tiles, id))} />
+        </div>
       ) : (
         <Glass className={styles.placeholder}>
           <EmptyState

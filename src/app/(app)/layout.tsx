@@ -2,6 +2,7 @@ import { AssistantDock } from "@/components/assistant/assistant-dock";
 import { Wallpaper } from "@/components/glass/wallpaper";
 import { AppHeader } from "@/components/shell/app-header";
 import { BackgroundStudio } from "@/components/shell/background-studio";
+import { CommandMenu } from "@/components/shell/command-menu";
 import { requireUser } from "@/lib/session";
 import styles from "./app.module.css";
 
@@ -14,6 +15,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <main className={styles.page}>{children}</main>
       <AssistantDock />
       <BackgroundStudio />
+      <CommandMenu />
     </>
   );
 }

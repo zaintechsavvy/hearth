@@ -156,6 +156,15 @@ export function createTile(kind: TileKind, link: string | null = null, adjustabl
   return { id: newTileId(), kind, link, size: defaultSize(kind, adjustable), ...extra };
 }
 
+/** One page of the dashboard, such as Home, Kitchen, or Wall tablet. */
+export interface DashboardPage {
+  id: string;
+  name: string;
+  layout: SavedTile[];
+}
+
+export const HOME_PAGE_ID = "home";
+
 /** A saved entry from before tiles had their own id and kind: `{ id: <device id>, size, hidden? }`. */
 export interface LegacyTile {
   id: string;

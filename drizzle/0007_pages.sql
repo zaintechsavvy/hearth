@@ -1,0 +1,1 @@
+ALTER TABLE "preference" ADD COLUMN "pages" jsonb DEFAULT '[]'::jsonb NOT NULL;

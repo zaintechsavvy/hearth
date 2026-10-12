@@ -1,6 +1,6 @@
 import { boolean, customType, index, integer, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
-import type { SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
+import type { DashboardPage, SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
 import type { ItemKind } from "@/lib/widgets/items";
 import type { SceneAction } from "@/lib/scenes/types";
 
@@ -79,6 +79,11 @@ export const preference = pgTable("preference", {
   streamRelayUrl: text("stream_relay_url"),
   /** Dashboard tiles in display order, read through `resolveLayout`. */
   layout: jsonb("layout").$type<SavedTile[]>().notNull().$defaultFn(() => []),
+  /**
+   * Dashboard pages in order, each with its own tiles. Empty until a second page is made; until then `layout` is the
+   * only page, called Home, and it stays in step with the first page afterwards.
+   */
+  pages: jsonb("pages").$type<DashboardPage[]>().notNull().default([]),
   /** Rooms the person made in Hearth, in their chosen order. Rooms from integrations are added to these when shown. */
   rooms: jsonb("rooms").$type<string[]>().notNull().default([]),
   updatedAt: updatedAt(),

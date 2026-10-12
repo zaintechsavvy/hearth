@@ -39,6 +39,10 @@ const subscribeNever = () => () => {};
 
 const fetchInfo = (url: string) => fetch(url).then(response => response.json() as Promise<AssistantInfo>);
 
+/** Opens the assistant from anywhere, such as the command palette, optionally with a request to send. */
+export const ASK_EVENT = "hearth-ask";
+export const askHearth = (text = "") => window.dispatchEvent(new CustomEvent(ASK_EVENT, { detail: text }));
+
 export function AssistantDock() {
   const reduce = useReducedMotion();
   const router = useRouter();
@@ -56,7 +60,7 @@ export function AssistantDock() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "j") {
         event.preventDefault();
         setOpen(value => !value);
       }
@@ -98,6 +102,18 @@ export function AssistantDock() {
       setPending(false);
     }
   }, [mutate, pending, turns]);
+
+  const latestSend = useRef(send);
+  useEffect(() => { latestSend.current = send; }, [send]);
+  useEffect(() => {
+    const onAsk = (event: Event) => {
+      setOpen(true);
+      const text = (event as CustomEvent<string>).detail;
+      if (text) void latestSend.current(text);
+    };
+    window.addEventListener(ASK_EVENT, onAsk);
+    return () => window.removeEventListener(ASK_EVENT, onAsk);
+  }, []);
 
   function toggleListening() {
     if (listening) return recognition.current?.stop();
@@ -212,12 +228,12 @@ export function AssistantDock() {
             style={{ borderRadius: 999 }}
             onClick={() => setOpen(true)}
             aria-label="Open the assistant"
-            aria-keyshortcuts="Meta+K Control+K"
+            aria-keyshortcuts="Meta+J Control+J"
           >
             <motion.span className={styles.pillInner} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Sparkles size={16} strokeWidth={1.75} aria-hidden="true" />
               <span>Ask Hearth</span>
-              <kbd className={styles.kbd}>⌘K</kbd>
+              <kbd className={styles.kbd}>⌘J</kbd>
             </motion.span>
           </motion.button>
         )}

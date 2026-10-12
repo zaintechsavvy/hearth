@@ -79,6 +79,24 @@
 
 .account {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.search {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+
+.search:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
 }
 
 @media (max-width: 640px) {

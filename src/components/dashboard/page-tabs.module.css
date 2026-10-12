@@ -1,0 +1,95 @@
+.bar {
+  display: flex;
+  justify-content: center;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabWrap {
+  display: flex;
+  align-items: center;
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 var(--space-4);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.tab[data-active] {
+  color: var(--foreground);
+}
+
+.highlight {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--surface-raised);
+  box-shadow: 0 1px 2px oklch(0% 0 0 / .08), inset 0 0 0 1px var(--border-subtle);
+}
+
+.label {
+  position: relative;
+}
+
+.tools {
+  display: flex;
+  gap: 1px;
+  margin: 0 var(--space-1);
+}
+
+.tool,
+.add {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+
+.add {
+  width: 34px;
+  height: 34px;
+}
+
+.tool:hover:not(:disabled),
+.add:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+
+.tool:disabled {
+  opacity: .35;
+}
+
+.popover.popover {
+  width: 280px;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab, .tool, .add { transition: none; }
+}
