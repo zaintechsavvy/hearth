@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Inter } from "next/font/google";
 import Script from "next/script";
+import { ServiceWorker } from "@/components/shell/service-worker";
 import { THEME_BOOTSTRAP } from "@/lib/theme";
 import "./globals.css";
 
@@ -10,10 +11,12 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: { default: "Hearth", template: "%s · Hearth" },
   description: "A calm dashboard for your home: climate, cameras, lights, and Matter devices.",
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/icon.svg", apple: "/icons/icon-180.png" },
+  appleWebApp: { capable: true, title: "Hearth", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#1b1b1b" },
@@ -26,6 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body>
         <Script id="theme-bootstrap" strategy="beforeInteractive">{THEME_BOOTSTRAP}</Script>
         {children}
+        <ServiceWorker />
       </body>
     </html>
   );

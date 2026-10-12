@@ -144,7 +144,7 @@ export function AssistantDock() {
   const configured = info?.configured;
 
   return (
-    <div className={styles.anchor}>
+    <div className={styles.anchor} data-wall-assistant>
       <AnimatePresence initial={false} mode="popLayout">
         {open ? (
           <motion.section

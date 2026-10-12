@@ -59,3 +59,14 @@ describe("countdowns, plants, timers, and Wi-Fi", () => {
     expect(wifiQrText({ ssid: "a\\b", password: "", security: "nopass", hidden: true })).toBe("WIFI:T:nopass;S:a\\\\b;H:true;;");
   });
 });
+
+describe("wall tablet night", async () => {
+  const { isNight } = await import("@/lib/wall");
+  it("handles windows that cross midnight", () => {
+    const window = { dimFrom: "22:00", dimTo: "07:00" };
+    expect(isNight(window, new Date("2026-10-12T23:30:00"))).toBe(true);
+    expect(isNight(window, new Date("2026-10-12T06:59:00"))).toBe(true);
+    expect(isNight(window, new Date("2026-10-12T07:00:00"))).toBe(false);
+    expect(isNight({ dimFrom: "13:00", dimTo: "15:00" }, new Date("2026-10-12T14:00:00"))).toBe(true);
+  });
+});

@@ -7,6 +7,7 @@ import { CalendarsSection } from "@/components/connections/calendars-section";
 import { CamerasSection } from "@/components/connections/cameras-section";
 import { IntegrationsSection } from "@/components/connections/integrations-section";
 import { RoomsSection } from "@/components/connections/rooms-section";
+import { WallSection } from "@/components/connections/wall-section";
 import styles from "@/components/connections/connections.module.css";
 import type { CameraSource } from "@/lib/cameras/stream-relay";
 import { unseal } from "@/lib/crypto";
@@ -48,6 +49,7 @@ export default async function ConnectionsPage() {
       <CamerasSection cameras={cameras.map(row => ({ id: row.id, name: row.name, host: hostOf(unseal<CameraSource>(row.source).url) }))} relayUrl={relayUrl} />
       <CalendarsSection calendars={calendars.map(row => ({ id: row.id, name: row.name, color: row.color, host: hostOf(unseal<string>(row.url)) }))} />
       <AppearanceSection />
+      <WallSection />
       <AccountSection user={{ name: user.name, email: user.email }} />
     </div>
   );

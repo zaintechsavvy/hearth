@@ -25,7 +25,7 @@ export function AppHeader({ user }: { user: { name: string; email: string } }) {
   const [theme, setTheme] = useThemePreference();
 
   return (
-    <header className={styles.header}>
+    <header className={styles.header} data-wall-hide>
       <Link href="/dashboard" className={styles.brand} aria-label="Hearth home"><Logo /></Link>
       <GlassSurface width="auto" height={46} borderRadius={23} blur={12} backgroundOpacity={0.18} saturation={1.6} className={styles.navGlass}>
         <nav aria-label="Main" className={styles.nav}>

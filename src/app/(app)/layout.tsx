@@ -3,6 +3,7 @@ import { Wallpaper } from "@/components/glass/wallpaper";
 import { AppHeader } from "@/components/shell/app-header";
 import { BackgroundStudio } from "@/components/shell/background-studio";
 import { CommandMenu } from "@/components/shell/command-menu";
+import { WallMode } from "@/components/shell/wall-mode";
 import { requireUser } from "@/lib/session";
 import styles from "./app.module.css";
 
@@ -16,6 +17,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <AssistantDock />
       <BackgroundStudio />
       <CommandMenu />
+      <WallMode />
     </>
   );
 }

@@ -37,3 +37,17 @@ body {
 ::selection {
   background: var(--accent-subtle);
 }
+
+/* Wall tablet mode: the page chrome steps back, and everything shifts a few pixels now and then so nothing burns in. */
+:root[data-wall] [data-wall-hide] {
+  display: none;
+}
+
+:root[data-wall=""] [data-wall-assistant] {
+  display: none;
+}
+
+:root[data-wall] main {
+  translate: var(--wall-shift-x, 0) var(--wall-shift-y, 0);
+  transition: translate 2s ease;
+}

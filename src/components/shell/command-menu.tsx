@@ -119,6 +119,7 @@ function Menu({ close }: { close: () => void }) {
   add({ id: "add-tile", label: "Add a tile", group: "Dashboard", keywords: ["new", "widget", "tile"], icon: icon(Plus) }, () => { router.push("/dashboard"); setTimeout(() => window.dispatchEvent(new Event(ADD_TILE_EVENT)), 150); });
   add({ id: "studio", label: "Change the background", group: "Dashboard", keywords: ["wallpaper", "gradient", "photo", "theme"], icon: icon(Palette) }, () => openStudio("gradient"));
   add({ id: "theme", label: theme === "dark" ? "Switch to light mode" : "Switch to dark mode", group: "Dashboard", keywords: ["theme", "dark", "light", "night"], icon: icon(theme === "dark" ? Sun : Moon) }, () => setTheme(theme === "dark" ? "light" : "dark"));
+  add({ id: "wall", label: "Wall tablet settings", group: "Go to", keywords: ["kiosk", "tablet", "screensaver", "dim"], icon: icon(Settings) }, () => router.push("/settings#wall"));
   add({ id: "home", label: "Go home", group: "Go to", keywords: ["dashboard"], icon: icon(House) }, () => router.push("/dashboard"));
   for (const section of SETTINGS) {
     add({ id: `settings:${section.id}`, label: `Settings: ${section.label}`, group: "Go to", keywords: ["settings", section.label], icon: icon(section.id === "rooms" ? DoorOpen : section.id === "calendars" ? CalendarDays : Settings) }, () => router.push(`/settings#${section.id}`));

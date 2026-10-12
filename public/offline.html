@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hearth is offline</title>
+<style>
+  :root { color-scheme: light dark; font-family: system-ui, -apple-system, sans-serif; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: linear-gradient(180deg, #f6f7f9, #e7e9ee); color: #111; }
+  @media (prefers-color-scheme: dark) { body { background: linear-gradient(180deg, #1c1d20, #111214); color: #f3f4f6; } }
+  main { display: grid; justify-items: center; gap: 10px; padding: 24px; text-align: center; }
+  h1 { margin: 8px 0 0; font-size: 20px; font-weight: 500; }
+  p { margin: 0; max-width: 32ch; opacity: .7; line-height: 1.45; }
+  button { margin-top: 12px; height: 40px; padding: 0 18px; border: 0; border-radius: 999px; background: currentColor; font: inherit; font-weight: 500; cursor: pointer; }
+  button span { color: Canvas; }
+</style>
+</head>
+<body>
+<main>
+  <svg width="56" height="56" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#111"/><path d="M10 23v-6.5a6 6 0 0 1 12 0V23" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><circle cx="16" cy="18.2" r="1.9" fill="#fff"/></svg>
+  <h1>Hearth is offline</h1>
+  <p>This screen cannot reach your Hearth server right now. It will reconnect on its own.</p>
+  <button type="button" onclick="location.reload()"><span>Try again</span></button>
+</main>
+<script>setInterval(function () { fetch("/", { cache: "no-store" }).then(function (r) { if (r.ok) location.reload(); }).catch(function () {}); }, 15000);</script>
+</body>
+</html>
