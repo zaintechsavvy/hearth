@@ -1,4 +1,4 @@
-export const ACTIVITY_CATEGORIES = ["lights", "doors", "sensors", "climate", "household", "system"] as const;
+export const ACTIVITY_CATEGORIES = ["lights", "doors", "sensors", "climate", "household", "automations", "system"] as const;
 export type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[number];
 
 export interface AlertSettings {

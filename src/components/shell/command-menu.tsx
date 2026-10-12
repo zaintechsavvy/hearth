@@ -120,6 +120,7 @@ function Menu({ close }: { close: () => void }) {
   add({ id: "studio", label: "Change the background", group: "Dashboard", keywords: ["wallpaper", "gradient", "photo", "theme"], icon: icon(Palette) }, () => openStudio("gradient"));
   add({ id: "theme", label: theme === "dark" ? "Switch to light mode" : "Switch to dark mode", group: "Dashboard", keywords: ["theme", "dark", "light", "night"], icon: icon(theme === "dark" ? Sun : Moon) }, () => setTheme(theme === "dark" ? "light" : "dark"));
   add({ id: "wall", label: "Wall tablet settings", group: "Go to", keywords: ["kiosk", "tablet", "screensaver", "dim"], icon: icon(Settings) }, () => router.push("/settings#wall"));
+  add({ id: "automations", label: "Automations", description: "Rules that run on their own", group: "Go to", keywords: ["rules", "schedule", "routine", "sunset"], icon: icon(Sparkles) }, () => router.push("/automations"));
   add({ id: "activity", label: "Activity", description: "What happened at home", group: "Go to", keywords: ["history", "log", "timeline"], icon: icon(House) }, () => router.push("/activity"));
   add({ id: "home", label: "Go home", group: "Go to", keywords: ["dashboard"], icon: icon(House) }, () => router.push("/dashboard"));
   for (const section of SETTINGS) {

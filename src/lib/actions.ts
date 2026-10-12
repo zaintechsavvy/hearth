@@ -12,7 +12,10 @@ import { seal } from "@/lib/crypto";
 import { createTile, HOME_PAGE_ID, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES } from "@/lib/dashboard/layout";
 import { tileSources } from "@/lib/dashboard/sources";
 import { db } from "@/lib/db";
-import { assistant, calendar, camera, deviceOverride, integration, preference, reminder, scene } from "@/lib/db/schema";
+import { assistant, automation, calendar, camera, deviceOverride, integration, preference, reminder, scene } from "@/lib/db/schema";
+import { automationInput } from "@/lib/automations/types";
+import { isSensitive } from "@/lib/devices/types";
+import { runAutomationNow } from "@/lib/monitor/automations";
 import { getPreferences, loadHome, orderedRooms, streamRelayUrl } from "@/lib/home";
 import { parseDeviceId } from "@/lib/devices/types";
 import { saveScene } from "@/lib/scenes/service";
@@ -437,6 +440,63 @@ export async function saveAlerts(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "Those alert settings are not valid." };
   return authed(async userId => {
     await savePreferences(userId, { alerts: parsed.data });
+    return OK;
+  });
+}
+
+/** Saves a rule after checking it can never unlock a door or open a garage, door, or gate. */
+export async function saveAutomation(input: unknown, id?: string): Promise<CreatedResult> {
+  const parsed = automationInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  let saved = id ?? "";
+  const result = await authed(async userId => {
+    const devices = new Map((await loadHome(userId)).devices.map(device => [device.id, device]));
+    for (const action of parsed.data.actions) {
+      if (action.type !== "device") continue;
+      const device = devices.get(action.deviceId);
+      if (!device) throw new IntegrationError("One of the devices in this automation is gone.");
+      if (isSensitive(device, action.command)) throw new IntegrationError(`For safety, automations cannot unlock or open ${device.name}.`);
+    }
+    if (id) {
+      const updated = await db.update(automation).set(parsed.data).where(and(eq(automation.id, id), eq(automation.userId, userId))).returning({ id: automation.id });
+      if (!updated.length) throw new IntegrationError("That automation is gone.");
+    } else {
+      const [row] = await db.insert(automation).values({ userId, ...parsed.data }).returning({ id: automation.id });
+      saved = row.id;
+    }
+    return OK;
+  });
+  return result.ok ? { ok: true, id: saved } : result;
+}
+
+export async function setAutomationEnabled(id: string, enabled: boolean): Promise<ActionResult> {
+  return authed(async userId => {
+    await db.update(automation).set({ enabled }).where(and(eq(automation.id, id), eq(automation.userId, userId)));
+    return OK;
+  });
+}
+
+export async function deleteAutomation(id: string): Promise<ActionResult> {
+  return authed(async userId => {
+    await db.delete(automation).where(and(eq(automation.id, id), eq(automation.userId, userId)));
+    return OK;
+  });
+}
+
+export async function runAutomation(id: string): Promise<ActionResult> {
+  return authed(async userId => {
+    if (!(await runAutomationNow(userId, id))) throw new IntegrationError("That automation is gone.");
+    return OK;
+  });
+}
+
+const locationInput = z.object({ name: z.string().trim().min(1).max(80), latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) });
+
+export async function saveHomeLocation(input: unknown): Promise<ActionResult> {
+  const parsed = locationInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Pick a place from the list." };
+  return authed(async userId => {
+    await savePreferences(userId, { location: parsed.data });
     return OK;
   });
 }

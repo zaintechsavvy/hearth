@@ -1,6 +1,7 @@
 import "server-only";
 import { logActivity, onLoggedChanges } from "./activity";
 import { alertOnChanges, alertOnTick } from "./alerts";
+import { runDeviceAutomations, runTimedAutomations } from "./automations";
 import { onHomeChange, onTick, startMonitor } from "./monitor";
 import { recordReadings } from "./recorder";
 
@@ -10,5 +11,7 @@ export function startHomeMonitor() {
   onHomeChange(logActivity);
   onLoggedChanges(alertOnChanges);
   onTick(alertOnTick);
+  onHomeChange(runDeviceAutomations);
+  onTick(runTimedAutomations);
   startMonitor();
 }

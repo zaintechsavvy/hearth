@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, Cpu, DoorOpen, Droplets, Flame, History, Lightbulb, Lock, LockOpen, Thermometer, type LucideIcon } from "lucide-react";
+import { BellRing, Cpu, DoorOpen, Droplets, Flame, History, Lightbulb, Lock, LockOpen, Thermometer, Workflow, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import useSWRInfinite from "swr/infinite";
 import { Button } from "@/components/arc/button/button";
@@ -18,9 +18,9 @@ const ALL = "all";
 const ANY_ROOM = "__any";
 const FILTERS: { value: ActivityCategory | typeof ALL; label: string }[] = [
   { value: ALL, label: "All" }, { value: "doors", label: "Doors and locks" }, { value: "lights", label: "Lights" },
-  { value: "sensors", label: "Sensors" }, { value: "climate", label: "Climate" }, { value: "system", label: "System" },
+  { value: "sensors", label: "Sensors" }, { value: "climate", label: "Climate" }, { value: "automations", label: "Automations" }, { value: "system", label: "System" },
 ];
-const CATEGORY_ICONS: Record<ActivityCategory, LucideIcon> = { doors: DoorOpen, lights: Lightbulb, sensors: BellRing, climate: Thermometer, household: History, system: Cpu };
+const CATEGORY_ICONS: Record<ActivityCategory, LucideIcon> = { doors: DoorOpen, lights: Lightbulb, sensors: BellRing, climate: Thermometer, household: History, automations: Workflow, system: Cpu };
 
 function iconFor(entry: ActivityEntry): LucideIcon {
   if (entry.what === "unlocked") return LockOpen;

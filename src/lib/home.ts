@@ -91,7 +91,7 @@ export async function getPreferences(userId: string) {
   const row = await db.query.preference.findFirst({ where: eq(preference.userId, userId) });
   const layout = row?.layout ?? [];
   const pages: DashboardPage[] = row?.pages.length ? row.pages : [{ id: HOME_PAGE_ID, name: "Home", layout }];
-  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [], alerts: { ...DEFAULT_ALERTS, ...row?.alerts } };
+  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [], alerts: { ...DEFAULT_ALERTS, ...row?.alerts }, location: row?.location ?? null };
 }
 
 export async function loadHome(userId: string): Promise<HomeSnapshot> {

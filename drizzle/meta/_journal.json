@@ -71,6 +71,13 @@
       "when": 1791845600526,
       "tag": "0009_activity_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791846014877,
+      "tag": "0010_automations",
+      "breakpoints": true
     }
   ]
 }

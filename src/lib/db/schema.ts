@@ -3,6 +3,7 @@ import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { DashboardPage, SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
 import type { ItemKind } from "@/lib/widgets/items";
 import { DEFAULT_ALERTS, type ActivityCategory, type AlertSettings } from "@/lib/activity-types";
+import type { Action, Condition, HomeLocation, Trigger } from "@/lib/automations/types";
 import type { SceneAction } from "@/lib/scenes/types";
 
 const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataType: () => "bytea" });
@@ -85,6 +86,8 @@ export const preference = pgTable("preference", {
    * only page, called Home, and it stays in step with the first page afterwards.
    */
   pages: jsonb("pages").$type<DashboardPage[]>().notNull().default([]),
+  /** Where the home is, for sunrise and sunset automations. */
+  location: jsonb("location").$type<HomeLocation | null>(),
   /** Which alerts reach this person's phones and tablets. */
   alerts: jsonb("alerts").$type<AlertSettings>().notNull().default(DEFAULT_ALERTS),
   /** Rooms the person made in Hearth, in their chosen order. Rooms from integrations are added to these when shown. */
@@ -209,3 +212,16 @@ export const serverSecret = pgTable("server_secret", {
   value: text("value").notNull(),
   createdAt: createdAt(),
 });
+
+/** When, if, then rules the home monitor runs. Unlocking and opening are refused when saved and when run. */
+export const automation = pgTable("automation", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  trigger: jsonb("trigger").$type<Trigger>().notNull(),
+  conditions: jsonb("conditions").$type<Condition[]>().notNull().default([]),
+  actions: jsonb("actions").$type<Action[]>().notNull(),
+  lastRun: timestamp("last_run"),
+  createdAt: createdAt(),
+}, t => [index("automation_user_idx").on(t.userId)]);
