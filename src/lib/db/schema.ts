@@ -225,3 +225,23 @@ export const automation = pgTable("automation", {
   lastRun: timestamp("last_run"),
   createdAt: createdAt(),
 }, t => [index("automation_user_idx").on(t.userId)]);
+
+/** Someone who shares another person's home. One home each; leaving restores their own. */
+export const membership = pgTable("membership", {
+  memberId: text("member_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
+  ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  role: text("role", { enum: ["member", "guest"] }).notNull(),
+  /** For guests, the dashboard pages they can see. */
+  pages: jsonb("pages").$type<string[]>(),
+  createdAt: createdAt(),
+}, t => [index("membership_owner_idx").on(t.ownerId)]);
+
+/** A link the owner shares to bring someone into the home. */
+export const invite = pgTable("invite", {
+  code: text("code").primaryKey(),
+  ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  role: text("role", { enum: ["member", "guest"] }).notNull(),
+  pages: jsonb("pages").$type<string[]>(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: createdAt(),
+}, t => [index("invite_owner_idx").on(t.ownerId)]);

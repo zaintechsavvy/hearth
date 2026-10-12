@@ -11,10 +11,12 @@ interface AuthCardProps {
   title: string;
   description: string;
   footer: { prompt: string; href: "/sign-in" | "/sign-up"; label: string };
+  /** Where to go after signing in, carried across to the other form. */
+  next?: string | null;
   children: ReactNode;
 }
 
-export function AuthCard({ title, description, footer, children }: AuthCardProps) {
+export function AuthCard({ title, description, footer, next, children }: AuthCardProps) {
   const reduce = useReducedMotion();
   return (
     <motion.section
@@ -30,7 +32,7 @@ export function AuthCard({ title, description, footer, children }: AuthCardProps
       </div>
       {children}
       <p className={styles.footer}>
-        {footer.prompt} <Link href={footer.href} className={styles.link}>{footer.label}</Link>
+        {footer.prompt} <Link href={next ? `${footer.href}?next=${encodeURIComponent(next)}` : footer.href} className={styles.link}>{footer.label}</Link>
       </p>
     </motion.section>
   );

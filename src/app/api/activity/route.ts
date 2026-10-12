@@ -3,17 +3,18 @@ import { NextResponse } from "next/server";
 import { ACTIVITY_CATEGORIES, type ActivityCategory, type ActivityEntry } from "@/lib/activity-types";
 import { db } from "@/lib/db";
 import { activity } from "@/lib/db/schema";
-import { getUser } from "@/lib/session";
+import { getHome } from "@/lib/session";
 
 const PAGE = 80;
 
 /** The activity log newest first, a page at a time, optionally one category or room. */
 export async function GET(request: Request) {
-  const user = await getUser();
-  if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
+  const home = await getHome();
+  if (!home) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
+  if (home.role === "guest") return NextResponse.json({ error: "Guests cannot see this." }, { status: 403 });
   const params = new URL(request.url).searchParams;
   const before = params.get("before"), category = params.get("category"), room = params.get("room");
-  const filters = [eq(activity.userId, user.id)];
+  const filters = [eq(activity.userId, home.homeId)];
   if (before && !Number.isNaN(Date.parse(before))) filters.push(lt(activity.at, new Date(before)));
   if (category && (ACTIVITY_CATEGORIES as readonly string[]).includes(category)) filters.push(eq(activity.category, category as ActivityCategory));
   if (room) filters.push(eq(activity.room, room));

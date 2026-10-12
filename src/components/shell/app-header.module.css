@@ -112,3 +112,24 @@
     display: none;
   }
 }
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.household {
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .08);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .household { display: none; }
+}

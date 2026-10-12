@@ -38,7 +38,7 @@ const setMenuOpen = (open: boolean) => {
 };
 
 /** One search for everything: switch a device, run a scene, jump to a page or a setting, start a timer, or ask Hearth. */
-export function CommandMenu() {
+export function CommandMenu({ limited = false }: { limited?: boolean }) {
   const open = useSyncExternalStore(listener => { listeners.add(listener); return () => listeners.delete(listener); }, () => menuOpen, () => false);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -61,7 +61,7 @@ export function CommandMenu() {
         <DialogPrimitive.Overlay className={styles.overlay} />
         <DialogPrimitive.Content className={styles.content} aria-describedby={undefined}>
           <DialogPrimitive.Title className={styles.hidden}>Search Hearth</DialogPrimitive.Title>
-          {open && <Menu close={() => setMenuOpen(false)} />}
+          {open && <Menu limited={limited} close={() => setMenuOpen(false)} />}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
@@ -86,7 +86,8 @@ function deviceCommand(device: Device): { label: string; command: DeviceCommand 
   }
 }
 
-function Menu({ close }: { close: () => void }) {
+/** Guests get their devices, scenes, and pages; nothing that changes the home's setup. */
+function Menu({ close, limited }: { close: () => void; limited: boolean }) {
   const router = useRouter();
   const { home, send, runScene } = useHome();
   const [, setPage] = useStoredJson<string>("hearth-page", HOME_PAGE_ID);
@@ -101,7 +102,7 @@ function Menu({ close }: { close: () => void }) {
   };
   const icon = (Icon: LucideIcon) => <Icon size={16} strokeWidth={1.75} aria-hidden="true" />;
 
-  add({ id: "ask", label: "Ask Hearth", description: "Type or say what you want", group: "Assistant", keywords: ["assistant", "ai", "help"], icon: icon(Sparkles), shortcut: "⌘J" }, () => askHearth());
+  if (!limited) add({ id: "ask", label: "Ask Hearth", description: "Type or say what you want", group: "Assistant", keywords: ["assistant", "ai", "help"], icon: icon(Sparkles), shortcut: "⌘J" }, () => askHearth());
   for (const device of home?.devices ?? []) {
     const action = deviceCommand(device);
     if (!action || isSensitive(device, action.command)) continue;
@@ -113,20 +114,21 @@ function Menu({ close }: { close: () => void }) {
   for (const page of home?.pages ?? []) {
     add({ id: `page:${page.id}`, label: `Go to ${page.name}`, group: "Pages", keywords: ["page", "dashboard", page.name], icon: icon(LayoutGrid) }, () => { setPage(page.id); router.push("/dashboard"); });
   }
-  for (const minutes of [5, 10, 15, 30]) {
-    add({ id: `timer:${minutes}`, label: `Start a ${minutes} minute timer`, group: "Timers", keywords: ["timer", "kitchen", "countdown"], icon: icon(Timer) }, () => startQuickTimer(minutes));
+  if (!limited) {
+    for (const minutes of [5, 10, 15, 30]) {
+      add({ id: `timer:${minutes}`, label: `Start a ${minutes} minute timer`, group: "Timers", keywords: ["timer", "kitchen", "countdown"], icon: icon(Timer) }, () => startQuickTimer(minutes));
+    }
+    add({ id: "add-tile", label: "Add a tile", group: "Dashboard", keywords: ["new", "widget", "tile"], icon: icon(Plus) }, () => { router.push("/dashboard"); setTimeout(() => window.dispatchEvent(new Event(ADD_TILE_EVENT)), 150); });
+    add({ id: "studio", label: "Change the background", group: "Dashboard", keywords: ["wallpaper", "gradient", "photo", "theme"], icon: icon(Palette) }, () => openStudio("gradient"));
+    add({ id: "theme", label: theme === "dark" ? "Switch to light mode" : "Switch to dark mode", group: "Dashboard", keywords: ["theme", "dark", "light", "night"], icon: icon(theme === "dark" ? Sun : Moon) }, () => setTheme(theme === "dark" ? "light" : "dark"));
+    add({ id: "wall", label: "Wall tablet settings", group: "Go to", keywords: ["kiosk", "tablet", "screensaver", "dim"], icon: icon(Settings) }, () => router.push("/settings#wall"));
+    add({ id: "automations", label: "Automations", description: "Rules that run on their own", group: "Go to", keywords: ["rules", "schedule", "routine", "sunset"], icon: icon(Sparkles) }, () => router.push("/automations"));
+    add({ id: "activity", label: "Activity", description: "What happened at home", group: "Go to", keywords: ["history", "log", "timeline"], icon: icon(House) }, () => router.push("/activity"));
+    add({ id: "home", label: "Go home", group: "Go to", keywords: ["dashboard"], icon: icon(House) }, () => router.push("/dashboard"));
+    for (const section of SETTINGS) {
+      add({ id: `settings:${section.id}`, label: `Settings: ${section.label}`, group: "Go to", keywords: ["settings", section.label], icon: icon(section.id === "rooms" ? DoorOpen : section.id === "calendars" ? CalendarDays : Settings) }, () => router.push(`/settings#${section.id}`));
+    }
   }
-  add({ id: "add-tile", label: "Add a tile", group: "Dashboard", keywords: ["new", "widget", "tile"], icon: icon(Plus) }, () => { router.push("/dashboard"); setTimeout(() => window.dispatchEvent(new Event(ADD_TILE_EVENT)), 150); });
-  add({ id: "studio", label: "Change the background", group: "Dashboard", keywords: ["wallpaper", "gradient", "photo", "theme"], icon: icon(Palette) }, () => openStudio("gradient"));
-  add({ id: "theme", label: theme === "dark" ? "Switch to light mode" : "Switch to dark mode", group: "Dashboard", keywords: ["theme", "dark", "light", "night"], icon: icon(theme === "dark" ? Sun : Moon) }, () => setTheme(theme === "dark" ? "light" : "dark"));
-  add({ id: "wall", label: "Wall tablet settings", group: "Go to", keywords: ["kiosk", "tablet", "screensaver", "dim"], icon: icon(Settings) }, () => router.push("/settings#wall"));
-  add({ id: "automations", label: "Automations", description: "Rules that run on their own", group: "Go to", keywords: ["rules", "schedule", "routine", "sunset"], icon: icon(Sparkles) }, () => router.push("/automations"));
-  add({ id: "activity", label: "Activity", description: "What happened at home", group: "Go to", keywords: ["history", "log", "timeline"], icon: icon(House) }, () => router.push("/activity"));
-  add({ id: "home", label: "Go home", group: "Go to", keywords: ["dashboard"], icon: icon(House) }, () => router.push("/dashboard"));
-  for (const section of SETTINGS) {
-    add({ id: `settings:${section.id}`, label: `Settings: ${section.label}`, group: "Go to", keywords: ["settings", section.label], icon: icon(section.id === "rooms" ? DoorOpen : section.id === "calendars" ? CalendarDays : Settings) }, () => router.push(`/settings#${section.id}`));
-  }
-
   return (
     <div className={styles.menu}>
       <CommandPalette

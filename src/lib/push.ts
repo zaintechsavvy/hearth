@@ -1,9 +1,9 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import webpush from "web-push";
 import { seal, unseal } from "@/lib/crypto";
 import { db } from "@/lib/db";
-import { pushSubscription, serverSecret } from "@/lib/db/schema";
+import { membership, pushSubscription, serverSecret } from "@/lib/db/schema";
 
 const KEY = "vapid";
 const SUBJECT = process.env.PUSH_CONTACT ?? "mailto:hearth@localhost";
@@ -30,9 +30,10 @@ export function vapidKeys() {
   })();
 }
 
-/** Sends to every device that person turned alerts on for, and forgets the ones the push service says are gone. */
-export async function sendPush(userId: string, message: PushMessage) {
-  const subscriptions = await db.select().from(pushSubscription).where(eq(pushSubscription.userId, userId));
+/** Sends to every device anyone living in the home turned alerts on for, and forgets the ones the push service says are gone. Guests get none. */
+export async function sendPush(homeId: string, message: PushMessage) {
+  const members = await db.select({ id: membership.memberId }).from(membership).where(and(eq(membership.ownerId, homeId), eq(membership.role, "member")));
+  const subscriptions = await db.select().from(pushSubscription).where(inArray(pushSubscription.userId, [homeId, ...members.map(member => member.id)]));
   if (subscriptions.length === 0) return 0;
   const { publicKey, privateKey } = await vapidKeys();
   let delivered = 0;

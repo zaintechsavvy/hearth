@@ -1,10 +1,11 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { integration } from "@/lib/db/schema";
-import { loadHome } from "@/lib/home";
+import { loadHome, type HomeSnapshot } from "@/lib/home";
+import { guestView } from "@/lib/household";
 import { createProvider } from "@/lib/integrations/registry";
 import { integrationTopic, listen, userTopic } from "@/lib/live/bus";
-import { getUser } from "@/lib/session";
+import { getHome } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +17,10 @@ const HEARTBEAT_MS = 25_000;
  * runs, or settings change. Snapshots are throttled so a burst of updates becomes one message.
  */
 export async function GET(request: Request) {
-  const user = await getUser();
-  if (!user) return new Response("Sign in to continue.", { status: 401 });
+  const home = await getHome();
+  if (!home) return new Response("Sign in to continue.", { status: 401 });
 
+  const view = (snapshot: HomeSnapshot) => home.role === "guest" ? guestView(snapshot, home.pages ?? []) : snapshot;
   const encoder = new TextEncoder();
   let closed = false;
   let watching: (() => void)[] = [];
@@ -52,7 +54,7 @@ export async function GET(request: Request) {
         }
         sending = true;
         try {
-          write(`event: snapshot\ndata: ${JSON.stringify(await loadHome(user.id))}\n\n`);
+          write(`event: snapshot\ndata: ${JSON.stringify(view(await loadHome(home.homeId)))}\n\n`);
         } catch (error) {
           console.error(error);
         } finally {
@@ -74,7 +76,7 @@ export async function GET(request: Request) {
 
       const watchIntegrations = async () => {
         for (const cleanup of watching) cleanup();
-        const rows = await db.select().from(integration).where(eq(integration.userId, user.id));
+        const rows = await db.select().from(integration).where(eq(integration.userId, home.homeId));
         watching = rows.flatMap(row => {
           const stops: (() => void)[] = [listen(integrationTopic(row.id), schedule)];
           try {
@@ -88,7 +90,7 @@ export async function GET(request: Request) {
         if (closed) for (const cleanup of watching) cleanup();
       };
 
-      cleanups.push(listen(userTopic(user.id), () => void watchIntegrations().then(schedule)));
+      cleanups.push(listen(userTopic(home.homeId), () => void watchIntegrations().then(schedule)));
       const heartbeat = setInterval(() => write(": keepalive\n\n"), HEARTBEAT_MS);
       cleanups.push(() => clearInterval(heartbeat), () => clearTimeout(timer));
       request.signal.addEventListener("abort", () => {

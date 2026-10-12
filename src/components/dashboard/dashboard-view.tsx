@@ -92,7 +92,7 @@ function summarize(devices: Device[]) {
   return parts.join(" · ");
 }
 
-export function DashboardView({ userName }: { userName: string }) {
+export function DashboardView({ userName, canEdit = true }: { userName: string; canEdit?: boolean }) {
   const { home, error, isLoading, live, refresh, send, runScene } = useHome();
   const [sceneEditing, setSceneEditing] = useState<HearthScene | "new" | null>(null);
   const hour = useSyncExternalStore(subscribeNever, () => new Date().getHours(), () => null);
@@ -349,6 +349,14 @@ export function DashboardView({ userName }: { userName: string }) {
     </>
   );
 
+  if (tiles.length === 0 && !canEdit) {
+    return (
+      <Glass className={styles.placeholder}>
+        <EmptyState icon={<LayoutGrid size={24} strokeWidth={1.75} />} title="Nothing shared yet" description="The page you were given has no tiles yet. Ask whoever invited you to add some." />
+      </Glass>
+    );
+  }
+
   if (tiles.length === 0 && !connected) {
     return (
       <>
@@ -386,9 +394,9 @@ export function DashboardView({ userName }: { userName: string }) {
                   <BackgroundPicker />
                 </PopoverContent>
               </Popover>
-              <Button variant="ghost" onClick={() => setSceneEditing("new")}>New scene</Button>
-              <Button variant="ghost" onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" />Add tile</Button>
-              {tiles.length > 0 && <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
+              {canEdit && <Button variant="ghost" onClick={() => setSceneEditing("new")}>New scene</Button>}
+              {canEdit && <Button variant="ghost" onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" />Add tile</Button>}
+              {canEdit && tiles.length > 0 && <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
             </>
           )}
         </div>

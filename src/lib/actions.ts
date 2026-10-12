@@ -1,6 +1,6 @@
 "use server";
 
-import { authed, firstIssue, OK, type ActionResult, type CreatedResult } from "@/lib/action-helpers";
+import { authed, firstIssue, OK, ownerOnly, type ActionResult, type CreatedResult } from "@/lib/action-helpers";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -49,6 +49,8 @@ const cameraInput = z.object({
 
 /** Connects before saving, so a saved integration is one that worked at least once. */
 export async function addIntegration(input: unknown): Promise<CreatedResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
   const parsed = integrationInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const id = crypto.randomUUID();
@@ -65,6 +67,8 @@ export async function addIntegration(input: unknown): Promise<CreatedResult> {
 
 /** The demo home also fills an empty dashboard, so there is something to try straight away. */
 export async function addDemoHome(): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
   const result = await addIntegration({ kind: "demo", name: "Demo home" });
   if (!result.ok) return result;
   return authed(async userId => {
@@ -78,6 +82,8 @@ export async function addDemoHome(): Promise<ActionResult> {
 }
 
 export async function removeIntegration(id: string): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
   return authed(async userId => {
     await db.delete(integration).where(and(eq(integration.id, id), eq(integration.userId, userId)));
     revalidatePath("/", "layout");
@@ -86,6 +92,8 @@ export async function removeIntegration(id: string): Promise<ActionResult> {
 }
 
 export async function pairMatterDevice(integrationId: string, code: string): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
   const cleaned = code.trim().replaceAll(/[\s-]/g, "");
   if (!/^(MT:[0-9A-Z.\-]+|\d{11}|\d{21})$/i.test(cleaned)) return { ok: false, error: "Enter the 11 digit pairing code, or the MT: code from the QR label." };
   return authed(async userId => {
@@ -99,6 +107,8 @@ export async function pairMatterDevice(integrationId: string, code: string): Pro
 }
 
 export async function addCamera(input: unknown): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
   const parsed = cameraInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   return authed(async userId => {
@@ -113,6 +123,8 @@ export async function addCamera(input: unknown): Promise<ActionResult> {
 }
 
 export async function removeCamera(id: string): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
   return authed(async userId => {
     const deleted = await db.delete(camera).where(and(eq(camera.id, id), eq(camera.userId, userId))).returning({ id: camera.id });
     if (deleted.length) await new StreamRelay(await streamRelayUrl(userId)).remove(relayStreamName(id)).catch(() => undefined);
@@ -127,6 +139,8 @@ async function savePreferences(userId: string, patch: Partial<typeof preference.
 }
 
 export async function saveStreamRelay(url: string): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
   const parsed = httpUrl.safeParse(url.trim());
   if (!parsed.success) return { ok: false, error: "Enter the relay address, like http://192.168.1.10:1984" };
   return authed(async userId => {
@@ -232,6 +246,8 @@ const assistantInput = z.object({
 
 /** Checks the key against the provider before saving. The first assistant becomes the default. */
 export async function addAssistant(input: unknown): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
   const parsed = assistantInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const { provider } = parsed.data;
@@ -253,6 +269,8 @@ export async function addAssistant(input: unknown): Promise<ActionResult> {
 }
 
 export async function removeAssistant(id: string): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
   return authed(async userId => {
     await db.delete(assistant).where(and(eq(assistant.id, id), eq(assistant.userId, userId)));
     revalidatePath("/", "layout");
@@ -261,6 +279,8 @@ export async function removeAssistant(id: string): Promise<ActionResult> {
 }
 
 export async function setDefaultAssistant(id: string): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
   return authed(async userId => {
     await db.transaction(async tx => {
       await tx.update(assistant).set({ isDefault: false }).where(eq(assistant.userId, userId));

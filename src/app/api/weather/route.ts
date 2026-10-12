@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { readableError } from "@/lib/home";
-import { getUser } from "@/lib/session";
+import { getHome } from "@/lib/session";
 import { forecastFor } from "@/lib/widgets/weather";
 
 export async function GET(request: Request) {
-  if (!(await getUser())) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
+  if (!(await getHome())) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   const params = new URL(request.url).searchParams;
   const latitude = Number(params.get("lat")), longitude = Number(params.get("lon"));
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {

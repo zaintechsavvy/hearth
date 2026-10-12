@@ -14,7 +14,7 @@ import styles from "./auth-card.module.css";
 const MIN_LEVEL = 2;
 const rules = createPasswordRules({ minLength: MIN_PASSWORD_LENGTH });
 
-export function SignUpForm() {
+export function SignUpForm({ next = null }: { next?: string | null }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,12 +35,13 @@ export function SignUpForm() {
       setPending(false);
       return;
     }
-    router.replace("/dashboard");
+    router.replace(next ?? "/dashboard");
     router.refresh();
   }
 
   return (
     <AuthCard
+      next={next}
       title="Make yourself at home"
       description="Create an account to start connecting your devices."
       footer={{ prompt: "Already have an account?", href: "/sign-in", label: "Sign in" }}

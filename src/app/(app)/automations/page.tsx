@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { AutomationsView } from "@/components/automations/automations-view";
-import { requireUser } from "@/lib/session";
+import { requireHome } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Automations" };
 
 export default async function AutomationsPage() {
-  await requireUser();
+  await requireHome("member");
   return <AutomationsView />;
 }

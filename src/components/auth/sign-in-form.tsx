@@ -10,7 +10,7 @@ import { authClient } from "@/lib/auth-client";
 import { AuthCard } from "./auth-card";
 import styles from "./auth-card.module.css";
 
-export function SignInForm() {
+export function SignInForm({ next = null }: { next?: string | null }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,12 +29,13 @@ export function SignInForm() {
       setPending(false);
       return;
     }
-    router.replace("/dashboard");
+    router.replace(next ?? "/dashboard");
     router.refresh();
   }
 
   return (
     <AuthCard
+      next={next}
       title="Welcome home"
       description="Sign in to see your rooms, cameras, and climate."
       footer={{ prompt: "New to Hearth?", href: "/sign-up", label: "Create an account" }}

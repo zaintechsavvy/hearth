@@ -236,3 +236,64 @@
   align-items: stretch;
   gap: var(--space-4);
 }
+
+.pageChoice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.inviteLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: oklch(50% 0 0 / .06);
+}
+
+.inviteQr {
+  width: 96px;
+  height: 96px;
+  padding: 6px;
+  border-radius: 10px;
+  background: white;
+}
+
+.inviteText {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.inviteCode {
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.join {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  width: min(100%, 480px);
+  margin: var(--space-8) auto 0;
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+}
+
+.joinIcon {
+  color: var(--text-secondary);
+}
+
+.joinTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+}
+
+.joinText {
+  max-width: 40ch;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}

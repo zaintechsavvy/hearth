@@ -1,16 +1,18 @@
 import { deviceProvider } from "@/lib/home";
-import { getUser } from "@/lib/session";
+import { guestCanReach } from "@/lib/household";
+import { getHome } from "@/lib/session";
 
 const SEGMENT = /^[\w.-]+$/;
 const PASSED_HEADERS = ["content-type", "content-length"];
 
 /** Relays one HLS playlist or segment. Playlists use relative addresses, so everything they name comes back through here. */
 export async function GET(request: Request, { params }: RouteContext<"/api/devices/[id]/camera/hls/[...path]">) {
-  const user = await getUser();
-  if (!user) return new Response(null, { status: 401 });
+  const home = await getHome();
+  if (!home) return new Response(null, { status: 401 });
+  if (home.role === "guest" && !(await guestCanReach(home, decodeURIComponent((await params).id)))) return new Response(null, { status: 403 });
   const { id, path } = await params;
   if (path.length < 2 || !path.every(part => SEGMENT.test(part) && part !== "." && part !== "..")) return new Response(null, { status: 400 });
-  const target = await deviceProvider(user.id, decodeURIComponent(id));
+  const target = await deviceProvider(home.homeId, decodeURIComponent(id));
   if (!target?.provider.cameraHlsFetch) return new Response(null, { status: 404 });
   try {
     const upstream = await target.provider.cameraHlsFetch(`/api/hls/${path.join("/")}`, new URL(request.url).search, request.signal);

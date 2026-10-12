@@ -4,19 +4,20 @@ import { AppHeader } from "@/components/shell/app-header";
 import { BackgroundStudio } from "@/components/shell/background-studio";
 import { CommandMenu } from "@/components/shell/command-menu";
 import { WallMode } from "@/components/shell/wall-mode";
-import { requireUser } from "@/lib/session";
+import { requireHome } from "@/lib/session";
 import styles from "./app.module.css";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  const user = await requireUser();
+  const home = await requireHome();
+  const { user } = home;
   return (
     <>
       <Wallpaper />
-      <AppHeader user={{ name: user.name, email: user.email }} />
+      <AppHeader user={{ name: user.name, email: user.email }} role={home.role} ownerName={home.ownerName} />
       <main className={styles.page}>{children}</main>
-      <AssistantDock />
+      {home.role !== "guest" && <AssistantDock />}
       <BackgroundStudio />
-      <CommandMenu />
+      <CommandMenu limited={home.role === "guest"} />
       <WallMode />
     </>
   );

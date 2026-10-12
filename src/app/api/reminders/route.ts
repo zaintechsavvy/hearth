@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getUser } from "@/lib/session";
+import { getHome } from "@/lib/session";
 import { remindersFor } from "@/lib/widgets/reminders";
 
 export async function GET() {
-  const user = await getUser();
-  if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
-  return NextResponse.json(await remindersFor(user.id));
+  const home = await getHome();
+  if (!home) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
+  if (home.role === "guest") return NextResponse.json({ error: "Guests cannot see this." }, { status: 403 });
+  return NextResponse.json(await remindersFor(home.homeId));
 }
