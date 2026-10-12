@@ -4,6 +4,7 @@ import { Maximize2, RotateCw, VideoOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
 import { glassClass } from "@/components/glass/glass";
+import { firstFrame } from "./camera-frames";
 import styles from "./camera-tile.module.css";
 
 type StreamState = "connecting" | "live" | "snapshot" | "offline";
@@ -57,9 +58,13 @@ export function CameraTile({ camera, fill = false }: { camera: { id: string; nam
     const controller = new AbortController();
     const fallback = setTimeout(() => setState(current => current === "connecting" ? "snapshot" : current), CONNECT_TIMEOUT_MS);
     connect(camera.id, element, controller.signal)
-      .then(peer => peer.addEventListener("connectionstatechange", () => {
-        if (peer.connectionState === "failed" || peer.connectionState === "disconnected") setState("snapshot");
-      }))
+      .then(async peer => {
+        peer.addEventListener("connectionstatechange", () => {
+          if (peer.connectionState === "failed" || peer.connectionState === "disconnected") setState("snapshot");
+        });
+        await firstFrame(element, controller.signal);
+        setState(current => current === "connecting" ? "live" : current);
+      })
       .catch(() => { if (!controller.signal.aborted) setState("snapshot"); });
     return () => {
       clearTimeout(fallback);
@@ -80,7 +85,7 @@ export function CameraTile({ camera, fill = false }: { camera: { id: string; nam
 
   return (
     <figure ref={frame} className={`${glassClass()} ${styles.tile} ${fill ? styles.fill : ""}`} data-state={state}>
-      <video ref={video} className={styles.media} autoPlay muted playsInline onPlaying={() => setState("live")} hidden={state === "snapshot" || state === "offline"} />
+      <video ref={video} className={styles.media} autoPlay muted playsInline hidden={state === "snapshot" || state === "offline"} />
       {state === "snapshot" && (
         // eslint-disable-next-line @next/next/no-img-element -- a live, authenticated JPEG that must bypass the image optimiser
         <img className={styles.media} src={`/api/cameras/${camera.id}/snapshot?frame=${tick}`} alt={`Latest frame from ${camera.name}`} onError={() => setState("offline")} />

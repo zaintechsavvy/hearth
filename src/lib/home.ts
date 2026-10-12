@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { camera, integration, preference, scene } from "@/lib/db/schema";
+import { camera, deviceOverride, integration, preference, scene } from "@/lib/db/schema";
 import type { SavedTile } from "@/lib/dashboard/layout";
 import type { HearthScene } from "@/lib/scenes/types";
 import { parseDeviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
@@ -20,12 +20,43 @@ export interface IntegrationStatus {
   unsupported: Record<string, number>;
 }
 
+export interface HomeCamera {
+  id: string;
+  name: string;
+  sourceName?: string;
+}
+
 export interface HomeSnapshot {
   devices: Device[];
   integrations: IntegrationStatus[];
-  cameras: { id: string; name: string }[];
+  cameras: HomeCamera[];
   scenes: HearthScene[];
   layout: SavedTile[];
+  /** Every room in display order: the person's own first, as they arranged them, then the rest alphabetically. */
+  rooms: string[];
+}
+
+type Override = { name: string | null; room: string | null };
+
+/** Hearth's names and rooms over the integration's, keeping the originals so they can be shown and restored. */
+export function applyOverride<T extends Device>(device: T, override: Override | undefined): T {
+  if (!override) return device;
+  const next = { ...device };
+  if (override.name) {
+    next.sourceName = device.name;
+    next.name = override.name;
+  }
+  if (override.room !== null) {
+    next.sourceRoom = device.room;
+    next.room = override.room || null;
+  }
+  return next;
+}
+
+export function orderedRooms(custom: string[], devices: { room: string | null }[]) {
+  const own = new Set(custom);
+  const others = [...new Set(devices.map(device => device.room).filter((room): room is string => Boolean(room) && !own.has(room as string)))].sort((a, b) => a.localeCompare(b));
+  return [...custom, ...others];
 }
 
 const LIST_TIMEOUT_MS = 10_000;
@@ -42,22 +73,24 @@ export function readableError(error: unknown) {
 
 export async function getPreferences(userId: string) {
   const row = await db.query.preference.findFirst({ where: eq(preference.userId, userId) });
-  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout: row?.layout ?? [] };
+  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout: row?.layout ?? [], rooms: row?.rooms ?? [] };
 }
 
 export async function loadHome(userId: string): Promise<HomeSnapshot> {
-  const [rows, preferences, cameras, scenes] = await Promise.all([
+  const [rows, preferences, cameraRows, scenes, overrideRows] = await Promise.all([
     db.select().from(integration).where(eq(integration.userId, userId)).orderBy(integration.createdAt),
     getPreferences(userId),
     db.select({ id: camera.id, name: camera.name }).from(camera).where(eq(camera.userId, userId)).orderBy(camera.createdAt),
     db.select({ id: scene.id, name: scene.name, icon: scene.icon, actions: scene.actions }).from(scene).where(eq(scene.userId, userId)).orderBy(scene.createdAt),
+    db.select().from(deviceOverride).where(eq(deviceOverride.userId, userId)),
   ]);
+  const overrides = new Map(overrideRows.map(row => [row.deviceId, row]));
   const results = await Promise.allSettled(rows.map(row => withTimeout(createProvider(row).listDevices(), LIST_TIMEOUT_MS, `${row.name} took too long to answer.`)));
   const devices: Device[] = [];
   const integrations = rows.map((row, index): IntegrationStatus => {
     const result = results[index];
     const ok = result.status === "fulfilled";
-    if (ok) devices.push(...result.value.devices);
+    if (ok) devices.push(...result.value.devices.map(device => applyOverride(device, overrides.get(device.id))));
     return {
       id: row.id, name: row.name, kind: row.kind, ok,
       error: ok ? null : readableError(result.reason),
@@ -65,7 +98,11 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
       unsupported: ok ? result.value.unsupported : {},
     };
   });
-  return { devices, integrations, cameras, scenes, layout: preferences.layout };
+  const cameras = cameraRows.map(row => {
+    const name = overrides.get(`camera:${row.id}`)?.name;
+    return name ? { ...row, name, sourceName: row.name } : row;
+  });
+  return { devices, integrations, cameras, scenes, layout: preferences.layout, rooms: orderedRooms(preferences.rooms, devices) };
 }
 
 export async function runCommand(userId: string, id: string, command: DeviceCommand) {

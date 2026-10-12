@@ -1,11 +1,20 @@
+import { miredToKelvin, xyToHs } from "@/lib/devices/color";
 import { deviceId, type Device, type DeviceKind, type LockState, type ThermostatAction, type ThermostatMode } from "@/lib/devices/types";
 import type { MatterNode } from "./client";
 
 export const Cluster = {
   OnOff: 6, LevelControl: 8, Descriptor: 29, BasicInformation: 40, PowerSource: 47, BridgedBasicInformation: 57, Switch: 59, BooleanState: 69,
   DoorLock: 257, WindowCovering: 258, Thermostat: 513, FanControl: 514, Illuminance: 1024, Temperature: 1026, Humidity: 1029, Occupancy: 1030,
-  CameraStreams: 1361,
+  ColorControl: 768, CameraStreams: 1361,
 } as const;
+
+export const ColorAttribute = {
+  CurrentHue: 0, CurrentSaturation: 1, CurrentX: 3, CurrentY: 4, ColorTemperatureMireds: 7, ColorMode: 8,
+  Capabilities: 0x400a, MinMireds: 0x400b, MaxMireds: 0x400c,
+} as const;
+
+/** Bits of the Color Control cluster's capabilities, which match its feature map. */
+export const ColorCapability = { HueSaturation: 1, XY: 8, Temperature: 16 } as const;
 
 export const WindowCoveringAttribute = { OperationalStatus: 10, LiftPercent100ths: 14, FeatureMap: 65532 } as const;
 
@@ -142,12 +151,37 @@ export function mapMatterNode(integrationId: string, node: MatterNode, events: R
   };
 }
 
+/** Hue and saturation, CIE xy, and colour temperature from the Color Control cluster, as the light supports them. */
+export function mapColor(node: MatterNode, endpoint: number) {
+  const none = { supportsColor: false, color: null, colorMode: null, temperatureRange: null, temperature: null } as const;
+  if (!hasCluster(node, endpoint, Cluster.ColorControl)) return none;
+  const read = (id: number) => num(attribute(node, endpoint, Cluster.ColorControl, id));
+  const capabilities = read(ColorAttribute.Capabilities) ?? 0;
+  const supportsColor = (capabilities & (ColorCapability.HueSaturation | ColorCapability.XY)) !== 0;
+  const minMireds = read(ColorAttribute.MinMireds), maxMireds = read(ColorAttribute.MaxMireds);
+  const temperatureRange = capabilities & ColorCapability.Temperature && minMireds && maxMireds ? { min: miredToKelvin(maxMireds), max: miredToKelvin(minMireds) } : null;
+  const mode = read(ColorAttribute.ColorMode);
+  const hue = read(ColorAttribute.CurrentHue), saturation = read(ColorAttribute.CurrentSaturation);
+  const x = read(ColorAttribute.CurrentX), y = read(ColorAttribute.CurrentY);
+  const color = !supportsColor ? null
+    : mode === 1 && x !== null && y !== null ? xyToHs(x / 65536, y / 65536)
+      : hue !== null && saturation !== null ? { hue: Math.round(hue / 254 * 360), saturation: Math.round(saturation / 254 * 100) } : null;
+  const mireds = read(ColorAttribute.ColorTemperatureMireds);
+  return {
+    supportsColor,
+    color,
+    colorMode: mode === 2 ? "white" as const : mode === 0 || mode === 1 ? "color" as const : null,
+    temperatureRange,
+    temperature: temperatureRange && mireds ? miredToKelvin(mireds) : null,
+  };
+}
+
 function mapPrimary(kind: DeviceKind, base: Base, node: MatterNode, endpoint: number): Device {
   const on = attribute(node, endpoint, Cluster.OnOff, 0) === true;
   switch (kind) {
     case "light": {
       const level = num(attribute(node, endpoint, Cluster.LevelControl, 0));
-      return { ...base, kind, on, dimmable: hasCluster(node, endpoint, Cluster.LevelControl), brightness: on && level !== null ? Math.round(level / 254 * 100) : 0 };
+      return { ...base, kind, on, dimmable: hasCluster(node, endpoint, Cluster.LevelControl), brightness: on && level !== null ? Math.round(level / 254 * 100) : 0, ...mapColor(node, endpoint) };
     }
     case "fan": {
       const mode = num(attribute(node, endpoint, Cluster.FanControl, FanAttribute.FanMode));

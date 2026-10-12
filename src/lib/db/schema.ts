@@ -1,4 +1,4 @@
-import { boolean, index, jsonb, pgTable, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
 import type { SceneAction } from "@/lib/scenes/types";
@@ -77,6 +77,8 @@ export const preference = pgTable("preference", {
   streamRelayUrl: text("stream_relay_url"),
   /** Dashboard tiles in display order, read through `resolveLayout`. */
   layout: jsonb("layout").$type<SavedTile[]>().notNull().$defaultFn(() => []),
+  /** Rooms the person made in Hearth, in their chosen order. Rooms from integrations are added to these when shown. */
+  rooms: jsonb("rooms").$type<string[]>().notNull().default([]),
   updatedAt: updatedAt(),
 });
 
@@ -121,3 +123,14 @@ export const reminder = pgTable("reminder", {
   doneAt: timestamp("done_at"),
   createdAt: createdAt(),
 }, t => [index("reminder_user_idx").on(t.userId)]);
+
+/** Names and rooms set in Hearth, which win over what the integration reports and leave the integration unchanged. */
+export const deviceOverride = pgTable("device_override", {
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  /** A device id, or `camera:<id>` for an RTSP camera. */
+  deviceId: text("device_id").notNull(),
+  name: text("name"),
+  /** Null keeps the integration's room; an empty string means no room. */
+  room: text("room"),
+  updatedAt: updatedAt(),
+}, t => [primaryKey({ columns: [t.userId, t.deviceId] })]);

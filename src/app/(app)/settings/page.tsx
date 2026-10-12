@@ -6,6 +6,7 @@ import { AssistantsSection } from "@/components/connections/assistants-section";
 import { CalendarsSection } from "@/components/connections/calendars-section";
 import { CamerasSection } from "@/components/connections/cameras-section";
 import { IntegrationsSection } from "@/components/connections/integrations-section";
+import { RoomsSection } from "@/components/connections/rooms-section";
 import styles from "@/components/connections/connections.module.css";
 import type { CameraSource } from "@/lib/cameras/stream-relay";
 import { unseal } from "@/lib/crypto";
@@ -42,6 +43,7 @@ export default async function ConnectionsPage() {
         <p className={styles.lede}>Connections, cameras, calendars, assistants, and how Hearth looks. Secrets are encrypted before they are stored.</p>
       </header>
       <IntegrationsSection integrations={integrations.map(row => ({ id: row.id, name: row.name, kind: row.kind, ...publicConfig(row) }))} />
+      <RoomsSection />
       <AssistantsSection assistants={assistants} />
       <CamerasSection cameras={cameras.map(row => ({ id: row.id, name: row.name, host: hostOf(unseal<CameraSource>(row.source).url) }))} relayUrl={relayUrl} />
       <CalendarsSection calendars={calendars.map(row => ({ id: row.id, name: row.name, color: row.color, host: hostOf(unseal<string>(row.url)) }))} />

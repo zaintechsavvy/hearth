@@ -1,7 +1,8 @@
+import { hsToXy, kelvinToMired } from "@/lib/devices/color";
 import { clamp, type DeviceCommand, type ThermostatDevice } from "@/lib/devices/types";
 import { IntegrationError, countBy, type DeviceList, type Provider } from "../types";
 import { matterClient, wireNodeId, type MatterNode } from "./client";
-import { Cluster, FanAttribute, SYSTEM_MODE, ThermostatAttribute, hasCluster, mapMatterNode, parseMatterNativeId } from "./mapping";
+import { Cluster, ColorAttribute, ColorCapability, FanAttribute, SYSTEM_MODE, ThermostatAttribute, attribute, hasCluster, mapMatterNode, parseMatterNativeId } from "./mapping";
 
 interface WriteResult {
   Path: { EndpointId: number; ClusterId: number; AttributeId: number };
@@ -50,6 +51,27 @@ export class MatterProvider implements Provider {
         if (command.value <= 0) return this.invoke(nodeId, endpoint, Cluster.OnOff, "Off");
         return this.invoke(nodeId, endpoint, Cluster.LevelControl, "MoveToLevelWithOnOff", {
           level: clamp(Math.round(command.value / 100 * 254), 1, 254),
+          transitionTime: 4,
+          optionsMask: 0,
+          optionsOverride: 0,
+        });
+      case "color": {
+        const capabilities = Number(attribute(node, endpoint, Cluster.ColorControl, ColorAttribute.Capabilities) ?? 0);
+        if (!(capabilities & ColorCapability.HueSaturation)) {
+          const { x, y } = hsToXy(command);
+          return this.invoke(nodeId, endpoint, Cluster.ColorControl, "MoveToColor", { colorX: Math.round(x * 65536), colorY: Math.round(y * 65536), transitionTime: 4, optionsMask: 0, optionsOverride: 0 });
+        }
+        return this.invoke(nodeId, endpoint, Cluster.ColorControl, "MoveToHueAndSaturation", {
+          hue: clamp(Math.round(command.hue / 360 * 254), 0, 254),
+          saturation: clamp(Math.round(command.saturation / 100 * 254), 0, 254),
+          transitionTime: 4,
+          optionsMask: 0,
+          optionsOverride: 0,
+        });
+      }
+      case "temperature":
+        return this.invoke(nodeId, endpoint, Cluster.ColorControl, "MoveToColorTemperature", {
+          colorTemperatureMireds: kelvinToMired(command.kelvin),
           transitionTime: 4,
           optionsMask: 0,
           optionsOverride: 0,

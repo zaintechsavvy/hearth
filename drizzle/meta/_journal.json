@@ -29,6 +29,13 @@
       "when": 1791816635273,
       "tag": "0003_tiles_calendars",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791842006018,
+      "tag": "0004_device_overrides",
+      "breakpoints": true
     }
   ]
 }

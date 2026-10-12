@@ -11,8 +11,9 @@ import { seal } from "@/lib/crypto";
 import { createTile, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES } from "@/lib/dashboard/layout";
 import { tileSources } from "@/lib/dashboard/sources";
 import { db } from "@/lib/db";
-import { assistant, calendar, camera, integration, preference, reminder, scene } from "@/lib/db/schema";
-import { getPreferences, loadHome, readableError, streamRelayUrl } from "@/lib/home";
+import { assistant, calendar, camera, deviceOverride, integration, preference, reminder, scene } from "@/lib/db/schema";
+import { getPreferences, loadHome, orderedRooms, readableError, streamRelayUrl } from "@/lib/home";
+import { parseDeviceId } from "@/lib/devices/types";
 import { saveScene } from "@/lib/scenes/service";
 import { MatterProvider } from "@/lib/integrations/matter/provider";
 import { createProvider } from "@/lib/integrations/registry";
@@ -297,6 +298,89 @@ export async function setReminderDone(id: string, done: boolean): Promise<Action
 export async function removeReminder(id: string): Promise<ActionResult> {
   return authed(async userId => {
     await db.delete(reminder).where(and(eq(reminder.id, id), eq(reminder.userId, userId)));
+    return OK;
+  });
+}
+
+const roomName = z.string().trim().min(1, "Give the room a name.").max(40, "Keep room names under 40 characters.");
+const deviceChange = z.object({
+  /** Null restores the integration's name. */
+  name: z.string().trim().max(60, "Keep names under 60 characters.").nullable().optional(),
+  /** Null restores the integration's room; an empty string means no room. */
+  room: z.union([roomName, z.literal("")]).nullable().optional(),
+});
+
+async function ownsTarget(userId: string, id: string) {
+  if (id.startsWith("camera:")) return Boolean(await db.query.camera.findFirst({ where: and(eq(camera.id, id.slice(7)), eq(camera.userId, userId)) }));
+  const parsed = parseDeviceId(id);
+  return Boolean(parsed && await db.query.integration.findFirst({ where: and(eq(integration.id, parsed.integrationId), eq(integration.userId, userId)) }));
+}
+
+async function writeOverride(userId: string, deviceId: string, change: { name?: string | null; room?: string | null }) {
+  const current = await db.query.deviceOverride.findFirst({ where: and(eq(deviceOverride.userId, userId), eq(deviceOverride.deviceId, deviceId)) });
+  const next = { name: change.name === undefined ? current?.name ?? null : change.name || null, room: change.room === undefined ? current?.room ?? null : change.room };
+  if (next.name === null && next.room === null) {
+    await db.delete(deviceOverride).where(and(eq(deviceOverride.userId, userId), eq(deviceOverride.deviceId, deviceId)));
+    return;
+  }
+  await db.insert(deviceOverride).values({ userId, deviceId, ...next }).onConflictDoUpdate({ target: [deviceOverride.userId, deviceOverride.deviceId], set: next });
+}
+
+/** Renames a device or moves it to another room in Hearth only; the integration keeps its own name and area. */
+export async function updateDevice(deviceId: string, change: unknown): Promise<ActionResult> {
+  const parsed = deviceChange.safeParse(change);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  return authed(async userId => {
+    if (!(await ownsTarget(userId, deviceId))) throw new IntegrationError("That device is not in your home.");
+    if (parsed.data.room) await rememberRoom(userId, parsed.data.room);
+    await writeOverride(userId, deviceId, parsed.data);
+    return OK;
+  });
+}
+
+async function rememberRoom(userId: string, room: string) {
+  const { rooms } = await getPreferences(userId);
+  if (!rooms.includes(room)) await savePreferences(userId, { rooms: [...rooms, room] });
+}
+
+export async function addRoom(name: unknown): Promise<ActionResult> {
+  const parsed = roomName.safeParse(name);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  return authed(async userId => {
+    await rememberRoom(userId, parsed.data);
+    return OK;
+  });
+}
+
+/** Renames a room everywhere it shows, including rooms that came from Home Assistant, by moving each device in it. */
+export async function renameRoom(from: string, to: unknown): Promise<ActionResult> {
+  const parsed = roomName.safeParse(to);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  return authed(async userId => {
+    const home = await loadHome(userId);
+    for (const device of home.devices.filter(item => item.room === from)) await writeOverride(userId, device.id, { room: parsed.data });
+    const rooms = orderedRooms((await getPreferences(userId)).rooms, home.devices);
+    await savePreferences(userId, { rooms: [...new Set(rooms.map(room => room === from ? parsed.data : room))] });
+    return OK;
+  });
+}
+
+/** Deletes a room; its devices move to no room rather than back to wherever the integration had them. */
+export async function removeRoom(name: string): Promise<ActionResult> {
+  return authed(async userId => {
+    const home = await loadHome(userId);
+    for (const device of home.devices.filter(item => item.room === name)) await writeOverride(userId, device.id, { room: "" });
+    const { rooms } = await getPreferences(userId);
+    await savePreferences(userId, { rooms: rooms.filter(room => room !== name) });
+    return OK;
+  });
+}
+
+export async function reorderRooms(order: unknown): Promise<ActionResult> {
+  const parsed = z.array(roomName).max(100).safeParse(order);
+  if (!parsed.success) return { ok: false, error: "That room order is not valid." };
+  return authed(async userId => {
+    await savePreferences(userId, { rooms: [...new Set(parsed.data)] });
     return OK;
   });
 }

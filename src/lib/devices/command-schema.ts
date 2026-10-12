@@ -5,6 +5,8 @@ const mode = z.enum(["off", "heat", "cool", "auto"]);
 export const deviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("power"), on: z.boolean() }),
   z.object({ type: z.literal("brightness"), value: z.number().min(0).max(100) }),
+  z.object({ type: z.literal("color"), hue: z.number().min(0).max(360), saturation: z.number().min(0).max(100) }),
+  z.object({ type: z.literal("temperature"), kelvin: z.number().min(1000).max(12_000) }),
   z.object({ type: z.literal("fanSpeed"), value: z.number().min(0).max(100) }),
   z.object({ type: z.literal("targetTemperature"), value: z.number().min(-20).max(120) }),
   z.object({ type: z.literal("thermostatMode"), mode }),

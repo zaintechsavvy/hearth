@@ -29,6 +29,7 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "drizzle-orm": "^0.45.3",
+    "hls.js": "^1.7.3",
     "ical.js": "^2.2.1",
     "lucide-react": "^1.52.0",
     "motion": "^14.0.0",

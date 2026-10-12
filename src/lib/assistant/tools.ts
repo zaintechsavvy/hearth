@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hexToHs } from "@/lib/devices/color";
 import { isSensitive, type Device, type DeviceCommand } from "@/lib/devices/types";
 import { describeState } from "./describe";
 
@@ -15,8 +16,9 @@ export const CONTROL_TOOL = {
     type: "object",
     properties: {
       device_id: { type: "string", description: "The device id, exactly as it appears in the device list." },
-      action: { type: "string", enum: ["turn_on", "turn_off", "set_brightness", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate"] },
-      value: { type: "number", description: "Brightness, fan speed, or cover position (0 closed, 100 open) from 0 to 100, or a target temperature in the thermostat's own unit." },
+      action: { type: "string", enum: ["turn_on", "turn_off", "set_brightness", "set_color", "set_white", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate"] },
+      value: { type: "number", description: "Brightness, fan speed, or cover position (0 closed, 100 open) from 0 to 100; a target temperature in the thermostat's own unit; or, for set_white, a white temperature in kelvin (2700 warm, 4000 neutral, 6500 daylight)." },
+      color: { type: "string", description: "For set_color, the colour as #rrggbb." },
       mode: { type: "string", enum: ["off", "heat", "cool", "auto"], description: "The thermostat mode, for set_mode." },
     },
     required: ["device_id", "action"],
@@ -61,8 +63,9 @@ const sceneCreate = z.object({ name: z.string().min(1).max(60), devices: z.array
 function toolInputShape() {
   return z.object({
     device_id: z.string(),
-    action: z.enum(["turn_on", "turn_off", "set_brightness", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate"]),
+    action: z.enum(["turn_on", "turn_off", "set_brightness", "set_color", "set_white", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate"]),
     value: z.number().optional(),
+    color: z.string().optional(),
     mode: z.enum(["off", "heat", "cool", "auto"]).optional(),
   });
 }
@@ -131,6 +134,14 @@ function commandFor(device: Device, input: ToolInput): DeviceCommand | string {
     case "set_brightness":
       if (device.kind !== "light" || !device.dimmable) return `${device.name} cannot be dimmed.`;
       return input.value === undefined ? "set_brightness needs a value from 0 to 100." : { type: "brightness", value: Math.max(0, Math.min(100, input.value)) };
+    case "set_color": {
+      if (device.kind !== "light" || !device.supportsColor) return `${device.name} does not take colours.`;
+      const color = input.color ? hexToHs(input.color) : null;
+      return color ? { type: "color", ...color } : "set_color needs a colour as #rrggbb.";
+    }
+    case "set_white":
+      if (device.kind !== "light" || !device.temperatureRange) return `${device.name} has no white temperature control.`;
+      return input.value === undefined ? `set_white needs a temperature from ${device.temperatureRange.min} to ${device.temperatureRange.max} kelvin.` : { type: "temperature", kelvin: input.value };
     case "set_fan_speed":
       if (device.kind !== "fan" || !device.adjustable) return `${device.name} has no speed control.`;
       return input.value === undefined ? "set_fan_speed needs a value from 0 to 100." : { type: "fanSpeed", value: Math.max(0, Math.min(100, input.value)) };

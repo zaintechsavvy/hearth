@@ -7,6 +7,19 @@ import { getUser } from "@/lib/session";
 
 const offerInput = z.object({ offer: z.string().min(10).max(20_000) });
 
+/** Whether this camera offers WebRTC and which ICE servers to use, fetched before the browser builds its offer. */
+export async function GET(_request: Request, { params }: RouteContext<"/api/devices/[id]/camera/webrtc">) {
+  const user = await getUser();
+  if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
+  const target = await deviceProvider(user.id, decodeURIComponent((await params).id));
+  if (!target?.provider.cameraWebRtc) return NextResponse.json({ supported: false, iceServers: [] });
+  try {
+    return NextResponse.json(await target.provider.cameraWebRtcConfig?.(target.nativeId) ?? { supported: true, iceServers: [] });
+  } catch (error) {
+    return NextResponse.json({ error: readableError(error) }, { status: 502 });
+  }
+}
+
 /** Starts a WebRTC session for a camera: the browser sends its offer, and gets the answer and candidates back. */
 export async function POST(request: Request, { params }: RouteContext<"/api/devices/[id]/camera/webrtc">) {
   const user = await getUser();

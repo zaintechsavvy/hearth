@@ -5,10 +5,12 @@ import { glassClass } from "@/components/glass/glass";
 import type { TileConfig } from "@/lib/dashboard/layout";
 import { defaultStyle } from "@/lib/dashboard/style";
 import type { DeviceCommand, FanDevice, LightDevice, SwitchDevice } from "@/lib/devices/types";
+import { hasControls, lightTint } from "../light-controls";
 import { LevelPill } from "./level-pill";
 import { TILE_ICON_COMPONENTS } from "./tile-icons";
 import styles from "./tile.module.css";
 import level from "./level-tile.module.css";
+import { useLongPress } from "./use-long-press";
 
 export type ToggleDevice = LightDevice | SwitchDevice | FanDevice;
 
@@ -18,6 +20,8 @@ interface ToggleTileProps {
   onCommand: (command: DeviceCommand) => Promise<void>;
   /** False while the dashboard is being edited, so a tap selects instead of switching the device. */
   interactive?: boolean;
+  /** Opens colour, white, and brightness controls; lights only. */
+  onOpenControls?: () => void;
 }
 
 const levelOf = (device: ToggleDevice) => device.kind === "light" ? device.brightness : device.kind === "fan" ? device.speed : 0;
@@ -30,13 +34,17 @@ export function describeDevice(device: ToggleDevice, shownLevel = levelOf(device
 }
 
 /** Lights, switches, and fans: tap to switch, with a vertical level in the tall and large templates. */
-export function ToggleTile({ device, config, onCommand, interactive = true }: ToggleTileProps) {
+export function ToggleTile({ device, config, onCommand, interactive = true, onOpenControls }: ToggleTileProps) {
   const [error, setError] = useState<string | null>(null);
   const style = defaultStyle(device);
   const Icon = TILE_ICON_COMPONENTS[config.icon ?? style.icon];
   const color = config.color ?? style.color;
   const disabled = !device.available || !interactive;
   const spin = device.kind === "fan" && device.on ? { "--spin-duration": `${Math.max(0.5, 3 - device.speed / 100 * 2.4)}s` } as CSSProperties : undefined;
+  const controls = device.kind === "light" && hasControls(device) && interactive && device.available ? onOpenControls : undefined;
+  const press = useLongPress(controls);
+  const tint = device.kind === "light" ? lightTint(device) : null;
+  const colorable = device.kind === "light" && (device.supportsColor || device.temperatureRange !== null);
 
   const run = (command: DeviceCommand) => {
     setError(null);
@@ -50,14 +58,19 @@ export function ToggleTile({ device, config, onCommand, interactive = true }: To
       <Icon size={size} strokeWidth={1.75} />
     </span>
   );
-  const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size };
+  const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-tinted": tint ? "" : undefined, style: tint ? { "--tile-color": tint } as CSSProperties : undefined };
+  const swatch = controls && colorable && (
+    <button type="button" className={`${styles.swatch} ${glassClass("pill")}`} onClick={controls} aria-label={`Colour and brightness for ${device.name}`} title="Colour and brightness">
+      <span className={styles.swatchDot} style={tint ? { "--swatch": tint } as CSSProperties : undefined} aria-hidden="true" />
+    </button>
+  );
   const room = device.room ? `${device.room} · ` : "";
 
   if ((config.size === "1x2" || config.size === "2x2") && hasLevel(device)) {
     const label = `${device.name} ${device.kind === "fan" ? "speed" : "brightness"}`;
     if (config.size === "1x2") {
       return (
-        <div className={`${glassClass("panel")} ${styles.tile} ${level.tall}`} {...shared} data-template="slider">
+        <div className={`${glassClass("panel")} ${styles.tile} ${level.tall}`} {...shared} {...press} data-template="slider">
           <LevelPill label={label} value={levelOf(device)} on={device.on} disabled={disabled} onToggle={toggle} onCommit={commitLevel} className={level.fullPill}>
             {shown => (
               <span className={level.overlay} data-top={shown > 80 || undefined} data-bottom={shown > 26 || undefined}>
@@ -74,7 +87,7 @@ export function ToggleTile({ device, config, onCommand, interactive = true }: To
       );
     }
     return (
-      <div className={`${glassClass("panel")} ${styles.tile} ${level.large}`} {...shared} data-template="large" data-on={device.on || undefined}>
+      <div className={`${glassClass("panel")} ${styles.tile} ${level.large}`} {...shared} {...press} data-template="large" data-on={device.on || undefined}>
         <button type="button" className={level.largeBody} onClick={toggle} disabled={disabled} aria-pressed={device.on} aria-label={`${device.name}, ${describeDevice(device)}`}>
           <span className={styles.badge}>{icon(24)}</span>
           <span className={styles.text}>
@@ -83,15 +96,17 @@ export function ToggleTile({ device, config, onCommand, interactive = true }: To
           </span>
         </button>
         <LevelPill label={label} value={levelOf(device)} on={device.on} disabled={disabled} onToggle={toggle} onCommit={commitLevel} className={level.sidePill} />
+        {swatch}
       </div>
     );
   }
 
-  return (
+  const tile = (
     <button
       type="button"
       className={`${glassClass("panel")} ${styles.tile} ${styles.press}`}
       {...shared}
+      {...press}
       data-template="toggle"
       data-on={device.on || undefined}
       onClick={toggle}
@@ -116,4 +131,6 @@ export function ToggleTile({ device, config, onCommand, interactive = true }: To
       )}
     </button>
   );
+  if (!swatch || config.size === "1x1") return tile;
+  return <div className={styles.frame}>{tile}{swatch}</div>;
 }

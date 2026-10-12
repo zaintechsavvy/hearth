@@ -1,3 +1,4 @@
+import { hsToHex } from "@/lib/devices/color";
 import type { TileIcon } from "@/lib/dashboard/layout";
 import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/types";
 
@@ -18,8 +19,12 @@ export const sceneTileId = (sceneId: string) => `scene:${sceneId}`;
 /** The commands that recreate a device's current state, or none for devices a scene cannot set. */
 export function captureState(device: Device): DeviceCommand[] {
   switch (device.kind) {
-    case "light":
-      return device.on && device.dimmable ? [{ type: "brightness", value: device.brightness }] : [{ type: "power", on: device.on }];
+    case "light": {
+      if (!device.on) return [{ type: "power", on: false }];
+      const shade: DeviceCommand[] = device.colorMode === "color" && device.color ? [{ type: "color", ...device.color }]
+        : device.colorMode === "white" && device.temperature ? [{ type: "temperature", kelvin: device.temperature }] : [];
+      return [...shade, device.dimmable ? { type: "brightness", value: device.brightness } : { type: "power", on: true }];
+    }
     case "fan":
       return device.on && device.adjustable ? [{ type: "fanSpeed", value: device.speed }] : [{ type: "power", on: device.on }];
     case "switch":
@@ -46,6 +51,10 @@ export function describeAction(device: Device, command: DeviceCommand) {
       return command.on ? "On" : "Off";
     case "brightness":
       return `${command.value}%`;
+    case "color":
+      return `Colour ${hsToHex(command)}`;
+    case "temperature":
+      return `White ${command.kelvin} K`;
     case "fanSpeed":
       return `Speed ${command.value}%`;
     case "targetTemperature":

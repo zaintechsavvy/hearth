@@ -24,6 +24,18 @@ export interface Provider {
   camera?(nativeId: string, mode: "stream" | "snapshot", signal: AbortSignal): Promise<Response>;
   /** Answers a browser's WebRTC offer for a camera. Throws `WebRtcUnsupportedError` when that camera has no WebRTC. */
   cameraWebRtc?(nativeId: string, offer: string): Promise<WebRtcAnswer>;
+  /** Whether this camera offers WebRTC, and the ICE servers the browser should use for it, such as a STUN server. */
+  cameraWebRtcConfig?(nativeId: string): Promise<{ supported: boolean; iceServers: IceServer[] }>;
+  /** Starts an HLS stream for a camera and returns the playlist's path upstream, for `cameraHlsFetch`. */
+  cameraHls?(nativeId: string): Promise<string>;
+  /** Fetches a playlist or segment of a stream `cameraHls` started. */
+  cameraHlsFetch?(path: string, search: string, signal: AbortSignal): Promise<Response>;
+}
+
+export interface IceServer {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
 }
 
 export interface IceCandidate {

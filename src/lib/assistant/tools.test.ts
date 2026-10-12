@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Device } from "@/lib/devices/types";
 import { parseToolInput, toCommand } from "./tools";
 
-const lamp: Device = { id: "a:lamp", integrationId: "a", name: "Lamp", room: "Bedroom", available: true, kind: "light", on: false, dimmable: false, brightness: 0 };
+const lamp: Device = { id: "a:lamp", integrationId: "a", name: "Lamp", room: "Bedroom", available: true, kind: "light", on: false, dimmable: false, brightness: 0, supportsColor: false, color: null, colorMode: null, temperatureRange: null, temperature: null };
 const thermostat: Device = { id: "a:t", integrationId: "a", name: "Hall", room: null, available: true, kind: "thermostat", unit: "C", current: 20, target: 21, min: 10, max: 30, step: 0.5, mode: "heat", modes: ["off", "heat"], action: "idle" };
 
 const lock: Device = { id: "a:lock", integrationId: "a", name: "Front door", room: null, available: true, kind: "lock", state: "locked" };

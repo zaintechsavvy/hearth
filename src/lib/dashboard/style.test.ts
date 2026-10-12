@@ -4,7 +4,7 @@ import { shownByDefault, type Device } from "@/lib/devices/types";
 import { defaultStyle } from "./style";
 
 const base = { integrationId: "a", room: null, available: true };
-const light = (name: string): Device => ({ ...base, id: `a:${name}`, name, kind: "light", on: true, dimmable: true, brightness: 60 });
+const light = (name: string): Device => ({ ...base, id: `a:${name}`, name, kind: "light", on: true, dimmable: true, brightness: 60, supportsColor: false, color: null, colorMode: null, temperatureRange: null, temperature: null });
 const plug = (name: string): Device => ({ ...base, id: `a:${name}`, name, kind: "switch", on: false });
 
 describe("icons and labels for the device picker", () => {

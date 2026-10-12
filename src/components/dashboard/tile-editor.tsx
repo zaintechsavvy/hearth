@@ -16,8 +16,24 @@ import { glassSheetClass } from "@/components/glass/glass";
 import { KIND_INFO } from "@/lib/dashboard/catalog";
 import { isWidget, SIZE_OPTIONS, spanOf, TILE_COLORS, TILE_ICONS, type TileColor, type TileConfig, type TileIcon, type TileKind, type TileSize } from "@/lib/dashboard/layout";
 import type { Agenda } from "@/lib/widgets/calendar";
+import { RoomPicker } from "./room-picker";
 import { TILE_ICON_COMPONENTS, iconLabel } from "./tiles/tile-icons";
 import styles from "./tile-editor.module.css";
+
+export interface TileIdentity {
+  /** The device id, or `camera:<id>`, that renames and room moves apply to. */
+  id: string;
+  name: string;
+  sourceName?: string;
+  room: string | null;
+  sourceRoom?: string | null;
+  /** RTSP cameras and Hearth scenes have no room. */
+  roomEditable: boolean;
+  /** The integration's name for the source, such as "Home Assistant". */
+  source: string;
+}
+
+export type IdentityChange = { name?: string | null; room?: string | null };
 
 export interface EditableTile {
   config: TileConfig;
@@ -25,6 +41,7 @@ export interface EditableTile {
   name: string;
   /** What the tile shows: the device, camera, or scene, or the weather place. Null when nothing is linked. */
   linkedName: string | null;
+  identity?: TileIdentity;
   adjustable: boolean;
   icon: TileIcon | null;
   color: TileColor | null;
@@ -37,6 +54,8 @@ interface TileEditorProps {
   /** Renders the real tile for a config, without side effects such as opening a camera stream. */
   renderPreview: (config: TileConfig) => ReactNode;
   onRemove: () => void;
+  rooms: string[];
+  onIdentity: (change: IdentityChange) => void;
   /** Opens the chooser for what the tile shows: a device, or a place for weather. */
   onRelink: () => void;
   /** Extra actions for this kind of tile, such as editing a scene. */
@@ -63,7 +82,7 @@ const SIZE_NOTES: Partial<Record<TileSize, string>> = {
 
 const capitalize = (value: string) => value[0].toUpperCase() + value.slice(1);
 
-export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, renderPreview, extra }: TileEditorProps) {
+export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, rooms, onIdentity, renderPreview, extra }: TileEditorProps) {
   const [preview, setPreview] = useState<Preview>({});
   const styled = tile && tile.icon !== null;
   const options = tile ? SIZE_OPTIONS[tile.kind] : [];
@@ -87,7 +106,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
           <div className={styles.body}>
             <TilePreview config={shown} label={previewing ? "Previewing" : "Current"}>{renderPreview(shown)}</TilePreview>
             <div className={styles.options}>
-            <LinkSection tile={tile} onChange={onChange} onRelink={onRelink} />
+            <LinkSection tile={tile} onChange={onChange} onRelink={onRelink} rooms={rooms} onIdentity={onIdentity} />
             <section aria-labelledby="tile-size" className={styles.section}>
               <h3 id="tile-size" className={styles.heading}>Template</h3>
               <div
@@ -156,7 +175,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
   );
 }
 
-function LinkSection({ tile, onChange, onRelink }: { tile: EditableTile; onChange: TileEditorProps["onChange"]; onRelink: () => void }) {
+function LinkSection({ tile, onChange, onRelink, rooms, onIdentity }: Pick<TileEditorProps, "onChange" | "onRelink" | "rooms" | "onIdentity"> & { tile: EditableTile }) {
   const { config } = tile;
   if (tile.kind === "weather") {
     return (
@@ -185,7 +204,36 @@ function LinkSection({ tile, onChange, onRelink }: { tile: EditableTile; onChang
         <Input label="Name" placeholder={KIND_INFO[tile.kind].label} defaultValue={config.label ?? ""} maxLength={60}
           onBlur={event => onChange({ label: event.target.value.trim() || undefined })} />
       )}
+      {tile.identity && <IdentityFields key={tile.identity.id} identity={tile.identity} rooms={rooms} onIdentity={onIdentity} />}
     </section>
+  );
+}
+
+/** Hearth's own name and room for the linked device; the integration keeps its own. */
+function IdentityFields({ identity, rooms, onIdentity }: { identity: TileIdentity; rooms: string[]; onIdentity: TileEditorProps["onIdentity"] }) {
+  const [name, setName] = useState(identity.name);
+  const commit = () => {
+    const next = name.trim();
+    if (!next) return setName(identity.name);
+    if (next !== identity.name) onIdentity({ name: next === identity.sourceName ? null : next });
+  };
+  return (
+    <div className={styles.identity}>
+      <div className={styles.nameField}>
+        <Input label="Name" value={name} maxLength={60} onChange={event => setName(event.target.value)} onBlur={commit}
+          onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); commit(); } }}
+          description={identity.sourceName ? undefined : `Changes it in Hearth only. ${identity.source} keeps its own name.`} />
+        {identity.sourceName && (
+          <p className={styles.note}>
+            {identity.source} calls it {identity.sourceName}.
+            <button type="button" className={styles.restore} onClick={() => { setName(identity.sourceName ?? identity.name); onIdentity({ name: null }); }}>Use that</button>
+          </p>
+        )}
+      </div>
+      {identity.roomEditable && (
+        <RoomPicker rooms={rooms} value={identity.room} sourceRoom={identity.sourceRoom} sourceLabel={identity.source} onChange={room => onIdentity({ room })} />
+      )}
+    </div>
   );
 }
 

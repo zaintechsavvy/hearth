@@ -13,9 +13,10 @@ interface DeviceTileProps {
   onCommand: (command: DeviceCommand) => Promise<void>;
   /** False while the dashboard is being edited, so a tap selects instead of changing the device. */
   interactive?: boolean;
+  onOpenControls?: () => void;
 }
 
-export function DeviceTile({ device, ...props }: DeviceTileProps) {
-  if (device.kind === "light" || device.kind === "switch" || device.kind === "fan") return <ToggleTile device={device} {...props} />;
+export function DeviceTile({ device, onOpenControls, ...props }: DeviceTileProps) {
+  if (device.kind === "light" || device.kind === "switch" || device.kind === "fan") return <ToggleTile device={device} onOpenControls={onOpenControls} {...props} />;
   return <StateTile device={device} {...props} />;
 }

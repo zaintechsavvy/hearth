@@ -1,10 +1,15 @@
+import { hsToHex } from "@/lib/devices/color";
 import type { Device } from "@/lib/devices/types";
 
 export function describeState(device: Device) {
   if (!device.available) return "unavailable";
   switch (device.kind) {
-    case "light":
-      return device.on ? (device.dimmable ? `on at ${device.brightness}%` : "on") : "off";
+    case "light": {
+      const state = device.on ? (device.dimmable ? `on at ${device.brightness}%` : "on") : "off";
+      const color = device.supportsColor ? `, takes colour${device.on && device.colorMode === "color" && device.color ? ` (now ${hsToHex(device.color)})` : ""}` : "";
+      const white = device.temperatureRange ? `, white ${device.temperatureRange.min} to ${device.temperatureRange.max} K${device.on && device.colorMode === "white" && device.temperature ? ` (now ${device.temperature} K)` : ""}` : "";
+      return `${state}${color}${white}`;
+    }
     case "fan":
       return device.on ? (device.adjustable ? `on at ${device.speed}%` : "on") : "off";
     case "switch":

@@ -12,6 +12,13 @@ describe("mapHassState", () => {
     expect(device).toMatchObject({ kind: "light", on: false, dimmable: false, brightness: 0 });
   });
 
+  it("maps colour and white temperature for lights that support them", () => {
+    const color = mapHassState("ha", { entity_id: "light.strip", state: "on", attributes: { supported_color_modes: ["hs", "color_temp"], color_mode: "hs", hs_color: [210.4, 80.2], min_color_temp_kelvin: 2000, max_color_temp_kelvin: 6500, brightness: 255 } }, "C");
+    expect(color).toMatchObject({ supportsColor: true, color: { hue: 210, saturation: 80 }, colorMode: "color", temperatureRange: { min: 2000, max: 6500 } });
+    const white = mapHassState("ha", { entity_id: "light.bulb", state: "on", attributes: { supported_color_modes: ["color_temp"], color_mode: "color_temp", color_temp_kelvin: 2700, min_color_temp_kelvin: 2200, max_color_temp_kelvin: 5000 } }, "C");
+    expect(white).toMatchObject({ supportsColor: false, color: null, colorMode: "white", temperature: 2700 });
+  });
+
   it("maps a range thermostat to its midpoint and heat_cool to auto", () => {
     const device = mapHassState("ha", {
       entity_id: "climate.hall",

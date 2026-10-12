@@ -1,3 +1,5 @@
+import type { HueSaturation } from "./color";
+
 export type TemperatureUnit = "C" | "F";
 export type ThermostatMode = "off" | "heat" | "cool" | "auto";
 export type ThermostatAction = "heating" | "cooling" | "idle" | "off";
@@ -12,6 +14,10 @@ interface DeviceBase {
   available: boolean;
   /** A settings or diagnostic entity, or one hidden in its source, such as "Restart" or "Firmware". */
   auxiliary?: boolean;
+  /** What the integration calls it, when the name was changed in Hearth. */
+  sourceName?: string;
+  /** The integration's room, when the room was changed in Hearth. */
+  sourceRoom?: string | null;
 }
 
 export interface LightDevice extends DeviceBase {
@@ -20,6 +26,15 @@ export interface LightDevice extends DeviceBase {
   dimmable: boolean;
   /** 0 to 100. */
   brightness: number;
+  supportsColor: boolean;
+  /** The current colour, when the light reports one. */
+  color: HueSaturation | null;
+  /** Whether it is showing a colour or a shade of white, when it can do either. */
+  colorMode: "color" | "white" | null;
+  /** The white temperatures it accepts, in kelvin; null when it has no white control. */
+  temperatureRange: { min: number; max: number } | null;
+  /** The current white temperature in kelvin, when it reports one. */
+  temperature: number | null;
 }
 
 export interface SwitchDevice extends DeviceBase {
@@ -116,6 +131,8 @@ export type DeviceKind = Device["kind"];
 export type DeviceCommand =
   | { type: "power"; on: boolean }
   | { type: "brightness"; value: number }
+  | { type: "color"; hue: number; saturation: number }
+  | { type: "temperature"; kelvin: number }
   | { type: "fanSpeed"; value: number }
   | { type: "targetTemperature"; value: number }
   | { type: "thermostatMode"; mode: ThermostatMode }
@@ -170,6 +187,12 @@ export function applyCommand<T extends Device>(device: T, command: DeviceCommand
       return { ...device, on: command.on };
     case "brightness":
       return device.kind === "light" ? { ...device, brightness: command.value, on: command.value > 0 } : device;
+    case "color":
+      return device.kind === "light" ? { ...device, on: true, color: { hue: command.hue, saturation: command.saturation }, colorMode: "color" } : device;
+    case "temperature":
+      return device.kind === "light" && device.temperatureRange
+        ? { ...device, on: true, temperature: clamp(command.kelvin, device.temperatureRange.min, device.temperatureRange.max), colorMode: "white" }
+        : device;
     case "fanSpeed":
       return device.kind === "fan" ? { ...device, speed: command.value, on: command.value > 0 } : device;
     case "targetTemperature":

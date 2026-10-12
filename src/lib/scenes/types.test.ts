@@ -3,7 +3,7 @@ import type { Device } from "@/lib/devices/types";
 import { applyScene, captureState, sceneable } from "./types";
 
 const base = { integrationId: "a", room: null, available: true };
-const lamp: Device = { ...base, id: "a:lamp", name: "Lamp", kind: "light", on: true, dimmable: true, brightness: 30 };
+const lamp: Device = { ...base, id: "a:lamp", name: "Lamp", kind: "light", on: true, dimmable: true, brightness: 30, supportsColor: false, color: null, colorMode: null, temperatureRange: null, temperature: null };
 const lock: Device = { ...base, id: "a:lock", name: "Front door", kind: "lock", state: "unlocked" };
 const garage: Device = { ...base, id: "a:garage", name: "Garage", kind: "cover", coverClass: "garage", state: "open", position: 100, canStop: true, canSetPosition: true };
 const blind: Device = { ...base, id: "a:blind", name: "Blind", kind: "cover", coverClass: "blind", state: "open", position: 40, canStop: true, canSetPosition: true };

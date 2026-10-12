@@ -3,7 +3,7 @@ import {
   type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode,
 } from "@/lib/devices/types";
 import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
-import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type IceCandidate, type Provider, type WebRtcAnswer } from "./types";
+import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type IceCandidate, type IceServer, type Provider, type WebRtcAnswer } from "./types";
 
 export interface HassState {
   entity_id: string;
@@ -27,6 +27,7 @@ const WEBRTC_QUIET_MS = 250;
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const FAN_SET_SPEED = 1;
+const COLOR_MODES = new Set(["hs", "xy", "rgb", "rgbw", "rgbww"]);
 const COVER = { open: 1, close: 2, setPosition: 4, stop: 8 };
 
 const HVAC_TO_MODE: Record<string, ThermostatMode> = { off: "off", heat: "heat", cool: "cool", heat_cool: "auto", auto: "auto" };
@@ -80,7 +81,19 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
       const colorModes = Array.isArray(attributes.supported_color_modes) ? attributes.supported_color_modes : [];
       const dimmable = colorModes.some(mode => mode !== "onoff");
       const brightness = num(attributes.brightness);
-      return { ...base, kind: "light", on, dimmable, brightness: on && brightness !== null ? Math.round(brightness / 255 * 100) : 0 };
+      const supportsColor = colorModes.some(mode => COLOR_MODES.has(mode));
+      const hs = Array.isArray(attributes.hs_color) ? attributes.hs_color : null;
+      const min = num(attributes.min_color_temp_kelvin), max = num(attributes.max_color_temp_kelvin);
+      const temperatureRange = colorModes.includes("color_temp") && min !== null && max !== null ? { min, max } : null;
+      const mode = str(attributes.color_mode);
+      return {
+        ...base, kind: "light", on, dimmable, brightness: on && brightness !== null ? Math.round(brightness / 255 * 100) : 0,
+        supportsColor,
+        color: supportsColor && hs && num(hs[0]) !== null && num(hs[1]) !== null ? { hue: Math.round(hs[0]), saturation: Math.round(hs[1]) } : null,
+        colorMode: mode === "color_temp" ? "white" : mode && COLOR_MODES.has(mode) ? "color" : null,
+        temperatureRange,
+        temperature: temperatureRange ? num(attributes.color_temp_kelvin) : null,
+      };
     }
     case "switch":
     case "input_boolean":
@@ -264,6 +277,37 @@ export class HomeAssistantProvider implements Provider {
     }
   }
 
+  /** Whether the camera offers WebRTC, and the STUN and TURN servers Home Assistant hands its own frontend for it. */
+  async cameraWebRtcConfig(entityId: string) {
+    const [capabilities, config] = await Promise.all([
+      this.live.request<{ frontend_stream_types?: string[] }>({ type: "camera/capabilities", entity_id: entityId }).catch(() => null),
+      this.live.request<{ configuration?: { iceServers?: IceServer[] } }>({ type: "camera/webrtc/get_client_config", entity_id: entityId }).catch(() => null),
+    ]);
+    return {
+      supported: !capabilities || Boolean(capabilities.result.frontend_stream_types?.includes("web_rtc")),
+      iceServers: config?.result.configuration?.iceServers ?? [],
+    };
+  }
+
+  /** HLS through Home Assistant's stream integration: slower to start than WebRTC, but it only needs plain HTTP, which Hearth relays. */
+  async cameraHls(entityId: string) {
+    if (!entityId.startsWith("camera.")) throw new IntegrationError("That device is not a camera.");
+    const stream = await this.live.request<{ url: string }>({ type: "camera/stream", entity_id: entityId, format: "hls" }).catch(error => {
+      throw new IntegrationError(error instanceof Error ? `Home Assistant could not start a stream: ${error.message}` : "Home Assistant could not start a stream.");
+    });
+    if (!stream.result.url.startsWith("/api/hls/")) throw new IntegrationError("Home Assistant returned an unexpected stream address.");
+    return stream.result.url;
+  }
+
+  async cameraHlsFetch(path: string, search: string, signal: AbortSignal) {
+    if (!path.startsWith("/api/hls/")) throw new IntegrationError("Not a stream address.");
+    try {
+      return await fetch(new URL(`${path.slice(1)}${search}`, this.base), { cache: "no-store", signal });
+    } catch {
+      throw new IntegrationError(`Could not reach Home Assistant at ${this.base.origin}.`);
+    }
+  }
+
   private call(domain: string, service: string, data: Record<string, unknown>) {
     return this.request(`api/services/${domain}/${service}`, { method: "POST", body: JSON.stringify(data) });
   }
@@ -283,6 +327,10 @@ export class HomeAssistantProvider implements Provider {
         return void await (command.value <= 0
           ? this.call("light", "turn_off", target)
           : this.call("light", "turn_on", { ...target, brightness_pct: clamp(Math.round(command.value), 1, 100) }));
+      case "color":
+        return void await this.call("light", "turn_on", { ...target, hs_color: [command.hue, command.saturation] });
+      case "temperature":
+        return void await this.call("light", "turn_on", { ...target, color_temp_kelvin: Math.round(command.kelvin) });
       case "fanSpeed":
         return void await this.call("fan", "set_percentage", { ...target, percentage: clamp(Math.round(command.value), 0, 100) });
       case "targetTemperature":

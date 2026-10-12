@@ -11,7 +11,9 @@ import SegmentedControl from "@/components/arc/segmented-control/segmented-contr
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Glass, glassClass, glassSheetClass } from "@/components/glass/glass";
 import { BackgroundPicker } from "@/components/shell/background-picker";
-import { addDemoHome, deleteScene, saveLayout } from "@/lib/actions";
+import { addDemoHome, deleteScene, saveLayout, updateDevice } from "@/lib/actions";
+import type { HomeCamera } from "@/lib/home";
+import { INTEGRATION_LABELS } from "@/lib/integrations/types";
 import { KIND_INFO } from "@/lib/dashboard/catalog";
 import {
   cameraTileId, createTile, defaultSize, isStyled, isWidget, removeTile, resolveLayout, SIZE_OPTIONS, suggestedTiles, updateTile,
@@ -27,6 +29,7 @@ import { DoorbellBanner } from "./doorbell-banner";
 import type { Candidate } from "./entity-chooser";
 import { HomeGrid } from "./home-grid";
 import { IntegrationCameraTile } from "./integration-camera-tile";
+import { LightControls } from "./light-controls";
 import { SceneEditor } from "./scene-editor";
 import { Thermostat, formatTemperature } from "./thermostat";
 import { TileDialog, type TileDialogMode } from "./tile-dialog";
@@ -56,7 +59,7 @@ const COMPATIBLE: Partial<Record<TileKind, DeviceKind[]>> = {
 
 type Linked =
   | { type: "device"; device: Device }
-  | { type: "camera"; camera: { id: string; name: string } }
+  | { type: "camera"; camera: HomeCamera }
   | { type: "scene"; scene: HearthScene };
 
 function greeting(hour: number | null, name: string) {
@@ -81,6 +84,7 @@ export function DashboardView({ userName }: { userName: string }) {
   const [draft, setDraft] = useState<TileConfig[] | null>(null);
   const [customizing, setCustomizing] = useState<string | null>(null);
   const [dialog, setDialog] = useState<TileDialogMode | null>(null);
+  const [controlling, setControlling] = useState<string | null>(null);
   const [room, setRoom] = useState(ALL_ROOMS);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const latest = useRef<TileConfig[] | null>(null);
@@ -181,10 +185,11 @@ export function DashboardView({ userName }: { userName: string }) {
     return list.sort((a, b) => rank(a) - rank(b));
   };
 
-  const linkedRooms = [...new Set(tiles.map(tile => {
+  const tileRooms = new Set(tiles.map(tile => {
     const linked = resolve(tile);
     return linked?.type === "device" ? linked.device.room : null;
-  }).filter((value): value is string => Boolean(value)))].sort();
+  }));
+  const linkedRooms = home.rooms.filter(value => tileRooms.has(value));
   const roomOf = (tile: TileConfig) => {
     const linked = resolve(tile);
     return linked?.type === "device" ? linked.device.room : null;
@@ -194,7 +199,11 @@ export function DashboardView({ userName }: { userName: string }) {
   const failing = home.integrations.filter(integration => !integration.ok);
   const connected = home.integrations.length > 0 || home.cameras.length > 0;
   const customizingTile = customizing ? tiles.find(tile => tile.id === customizing) : undefined;
-  const editable = customizingTile ? editableTile(customizingTile, resolve(customizingTile), nameOf(customizingTile)) : null;
+  const sourceLabel = (device: Device) => {
+    const integration = home.integrations.find(item => item.id === device.integrationId);
+    return integration ? INTEGRATION_LABELS[integration.kind] : "The integration";
+  };
+  const editable = customizingTile ? editableTile(customizingTile, resolve(customizingTile), nameOf(customizingTile), sourceLabel) : null;
   const customizingLink = customizingTile ? resolve(customizingTile) : null;
   const customizingScene = customizingLink?.type === "scene" ? customizingLink.scene : null;
 
@@ -217,9 +226,11 @@ export function DashboardView({ userName }: { userName: string }) {
     const device = linked.device;
     if (device.kind === "thermostat") return <Thermostat device={device} onCommand={command => send(device, command)} />;
     if (device.kind === "camera") return preview ? <CameraPreview name={device.name} /> : <IntegrationCameraTile camera={device} />;
-    return <DeviceTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} />;
+    return <DeviceTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} onOpenControls={() => setControlling(device.id)} />;
   };
 
+  const controlled = controlling ? devices.get(controlling) : undefined;
+  const controlledLight = controlled?.kind === "light" ? controlled : null;
   const dialogs = (
     <>
       <TileDialog
@@ -230,12 +241,20 @@ export function DashboardView({ userName }: { userName: string }) {
         onLink={linkTile}
         onPlace={(tileId, place, units) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, place, units } } : tile))}
       />
+      <LightControls device={controlledLight} onOpenChange={open => !open && setControlling(null)} onCommand={send} />
       <SceneEditor open={sceneEditing !== null} onOpenChange={open => !open && setSceneEditing(null)} devices={home.devices} scene={sceneEditing === "new" ? null : sceneEditing} onSaved={() => refresh()} />
       <TileEditor
         tile={editable}
         renderPreview={config => renderTile(config, true)}
         onOpenChange={open => !open && setCustomizing(null)}
         onChange={patch => customizing && change(updateTile(tiles, customizing, patch))}
+        rooms={home.rooms}
+        onIdentity={async change => {
+          const id = editable?.identity?.id;
+          if (!id) return;
+          await updateDevice(id, change);
+          await refresh();
+        }}
         onRemove={() => { if (customizing) change(removeTile(tiles, customizing)); setCustomizing(null); }}
         onRelink={() => { if (customizingTile) setDialog(isWidget(customizingTile.kind) ? { mode: "place", tile: customizingTile } : { mode: "link", tile: customizingTile }); }}
         extra={customizingScene && (
@@ -344,17 +363,21 @@ function mergeFiltered(all: TileConfig[], changed: TileConfig[]) {
   return all.map(tile => ids.has(tile.id) ? queue.shift() ?? tile : tile);
 }
 
-function editableTile(tile: TileConfig, linked: Linked | null, name: string): EditableTile {
+function editableTile(tile: TileConfig, linked: Linked | null, name: string, sourceLabel: (device: Device) => string): EditableTile {
   const info = KIND_INFO[tile.kind];
   const base = { config: tile, kind: tile.kind, name, linkedName: null as string | null, adjustable: true, icon: null, color: null };
   if (isWidget(tile.kind)) return { ...base, linkedName: tile.kind === "weather" ? tile.options?.place?.name ?? null : null };
   if (!linked) return { ...base, icon: isStyled(tile.kind) ? tile.icon ?? info.icon : null, color: isStyled(tile.kind) ? tile.color ?? info.color : null };
   if (linked.type === "scene") return { ...base, linkedName: linked.scene.name, adjustable: false, icon: tile.icon ?? linked.scene.icon ?? "clapperboard", color: tile.color ?? "violet" };
-  if (linked.type === "camera") return { ...base, linkedName: linked.camera.name, adjustable: false };
+  if (linked.type === "camera") {
+    const { camera } = linked;
+    return { ...base, linkedName: camera.name, adjustable: false, identity: { id: cameraTileId(camera.id), name: camera.name, sourceName: camera.sourceName, room: null, roomEditable: false, source: "Settings" } };
+  }
   const device = linked.device;
-  if (!isStyled(device.kind)) return { ...base, linkedName: device.name, adjustable: false };
+  const identity = { id: device.id, name: device.name, sourceName: device.sourceName, room: device.room, sourceRoom: device.sourceRoom, roomEditable: true, source: sourceLabel(device) };
+  if (!isStyled(device.kind)) return { ...base, linkedName: device.name, identity, adjustable: false };
   const style = defaultStyle(device);
-  return { ...base, linkedName: device.name, adjustable: hasLevel(device), icon: tile.icon ?? style.icon, color: tile.color ?? style.color };
+  return { ...base, linkedName: device.name, identity, adjustable: hasLevel(device), icon: tile.icon ?? style.icon, color: tile.color ?? style.color };
 }
 
 function Welcome({ onCreated, onWidgets }: { onCreated: () => void; onWidgets: () => void }) {
