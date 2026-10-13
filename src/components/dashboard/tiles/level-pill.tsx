@@ -13,7 +13,8 @@ interface LevelPillProps {
   on: boolean;
   disabled?: boolean;
   onToggle: () => void;
-  onCommit: (value: number) => void;
+  /** Sends the level. The pill keeps showing it until the returned promise settles, so it never flicks back to the old level. */
+  onCommit: (value: number) => Promise<unknown>;
   className?: string;
   /** Rendered over the fill; receives the level shown right now so labels can follow a drag. */
   children?: (level: number) => ReactNode;
@@ -22,8 +23,16 @@ interface LevelPillProps {
 /** A vertical level control: drag anywhere to move the level relative to where you started, tap to toggle. */
 export function LevelPill({ label, value, on, disabled, onToggle, onCommit, className, children }: LevelPillProps) {
   const [drag, setDrag] = useState<number | null>(null);
+  const [sent, setSent] = useState<number | null>(null);
+  const commits = useRef(0);
   const gesture = useRef<{ y: number; from: number; moved: boolean } | null>(null);
-  const shown = drag ?? (on ? value : 0);
+  const shown = drag ?? sent ?? (on ? value : 0);
+
+  function send(level: number) {
+    const id = ++commits.current;
+    setSent(level);
+    void onCommit(level).finally(() => { if (commits.current === id) setSent(null); });
+  }
 
   function down(event: PointerEvent<HTMLDivElement>) {
     if (disabled || event.button !== 0) return;
@@ -44,7 +53,7 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
     const current = gesture.current;
     gesture.current = null;
     if (!current) return;
-    if (current.moved && drag !== null) onCommit(drag);
+    if (current.moved && drag !== null) send(drag);
     else onToggle();
     setDrag(null);
   }
@@ -59,7 +68,7 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
     const target = step !== undefined ? clamp(shown + step, 0, 100) : event.key === "Home" ? 0 : event.key === "End" ? 100 : null;
     if (target === null) return;
     event.preventDefault();
-    onCommit(target);
+    send(target);
   }
 
   return (

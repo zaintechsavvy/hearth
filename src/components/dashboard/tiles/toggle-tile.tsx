@@ -48,7 +48,7 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
 
   const run = (command: DeviceCommand) => {
     setError(null);
-    onCommand(command).catch(cause => setError(cause instanceof Error ? cause.message : "The device did not respond."));
+    return onCommand(command).catch(cause => setError(cause instanceof Error ? cause.message : "The device did not respond."));
   };
   const toggle = () => run({ type: "power", on: !device.on });
   const commitLevel = (value: number) => run(device.kind === "fan" ? { type: "fanSpeed", value } : value === 0 ? { type: "power", on: false } : { type: "brightness", value });

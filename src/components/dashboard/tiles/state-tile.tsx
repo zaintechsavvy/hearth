@@ -158,7 +158,7 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
 
   const run = (next: DeviceCommand) => {
     setError(null);
-    onCommand(next).then(() => device.kind === "scene" && setRan(true), cause => setError(cause instanceof Error ? cause.message : "The device did not respond."));
+    return onCommand(next).then(() => device.kind === "scene" && setRan(true), cause => setError(cause instanceof Error ? cause.message : "The device did not respond."));
   };
   const request = (next: DeviceCommand) => isSensitive(device, next) ? setPending(next) : run(next);
 
@@ -168,7 +168,7 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   const confirm = pending && <SensitiveConfirm device={device} state={text} onConfirm={() => run(pending)} onClose={() => setPending(null)} />;
 
   if (device.kind === "cover" && device.canSetPosition && (config.size === "1x2" || config.size === "2x2")) {
-    const commit = (value: number) => request({ type: "coverPosition", value });
+    const commit = async (value: number) => { await request({ type: "coverPosition", value }); };
     const toggle = () => request(tapCommand(device) as DeviceCommand);
     const pill = (className: string) => (
       <LevelPill label={`${device.name} position`} value={device.position ?? 0} on={(device.position ?? 0) > 0} disabled={!device.available || !interactive} onToggle={toggle} onCommit={commit} className={className}>

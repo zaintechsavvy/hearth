@@ -63,40 +63,65 @@
   overflow: hidden;
 }
 
-.sceneSky,
-.sceneGround,
-.sceneLamp {
+.feed {
+  object-fit: cover;
+}
+
+.camera[data-night-vision] .feed {
+  filter: contrast(1.05) brightness(1.08);
+}
+
+/* A faint, shifting grain so the still reads as a live feed. */
+.grain {
   position: absolute;
+  inset: -50%;
   pointer-events: none;
+  opacity: .16;
+  background-image: radial-gradient(oklch(100% 0 0 / .5) .5px, transparent .6px), radial-gradient(oklch(0% 0 0 / .6) .5px, transparent .6px);
+  background-size: 3px 3px, 4px 4px;
+  background-position: 0 0, 1px 2px;
+  mix-blend-mode: overlay;
+  animation: grain 0.6s steps(3) infinite;
 }
 
-.sceneSky {
-  inset: 0;
-  background: linear-gradient(180deg, oklch(62% .09 280), oklch(78% .1 55) 70%, oklch(70% .08 40));
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  33% { transform: translate(-1.5%, 1%); }
+  66% { transform: translate(1%, -1.5%); }
+  100% { transform: translate(0, 0); }
 }
 
-.camera[data-scene="night"] .sceneSky {
-  background: linear-gradient(180deg, oklch(22% .04 265), oklch(34% .05 250) 75%);
-}
-
-.sceneGround {
-  inset: 62% 0 0;
-  background: linear-gradient(180deg, oklch(35% .03 150), oklch(22% .02 150));
-  filter: blur(1px);
-}
-
-.camera[data-scene="night"] .sceneGround {
-  background: linear-gradient(180deg, oklch(20% .02 200), oklch(12% .01 220));
-}
-
-.sceneLamp {
-  width: 34%;
-  aspect-ratio: 1;
-  right: 12%;
-  top: 22%;
+.live {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: radial-gradient(closest-side, oklch(92% .1 85 / .9), transparent);
-  filter: blur(6px);
+  background: oklch(63% .22 27);
+  animation: live 2s ease-in-out infinite;
+}
+
+@keyframes live {
+  50% { opacity: .35; }
+}
+
+.stamp {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: oklch(0% 0 0 / .45);
+  color: oklch(96% 0 0);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grain,
+  .live {
+    animation: none;
+  }
 }
 
 .cameraLabel {
@@ -118,9 +143,22 @@
 }
 
 .caption {
+  display: grid;
+  gap: 2px;
   padding: 0 var(--space-3) var(--space-2);
   color: var(--text-secondary);
   font-size: var(--text-xs);
   text-align: center;
 }
 
+
+.credits {
+  font-size: 10px;
+  opacity: .8;
+}
+
+.credits a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

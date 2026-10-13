@@ -80,6 +80,7 @@ interface ReelProps {
 function Reel({ char, order, entering, rising, duration, stagger, spins, reduced }: ReelProps) {
   const pos = useMotionValue(0);
   const width = useMotionValue<number | "auto">("auto");
+  const opacity = useMotionValue(1);
   const sizer = useRef<HTMLSpanElement>(null);
   const [isPresent, safeToRemove] = usePresence();
   const [reel, setReel] = useState(() => ({
@@ -130,11 +131,13 @@ function Reel({ char, order, entering, rising, duration, stagger, spins, reduced
   useLayoutEffect(() => {
     if (isPresent) return;
     if (reduced) { safeToRemove(); return; }
+    // The glyph fades well before its column closes, so it is never seen sliced by the shrinking window.
+    const fade = animate(opacity, 0, { duration: .14, ease: "easeOut" });
     const exit = animate(width, 0, { type: "spring", visualDuration: .35, bounce: 0, onComplete: safeToRemove });
-    return () => exit.stop();
-  }, [isPresent, safeToRemove, width, reduced]);
+    return () => { fade.stop(); exit.stop(); };
+  }, [isPresent, safeToRemove, width, opacity, reduced]);
 
-  return <motion.span className={styles.slot} style={{ width }} data-exiting={isPresent ? undefined : ""}>
+  return <motion.span className={styles.slot} style={{ width, opacity }} data-exiting={isPresent ? undefined : ""}>
     <span ref={sizer} className={styles.sizer}>{char === " " ? "\u00a0" : char}</span>
     <span className={styles.window}>
       <motion.span className={styles.strip} style={{ transform: y, filter: blur }}>

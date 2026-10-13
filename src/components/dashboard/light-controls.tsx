@@ -52,8 +52,17 @@ function Body({ device, onCommand }: { device: LightDevice; onCommand: (command:
   const [hex, setHex] = useState(device.color ? hsToHex(device.color) : "#ff9a3c");
   const range = device.temperatureRange;
   const [kelvin, setKelvin] = useState(device.temperature ?? (range ? clamp(2700, range.min, range.max) : 2700));
+  const [level, setLevel] = useState<number | null>(null);
+  const commits = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
+
+  /** Holds the released brightness until the light answers, so the slider doesn't spring back to the old level first. */
+  const chooseBrightness = (value: number) => {
+    const id = ++commits.current;
+    setLevel(value);
+    void onCommand(value === 0 ? { type: "power", on: false } : { type: "brightness", value }).finally(() => { if (commits.current === id) setLevel(null); });
+  };
 
   const later = (command: DeviceCommand) => {
     clearTimeout(timer.current);
@@ -86,8 +95,7 @@ function Body({ device, onCommand }: { device: LightDevice; onCommand: (command:
       </div>
 
       {device.dimmable && (
-        <Slider label="Brightness" value={device.on ? device.brightness : 0} min={0} max={100} format={value => `${value}%`}
-          onValueCommit={value => void onCommand(value === 0 ? { type: "power", on: false } : { type: "brightness", value })} />
+        <Slider label="Brightness" value={level ?? (device.on ? device.brightness : 0)} min={0} max={100} format={value => `${value}%`} onValueCommit={chooseBrightness} />
       )}
 
       {both && (
