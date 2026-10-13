@@ -90,6 +90,10 @@ DATABASE_URL=postgresql://user:password@ep-example-pooler.us-east-2.aws.neon.tec
 
 To use Supabase, open **Connect**, copy the **Transaction pooler** string (port 6543), and add it the same way. Restart Hearth after changing it. Switching starts with an empty database; there is no copy from the embedded one.
 
+### On your phone
+
+Phones need HTTPS to install Hearth and get alerts. Run `npm run dev:https`, trust the Hearth certificate once on each phone, and open the address it prints. [docs/https.md](docs/https.md) walks through iPhone and Android, and how to give an always-on Hearth a real address.
+
 ### Run it at home with Docker
 
 ```bash
