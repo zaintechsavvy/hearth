@@ -33,9 +33,12 @@ function connect(): Connection {
     // prepare: false keeps transaction poolers (Supabase on port 6543, Neon's pooled host) working.
     const client = postgres(url, { prepare: false, max: 10 });
     const db = drizzlePostgres(client, { schema });
-    return { db, migrate: () => migratePostgres(db, { migrationsFolder: migrationsFolder() }) };
+    const migrate = () => migratePostgres(db, { migrationsFolder: migrationsFolder() });
+    // Serverless hosts can cold-start several instances at once; whichever loses the race finds the work done on its retry.
+    return { db, migrate: () => migrate().catch(() => new Promise(done => setTimeout(done, 3000)).then(migrate)) };
   }
   const building = process.env.NEXT_PHASE === "phase-production-build" || isHelperWorker();
+  if (!building && process.env.VERCEL) throw new Error("DATABASE_URL is not set. Vercel has no lasting disk, so Hearth needs a Postgres database there; see docs/vercel.md.");
   const directory = resolve(/*turbopackIgnore: true*/ process.env.DATABASE_PATH ?? "data/pglite");
   if (!building) {
     mkdirSync(directory, { recursive: true });

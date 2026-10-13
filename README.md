@@ -103,6 +103,10 @@ docker compose up -d --build
 
 This starts Hearth on port 3000 and go2rtc next to it. If you open Hearth from other devices by IP (for example `http://192.168.1.10:3000`), set that as `BETTER_AUTH_URL` or add it to `TRUSTED_ORIGINS`. Once everyone in your household has an account, set `DISABLE_SIGNUP=true`.
 
+### Deploy to Vercel
+
+Vercel needs a Postgres database (Neon from the Vercel Marketplace works), `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`; until they are set, Hearth shows a setup screen listing what is missing. Alerts, automations, and history need an always-on server, so they stay off there. [docs/vercel.md](docs/vercel.md) has the steps.
+
 ## How Hearth works with Home Assistant and Matter
 
 Matter is a local standard: devices talk over your own network (Wi-Fi, Ethernet, or Thread), and the apps that control them are **controllers**. A controller pairs a device onto its **fabric**, a private set of credentials that lets it send commands. One device can belong to several fabrics at once (Apple Home, Google Home, and Home Assistant together), which Matter calls **multi-admin**.

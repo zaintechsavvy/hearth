@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["@electric-sql/pglite"],
   allowedDevOrigins: devOrigins,
+  /** Migrations are read at startup by path, which file tracing cannot see; serverless hosts such as Vercel only ship traced files. */
+  outputFileTracingIncludes: { "/*": ["./drizzle/**/*"] },
 };
 
 export default nextConfig;
