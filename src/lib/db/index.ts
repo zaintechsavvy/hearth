@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
@@ -33,9 +33,7 @@ function connect(): Connection {
     // prepare: false keeps transaction poolers (Supabase on port 6543, Neon's pooled host) working.
     const client = postgres(url, { prepare: false, max: 10 });
     const db = drizzlePostgres(client, { schema });
-    const migrate = () => migratePostgres(db, { migrationsFolder: migrationsFolder() });
-    // Serverless hosts can cold-start several instances at once; whichever loses the race finds the work done on its retry.
-    return { db, migrate: () => migrate().catch(() => new Promise(done => setTimeout(done, 3000)).then(migrate)) };
+    return { db, migrate: () => migratePostgres(db, { migrationsFolder: migrationsFolder() }) };
   }
   const building = process.env.NEXT_PHASE === "phase-production-build" || isHelperWorker();
   if (!building && process.env.VERCEL) throw new Error("DATABASE_URL is not set. Vercel has no lasting disk, so Hearth needs a Postgres database there; see docs/vercel.md.");
@@ -67,6 +65,3 @@ const connection = cache.hearthDatabase ??= connect();
 
 export const db = connection.db;
 export const runMigrations = () => connection.migrate();
-
-/** Whether this bundle carries the migration files. Vercel deploys the proxy as its own function without them. */
-export const migrationsShipped = () => existsSync(join(migrationsFolder(), "meta", "_journal.json"));

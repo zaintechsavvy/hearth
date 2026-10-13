@@ -6,7 +6,7 @@ Vercel runs Hearth as serverless functions: each request may start a fresh copy,
 
 In the Vercel project, open **Storage**, choose **Create Database**, then **Neon** (Serverless Postgres), and connect it to the project. That adds `DATABASE_URL` to every environment. Any Postgres works: for Supabase or your own server, add `DATABASE_URL` yourself under **Settings**, **Environment Variables**, using the pooled connection string.
 
-Hearth creates its tables on the first request after each deploy.
+Each production deploy creates or updates Hearth's tables before it builds (`npm run vercel-build` runs `scripts/migrate.mjs`), using Neon's direct connection, `DATABASE_URL_UNPOOLED`, when there is one. Preview deploys share the production database, so they skip this step. On another serverless host, run `npm run db:migrate` with `DATABASE_URL` set before each deploy.
 
 ## 2. Add the other settings
 
