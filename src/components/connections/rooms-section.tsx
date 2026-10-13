@@ -39,7 +39,7 @@ export function RoomsSection() {
   };
 
   return (
-    <SettingsSection id="rooms" title="Rooms" description={<>Rename, reorder, or add rooms. Changes stay in Hearth; Home Assistant keeps its areas. Move a device from its tile&apos;s Customize.</>}>
+    <SettingsSection id="rooms" title="Rooms" description={<>Rename, reorder, or add rooms.</>}>
       <Glass shape="panel" className={styles.group}>
         {rooms.length === 0 && (
           <div className={styles.row}>

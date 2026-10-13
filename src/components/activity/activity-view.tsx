@@ -100,7 +100,7 @@ export function ActivityView() {
                   const Icon = iconFor(entry);
                   return (
                     <li key={entry.id} className={styles.entry} data-tone={entry.tone}>
-                      <span className={styles.icon} aria-hidden="true"><Icon size={16} strokeWidth={1.9} /></span>
+                      <span className={styles.icon} aria-hidden="true"><Icon size={16} strokeWidth={1.75} /></span>
                       <span className={styles.text}>
                         <span><b>{entry.name}</b> {entry.what}{entry.by && <span className={styles.by}> · by {entry.by}</span>}</span>
                         {entry.room && <span className={styles.meta}>{entry.room}</span>}

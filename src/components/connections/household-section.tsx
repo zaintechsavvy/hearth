@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, LogOut, Users } from "lucide-react";
+import { Copy, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/arc/badge/badge";
@@ -83,7 +83,7 @@ export function HouseholdSection({ role, ownerName, members, invites, pages }: H
   };
 
   return (
-    <SettingsSection id="household" title="Household" description={<>Members see and control everything and get alerts. Guests see only the pages you pick, and doors stay locked.</>}>
+    <SettingsSection id="household" title="Household" description={<>Invite the people you live with.</>}>
       <Glass shape="panel" className={styles.group}>
         {members.map(member => (
           <div key={member.id} className={`${styles.row} ${member.role === "guest" ? styles.stacked : ""}`}>
@@ -107,7 +107,7 @@ export function HouseholdSection({ role, ownerName, members, invites, pages }: H
           <SegmentedControl label="As" value={inviteRole} onValueChange={value => setInviteRole(value as "member" | "guest")} options={[{ value: "member", label: "Member" }, { value: "guest", label: "Guest" }]} />
           {inviteRole === "guest" && <PageChoice pages={pages} value={guestPages} onChange={setGuestPagesDraft} />}
           {error && <p className={styles.rowMeta} role="alert">{error}</p>}
-          <Button onClick={() => void make()}>Make an invite link</Button>
+          <Button variant="secondary" className={styles.alignEnd} onClick={() => void make()}>Make an invite link</Button>
           {link && (
             <div className={styles.inviteLink}>
               {qr && (
@@ -116,7 +116,7 @@ export function HouseholdSection({ role, ownerName, members, invites, pages }: H
               )}
               <div className={styles.inviteText}>
                 <code className={styles.inviteCode}>{link}</code>
-                <Button variant="secondary" size="sm" onClick={async () => { await navigator.clipboard.writeText(link); setCopied(true); }}><Copy size={14} strokeWidth={1.75} aria-hidden="true" /> {copied ? "Copied" : "Copy link"}</Button>
+                <Button variant="secondary" size="sm" onClick={async () => { await navigator.clipboard.writeText(link); setCopied(true); }}><Copy size={16} strokeWidth={1.75} aria-hidden="true" /> {copied ? "Copied" : "Copy link"}</Button>
               </div>
             </div>
           )}
@@ -127,7 +127,7 @@ export function HouseholdSection({ role, ownerName, members, invites, pages }: H
             {invites.map(item => (
               <div key={item.code} className={styles.inline} style={{ alignItems: "center" }}>
                 <span className={styles.rowMeta} style={{ flex: 1 }}>{item.role === "member" ? "Member" : "Guest"} invite · expires {new Date(item.expiresAt).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</span>
-                <Button variant="ghost" size="sm" onClick={async () => { await revokeInvite(item.code); router.refresh(); }}><LogOut size={14} strokeWidth={1.75} aria-hidden="true" /> Revoke</Button>
+                <ConfirmMorph label="Revoke" prompt="Revoke this invite?" pendingLabel="Revoking" doneLabel="Revoked" onConfirm={async () => { await revokeInvite(item.code); router.refresh(); }} />
               </div>
             ))}
           </div>

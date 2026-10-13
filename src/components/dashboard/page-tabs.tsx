@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/arc/button/button";
+import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
 import { InlineEdit } from "@/components/arc/inline-edit/inline-edit";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
@@ -61,10 +62,10 @@ export function PageTabs({ pages, current, editing, onSelect, onChanged }: PageT
               )}
               {editing && active && (
                 <span className={styles.tools}>
-                  <button type="button" className={styles.tool} aria-label={`Move ${page.name} left`} disabled={index === 0} onClick={async () => { await movePage(page.id, -1); await onChanged(); }}><ArrowLeft size={13} strokeWidth={2} aria-hidden="true" /></button>
-                  <button type="button" className={styles.tool} aria-label={`Move ${page.name} right`} disabled={index === pages.length - 1} onClick={async () => { await movePage(page.id, 1); await onChanged(); }}><ArrowRight size={13} strokeWidth={2} aria-hidden="true" /></button>
+                  <button type="button" className={styles.tool} aria-label={`Move ${page.name} left`} disabled={index === 0} onClick={async () => { await movePage(page.id, -1); await onChanged(); }}><ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" /></button>
+                  <button type="button" className={styles.tool} aria-label={`Move ${page.name} right`} disabled={index === pages.length - 1} onClick={async () => { await movePage(page.id, 1); await onChanged(); }}><ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" /></button>
                   {pages.length > 1 && (
-                    <button type="button" className={styles.tool} aria-label={`Delete ${page.name}`} onClick={async () => { await deletePage(page.id); await onChanged(); onSelect(pages[index === 0 ? 1 : 0].id); }}><Trash2 size={13} strokeWidth={2} aria-hidden="true" /></button>
+                    <ConfirmMorph label="Delete" prompt={`Delete ${page.name}?`} pendingLabel="Deleting" doneLabel="Deleted" onConfirm={async () => { await deletePage(page.id); await onChanged(); onSelect(pages[index === 0 ? 1 : 0].id); }} />
                   )}
                 </span>
               )}
@@ -74,7 +75,7 @@ export function PageTabs({ pages, current, editing, onSelect, onChanged }: PageT
         {editing && (
           <Popover open={adding} onOpenChange={setAdding}>
             <PopoverTrigger asChild>
-              <button type="button" className={styles.add} aria-label="New page"><Plus size={15} strokeWidth={1.9} aria-hidden="true" /></button>
+              <button type="button" className={styles.add} aria-label="New page"><Plus size={15} strokeWidth={1.75} aria-hidden="true" /></button>
             </PopoverTrigger>
             <PopoverContent className={`${glassSheetClass} ${styles.popover}`}>
               <form className={styles.form} onSubmit={create}>

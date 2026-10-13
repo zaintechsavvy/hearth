@@ -51,7 +51,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: conic-gradient(oklch(70% .17 55) calc(var(--progress) * 360deg), oklch(50% 0 0 / .12) 0);
+  background: conic-gradient(var(--warning) calc(var(--progress) * 360deg), oklch(50% 0 0 / .12) 0);
   mask: radial-gradient(circle, transparent 11px, black 12px);
 }
 
@@ -81,7 +81,7 @@
 }
 
 .timer[data-done] .time {
-  color: oklch(62% .2 40);
+  color: var(--warning);
   animation: pulse 1s var(--ease-standard) infinite;
 }
 

@@ -47,7 +47,7 @@ export function AssistantsSection({ assistants }: { assistants: AssistantSummary
   }
 
   return (
-    <SettingsSection id="assistants" title="AI assistants" description={<>Bring your own API key, or point at a model you run yourself. Requests go from this server straight to the provider.</>} action={<Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>}>
+    <SettingsSection id="assistants" title="AI assistants" description={<>Ask for changes in plain words.</>} action={<Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>}>
 
       <Glass shape="panel" className={styles.group}>
         {assistants.length === 0 ? (

@@ -36,7 +36,7 @@ export function NotesTile({ items, interactive, author }: HouseholdTileProps<"no
             <p className={own.text}>{note.data.text}</p>
             {note.data.author && <span className={own.author}>{note.data.author}</span>}
             {interactive && (
-              <button type="button" className={own.remove} aria-label="Remove note" onClick={() => void deleteWidgetItem(note.id)}><X size={12} strokeWidth={2.25} aria-hidden="true" /></button>
+              <button type="button" className={own.remove} aria-label="Remove note" onClick={() => void deleteWidgetItem(note.id)}><X size={12} strokeWidth={1.75} aria-hidden="true" /></button>
             )}
           </li>
         ))}

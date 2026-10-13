@@ -99,8 +99,8 @@ function Collection<K extends "bin" | "medication" | "plant">({ kind, items, sta
                   <span className={styles.itemTitle}>{shown.title}</span>
                   <span className={styles.itemDetail}>{shown.detail}</span>
                 </span>
-                <Button variant="ghost" size="sm" aria-label={`Edit ${shown.title}`} onClick={() => setEditing(item.id)}><Pencil size={15} strokeWidth={1.75} aria-hidden="true" /></Button>
-                <Button variant="ghost" size="sm" aria-label={`Remove ${shown.title}`} onClick={() => { void deleteWidgetItem(item.id); if (editing === item.id) setEditing(null); }}><Trash2 size={15} strokeWidth={1.75} aria-hidden="true" /></Button>
+                <Button variant="ghost" size="sm" aria-label={`Edit ${shown.title}`} onClick={() => setEditing(item.id)}><Pencil size={16} strokeWidth={1.75} aria-hidden="true" /></Button>
+                <Button variant="ghost" size="sm" aria-label={`Remove ${shown.title}`} onClick={() => { void deleteWidgetItem(item.id); if (editing === item.id) setEditing(null); }}><Trash2 size={16} strokeWidth={1.75} aria-hidden="true" /></Button>
               </li>
             );
           })}
@@ -163,7 +163,7 @@ const EVERY_LABEL: Record<1 | 2 | 4, string> = { 1: "Every", 2: "Every other", 4
 
 function describeBin(bin: ItemData<"bin">) {
   const Icon = BIN_ICON_COMPONENTS[bin.icon];
-  return { title: bin.name, detail: `${EVERY_LABEL[bin.every]} ${weekdayName(bin.weekday)}, next ${new Date(`${nextPickup(bin, new Date())}T12:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`, color: bin.color, icon: <Icon size={16} strokeWidth={1.9} /> };
+  return { title: bin.name, detail: `${EVERY_LABEL[bin.every]} ${weekdayName(bin.weekday)}, next ${new Date(`${nextPickup(bin, new Date())}T12:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`, color: bin.color, icon: <Icon size={16} strokeWidth={1.75} /> };
 }
 
 function BinForm({ initial, onSubmit, onCancel, submitLabel }: FormProps<"bin">) {
@@ -189,7 +189,7 @@ function BinForm({ initial, onSubmit, onCancel, submitLabel }: FormProps<"bin">)
         <div className={styles.icons} role="radiogroup" aria-label="Icon">
           {BIN_ICONS.map(icon => {
             const Icon = BIN_ICON_COMPONENTS[icon];
-            return <button key={icon} type="button" role="radio" aria-checked={bin.icon === icon} aria-label={icon} className={styles.iconOption} style={{ "--item": bin.color } as CSSProperties} onClick={() => set({ icon })}><Icon size={18} strokeWidth={1.9} aria-hidden="true" /></button>;
+            return <button key={icon} type="button" role="radio" aria-checked={bin.icon === icon} aria-label={icon} className={styles.iconOption} style={{ "--item": bin.color } as CSSProperties} onClick={() => set({ icon })}><Icon size={18} strokeWidth={1.75} aria-hidden="true" /></button>;
           })}
         </div>
       </Field>
@@ -226,7 +226,7 @@ function MedicationForm({ initial, onSubmit, onCancel, submitLabel }: FormProps<
               {medication.times.length > 1 && <button type="button" className={styles.timeRemove} aria-label={`Remove dose ${index + 1}`} onClick={() => set({ times: medication.times.filter((_, position) => position !== index) })}>×</button>}
             </span>
           ))}
-          {medication.times.length < 6 && <Button type="button" variant="ghost" size="sm" onClick={() => set({ times: [...medication.times, medication.times.length === 1 ? "20:00" : "12:00"] })}><Plus size={14} strokeWidth={1.75} aria-hidden="true" /> Add a time</Button>}
+          {medication.times.length < 6 && <Button type="button" variant="ghost" size="sm" onClick={() => set({ times: [...medication.times, medication.times.length === 1 ? "20:00" : "12:00"] })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add a time</Button>}
         </div>
       </Field>
       <WeekdayChoice multiple value={medication.weekdays} onChange={weekdays => set({ weekdays })} label="Days (none chosen means every day)" />

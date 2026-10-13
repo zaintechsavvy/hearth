@@ -19,7 +19,7 @@ const now = (device: ChartedDevice) => device.kind === "thermostat" ? device.cur
 export function HistorySheet({ device, onOpenChange }: { device: ChartedDevice | null; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={Boolean(device)} onOpenChange={onOpenChange}>
-      <DialogContent className={`${glassSheetClass} ${styles.dialog}`} title={device?.name ?? "History"} description={device?.room ?? undefined}>
+      <DialogContent className={`${glassSheetClass} ${styles.dialog}`} title={device?.name ?? "History"} description={device?.room && device.room !== device.name ? device.room : undefined}>
         {device && <Body key={device.id} device={device} />}
       </DialogContent>
     </Dialog>

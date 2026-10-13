@@ -67,7 +67,7 @@ const iconEnter = { ...motionTokens.spring.snappy, opacity: { duration: motionTo
 
 /** The tick draws itself from its short stroke, the way a hand would write it. */
 function DrawnCheck({ reduced }: { reduced: boolean }) {
-  return <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  return <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <motion.path d="M4 12.5l5 5L20 6.5" initial={reduced ? false : { pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ pathLength: { duration: .32, ease: enter, delay: .06 }, opacity: { duration: .05, delay: .06 } }} />
   </svg>;
 }

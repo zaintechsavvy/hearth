@@ -45,7 +45,7 @@ export function CalendarsSection({ calendars }: { calendars: CalendarRow[] }) {
   }
 
   return (
-    <SettingsSection id="calendars" title="Calendars" description={<>Google Calendar, iCloud, Outlook, or any iCal address, read only. Show them with a Calendar tile.</>} action={<Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>}>
+    <SettingsSection id="calendars" title="Calendars" description={<>Show your calendars on a tile.</>} action={<Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>}>
 
       <Glass shape="panel" className={styles.group}>
         {calendars.length === 0 ? (

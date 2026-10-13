@@ -12,7 +12,6 @@ import { Logo } from "@/components/brand/logo";
 import GlassSurface from "@/components/reactbits/GlassSurface";
 import { authClient } from "@/lib/auth-client";
 import { CommandMenuButton } from "./command-menu";
-import { useThemePreference } from "./use-theme-preference";
 import styles from "./app-header.module.css";
 
 const LINKS: { href: string; label: string; icon: LucideIcon }[] = [
@@ -32,7 +31,6 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const reduce = useReducedMotion();
-  const [theme, setTheme] = useThemePreference();
   const links = LINKS.filter(link => role !== "guest" || link.href === "/dashboard");
   const current = links.find(link => pathname.startsWith(link.href)) ?? links[0];
 
@@ -67,8 +65,7 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
         <CommandMenuButton className={styles.search} />
         <UserMenu
           user={user}
-          theme={theme}
-          onThemeChange={setTheme}
+          showTheme={false}
           items={role === "guest" ? [] : [{ label: "Settings", icon: <Settings size={16} strokeWidth={1.75} />, onSelect: () => router.push("/settings") }]}
           onSignOut={async () => {
             await authClient.signOut();

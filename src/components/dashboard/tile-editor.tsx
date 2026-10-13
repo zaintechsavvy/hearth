@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/arc/button/button";
+import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
 import { Checkbox } from "@/components/arc/checkbox/checkbox";
 import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { Input } from "@/components/arc/input/input";
@@ -166,7 +167,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
             )}
             <div className={styles.actions}>
               <div className={styles.extra}>
-                <Button variant="ghost" onClick={() => { onRemove(); close(false); }}>Remove tile</Button>
+                <ConfirmMorph label="Remove tile" prompt="Remove this tile?" pendingLabel="Removing" doneLabel="Removed" onConfirm={() => { onRemove(); close(false); }} />
                 {extra}
               </div>
               <DialogClose asChild><Button>Done</Button></DialogClose>

@@ -48,7 +48,7 @@
 }
 
 .refill {
-  color: oklch(60% .18 50);
+  color: var(--warning);
   font-weight: 500;
 }
 
@@ -88,8 +88,8 @@
 }
 
 .slot[data-state="missed"] {
-  background: oklch(62% .2 25 / .14);
-  color: oklch(52% .2 25);
+  background: color-mix(in oklab, var(--danger) 14%, transparent);
+  color: var(--danger);
 }
 
 @container (min-width: 380px) {

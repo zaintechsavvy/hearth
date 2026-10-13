@@ -30,7 +30,7 @@
   color: var(--tone);
 }
 
-.banner[data-tone="timer"] { --tone: oklch(66% .17 50); }
+.banner[data-tone="timer"] { --tone: var(--warning); }
 .banner[data-tone="medication"] { --tone: oklch(64% .19 350); }
 
 .text {

@@ -27,7 +27,7 @@ export function WallSection() {
   const sensors = (home?.devices ?? []).filter(device => device.kind === "binary_sensor" && WAKE_CLASSES.has(device.sensorClass));
 
   return (
-    <SettingsSection id="wall" title="Wall tablet" description={<>For a screen that stays on the wall. These settings belong to this device only.</>}>
+    <SettingsSection id="wall" title="Wall tablet" description={<>For a screen that stays on the wall.</>}>
       <Glass shape="panel" className={styles.group}>
         <div className={styles.row}>
           <Tablet className={styles.rowIcon} size={20} strokeWidth={1.75} aria-hidden="true" />

@@ -69,7 +69,7 @@
 }
 
 .due[data-overdue] {
-  color: oklch(62% .2 25);
+  color: var(--danger);
 }
 
 .remove {

@@ -1,16 +1,15 @@
 "use client";
 
-import { Clapperboard, House, LayoutGrid, Palette, Plus, Sparkles, Sun, Video } from "lucide-react";
+import { Clapperboard, House, LayoutGrid, Plus, Sparkles, Sun, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
+import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
-import { Glass, glassClass, glassSheetClass } from "@/components/glass/glass";
-import { BackgroundPicker } from "@/components/shell/background-picker";
+import { Glass, glassClass } from "@/components/glass/glass";
 import { addDemoHome, deleteScene, saveLayout, updateDevice } from "@/lib/actions";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { PageTabs } from "./page-tabs";
@@ -342,7 +341,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         extra={customizingScene && (
           <>
             <Button variant="secondary" onClick={() => { setSceneEditing(customizingScene); setCustomizing(null); }}>Edit scene</Button>
-            <Button variant="ghost" onClick={async () => { await deleteScene(customizingScene.id); setCustomizing(null); await refresh(); }}>Delete scene</Button>
+            <ConfirmMorph label="Delete scene" prompt={`Delete ${customizingScene.name}?`} pendingLabel="Deleting" doneLabel="Deleted" onConfirm={async () => { await deleteScene(customizingScene.id); setCustomizing(null); await refresh(); }} />
           </>
         )}
       />
@@ -385,15 +384,6 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
             </>
           ) : (
             <>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" className={styles.iconButton} aria-label="Background" title="Background"><Palette size={16} strokeWidth={1.75} aria-hidden="true" /></Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className={`${glassSheetClass} ${styles.backgroundPopover}`}>
-                  <h2 className={styles.popoverTitle}>Background</h2>
-                  <BackgroundPicker />
-                </PopoverContent>
-              </Popover>
               {canEdit && <Button variant="ghost" className={styles.toolButton} aria-label="New scene" onClick={() => setSceneEditing("new")}><Clapperboard size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.toolLabel}>New scene</span></Button>}
               {canEdit && <Button variant="ghost" className={styles.toolButton} aria-label="Add tile" onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.toolLabel}>Add tile</span></Button>}
               {canEdit && tiles.length > 0 && <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
@@ -416,7 +406,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
 
       {tiles.length > 0 ? (
         <div {...swipeHandlers}>
-        <HomeGrid tiles={shownTiles} editing={editing} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(filtering ? mergeFiltered(tiles, next) : next)} onCustomize={setCustomizing} onRemove={id => change(removeTile(tiles, id))} />
+        <HomeGrid tiles={shownTiles} editing={editing} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(filtering ? mergeFiltered(tiles, next) : next)} onCustomize={setCustomizing} />
         </div>
       ) : (
         <Glass className={styles.placeholder}>

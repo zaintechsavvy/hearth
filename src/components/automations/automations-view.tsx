@@ -1,9 +1,10 @@
 "use client";
 
-import { MapPin, Play, Plus, Sparkles, Sunrise, Sunset, Trash2, Workflow } from "lucide-react";
+import { MapPin, Play, Plus, Sunrise, Sunset, Workflow } from "lucide-react";
 import { useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/arc/button/button";
+import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
@@ -74,7 +75,7 @@ export function AutomationsView() {
 
       {templates.length > 0 && (
         <section className={styles.templates} aria-labelledby="templates-title">
-          <h2 id="templates-title" className={styles.groupTitle} data-on-wall><Sparkles size={15} strokeWidth={1.75} aria-hidden="true" /> Start from an idea</h2>
+          <h2 id="templates-title" className={styles.groupTitle} data-on-wall>Start from an idea</h2>
           <div className={styles.templateGrid}>
             {templates.map(({ template, rule }) => (
               <button key={template.id} type="button" className={`${styles.template}`} onClick={() => rule && setDraft(rule)}>
@@ -87,7 +88,7 @@ export function AutomationsView() {
       )}
 
       <section aria-labelledby="yours-title" className={styles.list}>
-        <h2 id="yours-title" className={styles.groupTitle} data-on-wall><Workflow size={15} strokeWidth={1.75} aria-hidden="true" /> Yours</h2>
+        <h2 id="yours-title" className={styles.groupTitle} data-on-wall>Yours</h2>
         {isLoading && !data ? <Glass shape="panel" className={styles.card}><Skeleton lines={3} label="Loading automations" /></Glass>
           : !data?.automations.length ? (
             <Glass shape="panel" className={styles.empty}>
@@ -101,9 +102,9 @@ export function AutomationsView() {
                 <span className={styles.cardMeta}>{rule.lastRun ? `Last ran ${new Date(rule.lastRun).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}` : "Has not run yet"}{rule.conditions.length ? ` · ${rule.conditions.length} ${rule.conditions.length === 1 ? "condition" : "conditions"}` : ""}</span>
               </div>
               <div className={styles.cardActions}>
-                <Button variant="ghost" size="sm" aria-label={`Run ${rule.name} now`} title="Run now" onClick={async () => { await runAutomation(rule.id); await mutate(); }}><Play size={15} strokeWidth={1.75} aria-hidden="true" /></Button>
+                <Button variant="ghost" size="sm" aria-label={`Run ${rule.name} now`} title="Run now" onClick={async () => { await runAutomation(rule.id); await mutate(); }}><Play size={16} strokeWidth={1.75} aria-hidden="true" /></Button>
                 <Button variant="ghost" size="sm" onClick={() => setDraft({ ...rule })}>Edit</Button>
-                <Button variant="ghost" size="sm" aria-label={`Delete ${rule.name}`} onClick={async () => { await deleteAutomation(rule.id); await mutate(); }}><Trash2 size={15} strokeWidth={1.75} aria-hidden="true" /></Button>
+                <ConfirmMorph label="Delete" prompt={`Delete ${rule.name}?`} pendingLabel="Deleting" doneLabel="Deleted" onConfirm={async () => { await deleteAutomation(rule.id); await mutate(); }} />
                 <Switch aria-label={`${rule.name} is ${rule.enabled ? "on" : "paused"}`} checked={rule.enabled} onCheckedChange={async enabled => { await setAutomationEnabled(rule.id, enabled); await mutate(); }} />
               </div>
             </Glass>

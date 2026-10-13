@@ -11,7 +11,6 @@ import { CommandPalette, type CommandItem } from "@/components/arc/command-palet
 import { askHearth } from "@/components/assistant/assistant-dock";
 import { useHome } from "@/components/dashboard/use-home";
 import { startQuickTimer } from "@/components/dashboard/household/timers-tile";
-import { openStudio } from "@/components/shell/studio-store";
 import { useResolvedTheme } from "@/components/shell/use-resolved-theme";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { useThemePreference } from "@/components/shell/use-theme-preference";
@@ -119,7 +118,7 @@ function Menu({ close, limited }: { close: () => void; limited: boolean }) {
       add({ id: `timer:${minutes}`, label: `Start a ${minutes} minute timer`, group: "Timers", keywords: ["timer", "kitchen", "countdown"], icon: icon(Timer) }, () => startQuickTimer(minutes));
     }
     add({ id: "add-tile", label: "Add a tile", group: "Dashboard", keywords: ["new", "widget", "tile"], icon: icon(Plus) }, () => { router.push("/dashboard"); setTimeout(() => window.dispatchEvent(new Event(ADD_TILE_EVENT)), 150); });
-    add({ id: "studio", label: "Change the background", group: "Dashboard", keywords: ["wallpaper", "gradient", "photo", "theme"], icon: icon(Palette) }, () => openStudio("gradient"));
+    add({ id: "studio", label: "Change the background", group: "Dashboard", keywords: ["wallpaper", "gradient", "photo", "theme"], icon: icon(Palette) }, () => router.push("/settings#appearance"));
     add({ id: "theme", label: theme === "dark" ? "Switch to light mode" : "Switch to dark mode", group: "Dashboard", keywords: ["theme", "dark", "light", "night"], icon: icon(theme === "dark" ? Sun : Moon) }, () => setTheme(theme === "dark" ? "light" : "dark"));
     add({ id: "wall", label: "Wall tablet settings", group: "Go to", keywords: ["kiosk", "tablet", "screensaver", "dim"], icon: icon(Settings) }, () => router.push("/settings#wall"));
     add({ id: "automations", label: "Automations", description: "Rules that run on their own", group: "Go to", keywords: ["rules", "schedule", "routine", "sunset"], icon: icon(Sparkles) }, () => router.push("/automations"));

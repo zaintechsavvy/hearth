@@ -66,7 +66,7 @@ export function MedicationsTile({ tile, items, interactive, onManage }: Househol
                   return (
                     <button key={slot.key} type="button" className={own.slot} data-state={state} disabled={!interactive} aria-pressed={taken}
                       aria-label={`${item.data.name} at ${timeLabel(slot)}, ${taken ? "taken" : state}`} onClick={() => void toggle(item.id, slot)}>
-                      {taken && <Check size={12} strokeWidth={2.5} aria-hidden="true" />}
+                      {taken && <Check size={12} strokeWidth={1.75} aria-hidden="true" />}
                       {timeLabel(slot)}
                     </button>
                   );

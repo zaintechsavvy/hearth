@@ -92,7 +92,7 @@ export function AlertsSection({ alerts }: { alerts: AlertSettings }) {
   };
 
   return (
-    <SettingsSection id="alerts" title="Alerts" description={<>Notifications on your phone or tablet. They come from your Hearth server, so it has to be running.</>}>
+    <SettingsSection id="alerts" title="Alerts" description={<>Notifications on this phone or tablet.</>}>
       <Glass shape="panel" className={styles.group}>
         <div className={styles.row}>
           <BellRing className={styles.rowIcon} size={20} strokeWidth={1.75} aria-hidden="true" />

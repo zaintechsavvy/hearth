@@ -72,7 +72,7 @@ export function HouseholdAlerts({ items }: { items: WidgetItem[] }) {
         {done.map(timer => (
           <motion.div key={timer.id} role="alert" className={`${glassClass("pill")} ${styles.banner}`} data-tone="timer"
             initial={enter} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, transition: { duration: motionTokens.duration.exit } }} transition={reduce ? { duration: 0 } : motionTokens.spring.smooth}>
-            <span className={styles.icon} aria-hidden="true"><Timer size={18} strokeWidth={1.9} /></span>
+            <span className={styles.icon} aria-hidden="true"><Timer size={18} strokeWidth={1.75} /></span>
             <span className={styles.text}>{timer.data.label} is done<span className={styles.sub}>Timer</span></span>
             <Button size="sm" variant="ghost" onClick={() => void controlTimer(timer.id, { action: "add", ms: 60_000 })}>+1 min</Button>
             <Button size="sm" onClick={() => void controlTimer(timer.id, { action: "reset" })}>Stop</Button>
@@ -81,7 +81,7 @@ export function HouseholdAlerts({ items }: { items: WidgetItem[] }) {
         {due.map(({ item, slot }) => (
           <motion.div key={`${item.id}-${slot.key}`} role="alert" className={`${glassClass("pill")} ${styles.banner}`} data-tone="medication"
             initial={enter} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, transition: { duration: motionTokens.duration.exit } }} transition={reduce ? { duration: 0 } : motionTokens.spring.smooth}>
-            <span className={styles.icon} aria-hidden="true"><Pill size={18} strokeWidth={1.9} /></span>
+            <span className={styles.icon} aria-hidden="true"><Pill size={18} strokeWidth={1.75} /></span>
             <span className={styles.text}>
               Time for {item.data.name}{item.data.dose ? ` · ${item.data.dose}` : ""}
               <span className={styles.sub}>{item.data.person ? `${item.data.person} · ` : ""}{slot.at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>

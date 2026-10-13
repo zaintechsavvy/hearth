@@ -4,7 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
+import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { Input } from "@/components/arc/input/input";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { Select } from "@/components/arc/select/select";
@@ -87,13 +87,13 @@ function Body({ draft, devices, scenes, hasLocation, onSaved }: Omit<EditorProps
         {rule.conditions.map((condition, index) => (
           <div key={index} className={styles.item}>
             <ConditionFields condition={condition} devices={watchable} byId={byId} onChange={next => set({ conditions: rule.conditions.map((item, position) => position === index ? next : item) })} />
-            <Button type="button" variant="ghost" size="sm" aria-label="Remove condition" onClick={() => set({ conditions: rule.conditions.filter((_, position) => position !== index) })}><Trash2 size={15} strokeWidth={1.75} aria-hidden="true" /></Button>
+            <Button type="button" variant="ghost" size="sm" aria-label="Remove condition" onClick={() => set({ conditions: rule.conditions.filter((_, position) => position !== index) })}><Trash2 size={16} strokeWidth={1.75} aria-hidden="true" /></Button>
           </div>
         ))}
         <div className={styles.adds}>
-          <Button type="button" variant="ghost" size="sm" onClick={() => set({ conditions: [...rule.conditions, { type: "sun", when: "night" }] })}><Plus size={14} strokeWidth={1.75} aria-hidden="true" /> After dark</Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => set({ conditions: [...rule.conditions, { type: "time", after: "22:00", before: "06:00" }] })}><Plus size={14} strokeWidth={1.75} aria-hidden="true" /> Between times</Button>
-          {watchable.length > 0 && <Button type="button" variant="ghost" size="sm" onClick={() => set({ conditions: [...rule.conditions, { type: "device", deviceId: watchable[0].id, match: matchOptions(watchable[0])[0].match }] })}><Plus size={14} strokeWidth={1.75} aria-hidden="true" /> A device is</Button>}
+          <Button type="button" variant="ghost" size="sm" onClick={() => set({ conditions: [...rule.conditions, { type: "sun", when: "night" }] })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> After dark</Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => set({ conditions: [...rule.conditions, { type: "time", after: "22:00", before: "06:00" }] })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Between times</Button>
+          {watchable.length > 0 && <Button type="button" variant="ghost" size="sm" onClick={() => set({ conditions: [...rule.conditions, { type: "device", deviceId: watchable[0].id, match: matchOptions(watchable[0])[0].match }] })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> A device is</Button>}
         </div>
       </Section>
 
@@ -101,18 +101,19 @@ function Body({ draft, devices, scenes, hasLocation, onSaved }: Omit<EditorProps
         {rule.actions.map((action, index) => (
           <div key={index} className={styles.item}>
             <ActionFields action={action} devices={controllable} byId={byId} scenes={scenes} onChange={next => set({ actions: rule.actions.map((item, position) => position === index ? next : item) })} />
-            {rule.actions.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remove step" onClick={() => set({ actions: rule.actions.filter((_, position) => position !== index) })}><Trash2 size={15} strokeWidth={1.75} aria-hidden="true" /></Button>}
+            {rule.actions.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remove step" onClick={() => set({ actions: rule.actions.filter((_, position) => position !== index) })}><Trash2 size={16} strokeWidth={1.75} aria-hidden="true" /></Button>}
           </div>
         ))}
         <div className={styles.adds}>
-          {controllable.length > 0 && <Button type="button" variant="ghost" size="sm" onClick={() => set({ actions: [...rule.actions, { type: "device", deviceId: controllable[0].id, command: commandOptions(controllable[0])[0].command }] })}><Plus size={14} strokeWidth={1.75} aria-hidden="true" /> Control a device</Button>}
-          {scenes.length > 0 && <Button type="button" variant="ghost" size="sm" onClick={() => set({ actions: [...rule.actions, { type: "scene", sceneId: scenes[0].id }] })}><Plus size={14} strokeWidth={1.75} aria-hidden="true" /> Run a scene</Button>}
-          <Button type="button" variant="ghost" size="sm" onClick={() => set({ actions: [...rule.actions, { type: "notify", title: rule.name, body: "" }] })}><Plus size={14} strokeWidth={1.75} aria-hidden="true" /> Send an alert</Button>
+          {controllable.length > 0 && <Button type="button" variant="ghost" size="sm" onClick={() => set({ actions: [...rule.actions, { type: "device", deviceId: controllable[0].id, command: commandOptions(controllable[0])[0].command }] })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Control a device</Button>}
+          {scenes.length > 0 && <Button type="button" variant="ghost" size="sm" onClick={() => set({ actions: [...rule.actions, { type: "scene", sceneId: scenes[0].id }] })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Run a scene</Button>}
+          <Button type="button" variant="ghost" size="sm" onClick={() => set({ actions: [...rule.actions, { type: "notify", title: rule.name, body: "" }] })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Send an alert</Button>
         </div>
       </Section>
 
       <Alert tone="danger" title="Could not save" open={Boolean(error)}>{error ?? ""}</Alert>
       <div className={styles.actions}>
+        <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
         <Button type="submit" loading={pending}>{draft.id ? "Save" : "Create automation"}</Button>
       </div>
     </form>

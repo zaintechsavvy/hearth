@@ -49,17 +49,10 @@
 }
 
 .description {
-  overflow: hidden;
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 400;
   line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.section[data-open] .description {
-  white-space: normal;
 }
 
 .chevron {

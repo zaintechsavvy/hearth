@@ -5,7 +5,7 @@ import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { Input } from "@/components/arc/input/input";
-import { Switch } from "@/components/arc/switch/switch";
+import { Checkbox } from "@/components/arc/checkbox/checkbox";
 import { glassSheetClass } from "@/components/glass/glass";
 import { createScene, updateScene } from "@/lib/actions";
 import type { TileIcon } from "@/lib/dashboard/layout";
@@ -106,7 +106,7 @@ function SceneForm({ devices, scene, onSaved }: { devices: Device[]; scene: Hear
                     <span className={styles.rowName}>{device.name}</span>
                     <span className={styles.rowState}>{(commands ?? captureState(device)).map(command => describeAction(device, command)).join(" · ")}</span>
                   </span>
-                  <Switch aria-labelledby={`scene-${device.id}`} checked={Boolean(commands)} onCheckedChange={include => toggle(device, include)} />
+                  <Checkbox aria-labelledby={`scene-${device.id}`} checked={Boolean(commands)} onCheckedChange={include => toggle(device, include === true)} />
                 </div>
               );
             })}

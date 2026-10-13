@@ -357,7 +357,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(fu
                 // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
                 ? <img className={styles.pendingImage} src={entry.url} alt="" />
                 : <span className={styles.pendingFile}><FileText size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.pendingName}>{entry.file.name}</span><span className={styles.pendingSize}>{formatBytes(entry.file.size)}</span></span>}
-              <button type="button" className={styles.remove} aria-label={t.removeFile(entry.file.name)} onClick={() => remove(entry.id)}><X size={12} strokeWidth={2.25} /></button>
+              <button type="button" className={styles.remove} aria-label={t.removeFile(entry.file.name)} onClick={() => remove(entry.id)}><X size={12} strokeWidth={1.75} /></button>
             </motion.li>)}
           </AnimatePresence>
         </ul>
@@ -379,7 +379,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(fu
           <motion.span key={sent} className={styles.sendIcon}
             initial={reduced ? { opacity: 0 } : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={reduced ? { opacity: 0 } : { opacity: 0, y: -18, transition: { duration: duration.fast, ease: standard } }}
             transition={reduced ? { duration: duration.fast } : spring.snappy}>
-            <ArrowUp size={16} strokeWidth={2.25} />
+            <ArrowUp size={16} strokeWidth={1.75} />
           </motion.span>
         </AnimatePresence>
       </button>

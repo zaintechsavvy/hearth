@@ -53,7 +53,7 @@ export function CamerasSection({ cameras, relayUrl }: { cameras: CameraSummary[]
   }
 
   return (
-    <SettingsSection id="cameras" title="Cameras" description={<>RTSP cameras play through a go2rtc relay. Put one on the dashboard with Add tile, then Camera.</>} action={<Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>}>
+    <SettingsSection id="cameras" title="Cameras" description={<>RTSP cameras through a go2rtc relay.</>} action={<Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>}>
 
       <Glass shape="panel" className={styles.group}>
         <form className={styles.row} onSubmit={saveRelay}>

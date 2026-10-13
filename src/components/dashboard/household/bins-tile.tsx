@@ -37,7 +37,7 @@ export function BinsTile({ tile, items, interactive, onManage }: HouseholdTilePr
             <span className={styles.icons} aria-hidden="true">
               {group.bins.map(bin => {
                 const Icon = BIN_ICON_COMPONENTS[bin.data.icon];
-                return <span key={bin.id} className={styles.icon} style={{ "--bin": bin.data.color } as CSSProperties}><Icon size={18} strokeWidth={1.9} /></span>;
+                return <span key={bin.id} className={styles.icon} style={{ "--bin": bin.data.color } as CSSProperties}><Icon size={18} strokeWidth={1.75} /></span>;
               })}
             </span>
             <span className={styles.text}>

@@ -48,7 +48,7 @@ export function PlantsTile({ items, interactive, onManage }: HouseholdTileProps<
             </span>
             <button type="button" className={own.water} disabled={!interactive} aria-label={`Watered ${item.data.name}`} title="Watered"
               onClick={() => { setWatered(current => ({ ...current, [item.id]: new Date().toISOString() })); void waterPlant(item.id); }}>
-              <Droplets size={16} strokeWidth={1.9} aria-hidden="true" />
+              <Droplets size={16} strokeWidth={1.75} aria-hidden="true" />
             </button>
           </li>
         ))}

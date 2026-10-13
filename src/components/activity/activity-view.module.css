@@ -15,14 +15,15 @@
 
 .title {
   font-family: var(--font-display);
-  font-size: var(--text-3xl);
+  font-size: clamp(var(--text-2xl), 4vw, var(--text-3xl));
   font-weight: 500;
   letter-spacing: var(--tracking-display);
+  line-height: var(--leading-display);
 }
 
 .lede {
+  margin-top: var(--space-1);
   color: var(--text-secondary);
-  font-size: var(--text-sm);
 }
 
 .room {
@@ -42,7 +43,7 @@
 
 .dayTitle {
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: 500;
 }
 
@@ -85,8 +86,8 @@
 }
 
 .entry[data-tone="info"] { --tone: var(--text-secondary); }
-.entry[data-tone="warning"] { --tone: oklch(64% .16 60); }
-.entry[data-tone="alert"] { --tone: oklch(58% .21 25); }
+.entry[data-tone="warning"] { --tone: var(--warning); }
+.entry[data-tone="alert"] { --tone: var(--danger); }
 
 .text {
   display: grid;

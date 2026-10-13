@@ -15,12 +15,12 @@
 
 .title {
   font-family: var(--font-display);
-  font-size: var(--text-3xl);
+  font-size: clamp(var(--text-2xl), 4vw, var(--text-3xl));
   font-weight: 500;
   letter-spacing: var(--tracking-display);
+  line-height: var(--leading-display);
 }
 
-.lede,
 .hint,
 .cardMeta,
 .templateText {
@@ -61,11 +61,8 @@
 }
 
 .groupTitle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: 500;
 }
 
@@ -200,13 +197,14 @@
 }
 
 .warn {
-  color: oklch(58% .15 60);
+  color: var(--warning);
   font-size: var(--text-sm);
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 @media (max-width: 640px) {
@@ -216,4 +214,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .template, .card { transition: none; }
+}
+
+.lede {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
 }

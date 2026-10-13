@@ -200,6 +200,12 @@ div.reading {
   gap: var(--space-3);
 }
 
+/* Phones: the hold button takes the full width on top, where the thumb is, with Cancel under it. */
+@media (max-width: 640px) {
+  .confirmActions { flex-direction: column-reverse; align-items: stretch; }
+  .confirmActions > * { width: 100%; }
+}
+
 /* A card that also has a colour button: the two are siblings, never a button inside a button. */
 .frame {
   position: relative;

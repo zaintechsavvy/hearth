@@ -114,7 +114,7 @@ function GradientEditor() {
       <section className={styles.section} aria-labelledby="studio-samples">
         <div className={styles.sectionHead}>
           <h3 id="studio-samples" className={styles.heading}>Start from</h3>
-          <Button variant="ghost" size="sm" onClick={() => start("Shuffled", shufflePalette())}><Dices size={15} strokeWidth={1.75} aria-hidden="true" /> Surprise me</Button>
+          <Button variant="ghost" size="sm" onClick={() => start("Shuffled", shufflePalette())}><Dices size={16} strokeWidth={1.75} aria-hidden="true" /> Surprise me</Button>
         </div>
         <div className={styles.samples} role="radiogroup" aria-labelledby="studio-samples">
           {GRADIENT_SAMPLES.map(sample => (
@@ -129,7 +129,7 @@ function GradientEditor() {
       <section className={styles.section} aria-labelledby="studio-colours">
         <div className={styles.sectionHead}>
           <h3 id="studio-colours" className={styles.heading}>Colours</h3>
-          <Button variant="ghost" size="sm" onClick={() => update({ colors: [...stops].reverse() })}><ArrowUpDown size={15} strokeWidth={1.75} aria-hidden="true" /> Swap</Button>
+          <Button variant="ghost" size="sm" onClick={() => update({ colors: [...stops].reverse() })}><ArrowUpDown size={16} strokeWidth={1.75} aria-hidden="true" /> Swap</Button>
         </div>
         <div className={styles.stops}>
           {stops.map((color, index) => (
@@ -137,8 +137,8 @@ function GradientEditor() {
           ))}
         </div>
         {stops.length < MAX_GRADIENT_COLORS
-          ? <Button variant="ghost" size="sm" className={styles.stopToggle} onClick={() => update({ colors: [stops[0], mixHex(stops[0], stops[stops.length - 1]), stops[stops.length - 1]] })}><Plus size={15} strokeWidth={1.75} aria-hidden="true" /> Add a middle colour</Button>
-          : <Button variant="ghost" size="sm" className={styles.stopToggle} onClick={() => update({ colors: [stops[0], stops[stops.length - 1]] })}><Minus size={15} strokeWidth={1.75} aria-hidden="true" /> Just two colours</Button>}
+          ? <Button variant="ghost" size="sm" className={styles.stopToggle} onClick={() => update({ colors: [stops[0], mixHex(stops[0], stops[stops.length - 1]), stops[stops.length - 1]] })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add a middle colour</Button>
+          : <Button variant="ghost" size="sm" className={styles.stopToggle} onClick={() => update({ colors: [stops[0], stops[stops.length - 1]] })}><Minus size={16} strokeWidth={1.75} aria-hidden="true" /> Just two colours</Button>}
       </section>
 
       <section className={styles.section} aria-labelledby="studio-style">

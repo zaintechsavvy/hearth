@@ -76,7 +76,7 @@ export function PreviewWindow() {
         <span className={styles.tag}>Preview</span>
       </div>
       <div className={styles.body}>
-        <HomeGrid tiles={sampleLayout(phone)} editing={false} renderTile={renderTile} nameOf={tile => byId.get(tile.id)?.name ?? SAMPLE_CAMERAS[tile.id]?.name ?? ""} onTilesChange={() => {}} onCustomize={() => {}} onRemove={() => {}} />
+        <HomeGrid tiles={sampleLayout(phone)} editing={false} renderTile={renderTile} nameOf={tile => byId.get(tile.id)?.name ?? SAMPLE_CAMERAS[tile.id]?.name ?? ""} onTilesChange={() => {}} onCustomize={() => {}} />
       </div>
       <figcaption className={styles.caption}>
         Sample data. Drag the slider or press the arrows.
