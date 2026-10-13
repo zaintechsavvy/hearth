@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["@electric-sql/pglite"],
   allowedDevOrigins: devOrigins,
+  devIndicators: false,
 };
 
 export default nextConfig;

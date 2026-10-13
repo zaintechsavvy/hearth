@@ -1,13 +1,12 @@
 .root {
-  aspect-ratio: 1;
   width: 100%;
   height: 100%;
   overflow: hidden;
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: var(--space-2);
-  padding: 6%;
-  container-type: inline-size;
+  padding: clamp(12px, 6cqi, 24px);
+  container-type: size;
 }
 
 .warm,
@@ -137,9 +136,24 @@
   .reading, .step { transition: none; }
 }
 
-@container (max-width: 250px) {
+@container cell (max-width: 250px) or (max-height: 270px) {
   .modes { display: none; }
   .root { grid-template-rows: auto 1fr; }
+}
+
+/* A small tile: the dial tightens so the name never meets the arrows. */
+@container cell (max-height: 240px) {
+  .root { gap: 0; padding: 12px 12px 8px; }
+  .name { font-size: var(--text-sm); }
+  .dial { gap: 0; }
+  .step { height: 30px; width: 44px; }
+  .step :global(svg) { width: 24px; height: 24px; }
+  .reading { font-size: clamp(32px, 24cqi, 44px); }
+  .status { min-height: 16px; font-size: var(--text-xs); }
+}
+
+@container cell (max-width: 200px) {
+  .status { font-size: 11px; }
 }
 
 .headerEnd {

@@ -232,7 +232,7 @@ export function AssistantDock() {
           >
             <motion.span className={styles.pillInner} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Sparkles size={16} strokeWidth={1.75} aria-hidden="true" />
-              <span>Ask Hearth</span>
+              <span className={styles.pillLabel}>Ask Hearth</span>
               <kbd className={styles.kbd}>⌘J</kbd>
             </motion.span>
           </motion.button>

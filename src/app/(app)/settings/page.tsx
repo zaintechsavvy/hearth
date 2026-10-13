@@ -9,6 +9,7 @@ import { CalendarsSection } from "@/components/connections/calendars-section";
 import { CamerasSection } from "@/components/connections/cameras-section";
 import { IntegrationsSection } from "@/components/connections/integrations-section";
 import { RoomsSection } from "@/components/connections/rooms-section";
+import { SettingsNav } from "@/components/connections/settings-nav";
 import { WallSection } from "@/components/connections/wall-section";
 import styles from "@/components/connections/connections.module.css";
 import type { CameraSource } from "@/lib/cameras/stream-relay";
@@ -53,6 +54,17 @@ export default async function ConnectionsPage() {
         <h1 className={styles.title}>Settings</h1>
         <p className={styles.lede}>Connections, cameras, calendars, assistants, and how Hearth looks. Secrets are encrypted before they are stored.</p>
       </header>
+      <SettingsNav items={[
+        ...(owner ? [{ id: "connections", label: "Connections" }] : []),
+        { id: "household", label: "Household" },
+        { id: "rooms", label: "Rooms" },
+        { id: "alerts", label: "Alerts" },
+        ...(owner ? [{ id: "assistants", label: "Assistants" }, { id: "cameras", label: "Cameras" }] : []),
+        { id: "calendars", label: "Calendars" },
+        { id: "appearance", label: "Appearance" },
+        { id: "wall", label: "Wall tablet" },
+        { id: "account", label: "Account" },
+      ]} />
       {owner && <IntegrationsSection integrations={integrations.map(row => ({ id: row.id, name: row.name, kind: row.kind, ...publicConfig(row) }))} />}
       <HouseholdSection role={owner ? "owner" : "member"} ownerName={home.ownerName} members={members} invites={invites.map(item => ({ ...item, expiresAt: item.expiresAt.toISOString() }))} pages={preferences.pages.map(page => ({ id: page.id, name: page.name }))} />
       <RoomsSection />

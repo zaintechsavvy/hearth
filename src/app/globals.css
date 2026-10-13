@@ -25,9 +25,33 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
+/* Phones keep a tab bar along the bottom; pages and floating buttons clear it. */
+:root { --tab-bar-height: 62px; --tab-bar-space: 0px; }
+@media (max-width: 640px) {
+  :root { --tab-bar-space: calc(var(--tab-bar-height) + env(safe-area-inset-bottom) + 20px); }
+}
+
+/* The canvas colour behind the wallpaper, matched to its lower edge, which shows when a page overscrolls. */
+:root { --page-floor: oklch(93.2% .003 260); }
+:root[data-wallpaper="linen"] { --page-floor: oklch(92.8% .011 75); }
+:root[data-wallpaper="slate"] { --page-floor: oklch(91.6% .012 252); }
+:root[data-wallpaper="aurora"] { --page-floor: #c3d0fb; }
+:root[data-wallpaper="dusk"] { --page-floor: #fbcfd2; }
+:root[data-wallpaper="meadow"] { --page-floor: #cbe9da; }
+:root[data-wallpaper="gradient"] { --page-floor: var(--m2, oklch(93.2% .003 260)); }
+:root[data-wallpaper="photo"] { --page-floor: oklch(24% .005 260); }
+:root[data-theme="dark"] { --page-floor: oklch(11.5% .003 260); }
+:root[data-theme="dark"][data-wallpaper="linen"] { --page-floor: oklch(12.5% .006 60); }
+:root[data-theme="dark"][data-wallpaper="slate"] { --page-floor: oklch(11.5% .01 258); }
+:root[data-theme="dark"][data-wallpaper="aurora"] { --page-floor: #0c1430; }
+:root[data-theme="dark"][data-wallpaper="dusk"] { --page-floor: #26121a; }
+:root[data-theme="dark"][data-wallpaper="meadow"] { --page-floor: #0d1f16; }
+:root[data-theme="dark"][data-wallpaper="gradient"] { --page-floor: var(--m1, oklch(11.5% .003 260)); }
+:root[data-theme="dark"][data-wallpaper="photo"] { --page-floor: oklch(12% .004 260); }
+
 body {
   min-height: 100dvh;
-  background: var(--background);
+  background: var(--page-floor);
   color: var(--foreground);
   font-family: var(--font-body);
   letter-spacing: var(--tracking-body);
@@ -50,4 +74,13 @@ body {
 :root[data-wall] main {
   translate: var(--wall-shift-x, 0) var(--wall-shift-y, 0);
   transition: translate 2s ease;
+}
+
+/* iOS zooms the page into any field set smaller than 16px; touch screens get 16px so tapping a field keeps the layout still. */
+@media (pointer: coarse) {
+  :root input:not([type="checkbox"], [type="radio"], [type="range"]),
+  :root textarea,
+  :root select {
+    font-size: max(16px, 1em);
+  }
 }

@@ -1,7 +1,7 @@
 .anchor {
   position: fixed;
   right: clamp(16px, 3vw, 28px);
-  bottom: clamp(16px, 3vw, 28px);
+  bottom: calc(clamp(16px, 3vw, 28px) + var(--tab-bar-space));
   z-index: 40;
   display: flex;
   justify-content: flex-end;
@@ -37,6 +37,20 @@
   align-items: center;
   gap: var(--space-2);
   white-space: nowrap;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .kbd { display: none; }
+}
+
+/* Phones: a round button over the tab bar, so it never sits on top of a tile's controls. */
+@media (max-width: 640px) {
+  .anchor { right: 16px; bottom: calc(var(--tab-bar-space) - 6px); }
+  .pill { width: 48px; padding: 0; justify-content: center; }
+  .pillInner { justify-content: center; width: 100%; }
+  .pillLabel,
+  .kbd { display: none; }
+  .panel { height: min(600px, calc(100dvh - var(--tab-bar-space) - 96px)); }
 }
 
 .kbd {

@@ -14,13 +14,13 @@
   inset: 0;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  padding: 14% 14% 12%;
+  padding: 14% 12% 12%;
   pointer-events: none;
 }
 
 .reading {
   font-family: var(--font-display);
-  font-size: clamp(var(--text-lg), 22cqi, var(--text-2xl));
+  font-size: clamp(var(--text-base), 24cqi, var(--text-2xl));
   font-weight: 500;
   letter-spacing: var(--tracking-display);
   font-variant-numeric: tabular-nums;

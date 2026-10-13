@@ -4,13 +4,14 @@
   display: grid;
   align-content: center;
   gap: var(--space-1);
-  padding: var(--space-4) var(--space-5);
+  padding: clamp(12px, 6cqi, 20px) clamp(14px, 7cqi, 24px);
   container-type: size;
 }
 
 .time {
   font-family: var(--font-display);
-  font-size: clamp(var(--text-2xl), 34cqh, var(--text-5xl));
+  font-size: clamp(var(--text-xl), min(34cqh, 19cqi), var(--text-5xl));
+  white-space: nowrap;
   font-weight: 400;
   letter-spacing: var(--tracking-display);
   line-height: 1;
@@ -18,8 +19,11 @@
 }
 
 .date {
+  overflow: hidden;
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: clamp(11px, 7.5cqi, var(--text-sm));
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tile[data-size="2x2"] {

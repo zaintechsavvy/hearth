@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
-import { Settings } from "lucide-react";
+import { Activity, House, Settings, Workflow, type LucideIcon } from "lucide-react";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { UserMenu } from "@/components/arc/user-menu/user-menu";
 import { Logo } from "@/components/brand/logo";
@@ -13,12 +13,12 @@ import { CommandMenuButton } from "./command-menu";
 import { useThemePreference } from "./use-theme-preference";
 import styles from "./app-header.module.css";
 
-const LINKS = [
-  { href: "/dashboard", label: "Home" },
-  { href: "/activity", label: "Activity" },
-  { href: "/automations", label: "Automations" },
-  { href: "/settings", label: "Settings" },
-] as const;
+const LINKS: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/dashboard", label: "Home", icon: House },
+  { href: "/activity", label: "Activity", icon: Activity },
+  { href: "/automations", label: "Automations", icon: Workflow },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
 
 interface AppHeaderProps {
   user: { name: string; email: string };
@@ -31,6 +31,7 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
   const router = useRouter();
   const reduce = useReducedMotion();
   const [theme, setTheme] = useThemePreference();
+  const links = LINKS.filter(link => role !== "guest" || link.href === "/dashboard");
 
   return (
     <header className={styles.header} data-wall-hide>
@@ -40,7 +41,7 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
       </span>
       <GlassSurface width="auto" height={46} borderRadius={23} blur={12} backgroundOpacity={0.18} saturation={1.6} className={styles.navGlass}>
         <nav aria-label="Main" className={styles.nav}>
-          {LINKS.filter(link => role !== "guest" || link.href === "/dashboard").map(link => {
+          {links.map(link => {
             const active = pathname.startsWith(link.href);
             return (
               <Link key={link.href} href={link.href} className={styles.link} aria-current={active ? "page" : undefined}>
@@ -65,6 +66,21 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
           }}
         />
       </div>
+      {links.length > 1 && (
+        <nav aria-label="Main" className={styles.tabBar}>
+          {links.map(link => {
+            const active = pathname.startsWith(link.href);
+            const Icon = link.icon;
+            return (
+              <Link key={link.href} href={link.href} className={styles.tab} aria-current={active ? "page" : undefined}>
+                {active && <motion.span layoutId="tab-highlight" className={styles.tabHighlight} transition={reduce ? { duration: 0 } : motionTokens.spring.morph} aria-hidden="true" />}
+                <Icon size={21} strokeWidth={active ? 2 : 1.75} aria-hidden="true" />
+                <span className={styles.tabLabel}>{link.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
     </header>
   );
 }

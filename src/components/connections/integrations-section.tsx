@@ -36,7 +36,7 @@ export function IntegrationsSection({ integrations }: { integrations: Integratio
   };
 
   return (
-    <section className={styles.section} aria-labelledby="integrations-title">
+    <section id="connections" className={styles.section} aria-labelledby="integrations-title">
       <div className={styles.sectionHeader}>
         <div>
           <h2 id="integrations-title" className={styles.sectionTitle}>Connections</h2>

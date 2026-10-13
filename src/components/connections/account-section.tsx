@@ -9,7 +9,7 @@ import styles from "./connections.module.css";
 export function AccountSection({ user }: { user: { name: string; email: string } }) {
   const router = useRouter();
   return (
-    <section className={styles.section} aria-labelledby="account-title">
+    <section id="account" className={styles.section} aria-labelledby="account-title">
       <div className={styles.sectionHeader}>
         <h2 id="account-title" className={styles.sectionTitle}>Account</h2>
       </div>
