@@ -1,7 +1,7 @@
 .anchor {
   position: fixed;
   right: clamp(16px, 3vw, 28px);
-  bottom: calc(clamp(16px, 3vw, 28px) + var(--tab-bar-space));
+  bottom: calc(clamp(16px, 3vw, 28px) + env(safe-area-inset-bottom));
   z-index: 40;
   display: flex;
   justify-content: flex-end;
@@ -43,14 +43,16 @@
   .kbd { display: none; }
 }
 
-/* Phones: a round button over the tab bar, so it never sits on top of a tile's controls. */
+/* Phones: a small round button in the corner, so it never sits on top of a tile's controls. */
 @media (max-width: 640px) {
-  .anchor { right: 16px; bottom: calc(var(--tab-bar-space) - 6px); }
+  .anchor { right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); }
   .pill { width: 48px; padding: 0; justify-content: center; }
   .pillInner { justify-content: center; width: 100%; }
   .pillLabel,
   .kbd { display: none; }
-  .panel { height: min(600px, calc(100dvh - var(--tab-bar-space) - 96px)); }
+  /* The header's page menu opens the assistant on phones, so no button floats over the tiles. */
+  .pill { display: none; }
+  .panel { height: min(600px, calc(100dvh - 120px - env(safe-area-inset-bottom))); }
 }
 
 .kbd {

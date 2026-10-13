@@ -83,7 +83,7 @@
   inset: -50%;
   pointer-events: none;
   opacity: .16;
-  background-image: radial-gradient(oklch(100% 0 0 / .5) .5px, transparent .6px), radial-gradient(oklch(0% 0 0 / .6) .5px, transparent .6px);
+  background-image: radial-gradient(oklch(100% 0 0 / .5) .5px, oklch(100% 0 0 / 0) .6px), radial-gradient(oklch(0% 0 0 / .6) .5px, transparent .6px);
   background-size: 3px 3px, 4px 4px;
   background-position: 0 0, 1px 2px;
   mix-blend-mode: overlay;

@@ -33,6 +33,7 @@ export function SettingsSection({ id, title, description, action, children }: Se
         {expanded && action && <div className={styles.action}>{action}</div>}
       </div>
       <div id={`${id}-panel`} role="region" aria-labelledby={`${id}-title`} className={styles.body} hidden={!expanded}>
+        {action && <div className={styles.bodyAction}>{action}</div>}
         {children}
       </div>
     </section>

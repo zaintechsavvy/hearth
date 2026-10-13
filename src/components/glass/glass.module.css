@@ -1,4 +1,4 @@
-/* Liquid glass: a translucent fill that lifts colour from behind, a specular rim, and a soft sheen. */
+/* Liquid glass: a translucent fill that lifts colour from behind, with a specular rim along the top edge. */
 .glass {
   position: relative;
   isolation: isolate;
@@ -13,17 +13,6 @@
   backdrop-filter: blur(26px) saturate(175%);
 }
 
-.glass::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(120% 80% at 0% 0%, oklch(100% 0 0 / .45), transparent 55%);
-  opacity: .7;
-}
-
 :root[data-theme="dark"] .glass {
   background: linear-gradient(180deg, oklch(34% .006 260 / .52), oklch(22% .006 260 / .42));
   border-color: oklch(100% 0 0 / .1);
@@ -32,10 +21,6 @@
     inset 0 -1px 0 oklch(100% 0 0 / .04),
     0 1px 2px oklch(0% 0 0 / .3),
     0 24px 60px -16px oklch(0% 0 0 / .55);
-}
-
-:root[data-theme="dark"] .glass::before {
-  background: radial-gradient(120% 80% at 0% 0%, oklch(100% 0 0 / .1), transparent 55%);
 }
 
 .surface { border-radius: var(--radius-surface); }

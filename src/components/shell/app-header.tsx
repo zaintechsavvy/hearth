@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
-import { Activity, House, Settings, Workflow, type LucideIcon } from "lucide-react";
+import { Activity, House, Settings, Sparkles, Workflow, type LucideIcon } from "lucide-react";
+import { askHearth } from "@/components/assistant/assistant-dock";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
+import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
 import { UserMenu } from "@/components/arc/user-menu/user-menu";
 import { Logo } from "@/components/brand/logo";
 import GlassSurface from "@/components/reactbits/GlassSurface";
@@ -32,6 +34,7 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
   const reduce = useReducedMotion();
   const [theme, setTheme] = useThemePreference();
   const links = LINKS.filter(link => role !== "guest" || link.href === "/dashboard");
+  const current = links.find(link => pathname.startsWith(link.href)) ?? links[0];
 
   return (
     <header className={styles.header} data-wall-hide>
@@ -52,6 +55,14 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
           })}
         </nav>
       </GlassSurface>
+      {links.length > 1 && (
+        <div className={styles.pageMenu} data-on-wall>
+          <DropdownMenu label={current.label} icon={<current.icon size={16} strokeWidth={1.75} />} items={[
+            ...links.map(link => ({ label: link.label, icon: <link.icon size={16} strokeWidth={1.75} />, onSelect: () => router.push(link.href) })),
+            ...(role === "guest" ? [] : [{ label: "Ask Hearth", icon: <Sparkles size={16} strokeWidth={1.75} />, separatorBefore: true, onSelect: () => askHearth() }]),
+          ]} />
+        </div>
+      )}
       <div className={styles.account} data-on-wall>
         <CommandMenuButton className={styles.search} />
         <UserMenu
@@ -66,21 +77,6 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
           }}
         />
       </div>
-      {links.length > 1 && (
-        <nav aria-label="Main" className={styles.tabBar}>
-          {links.map(link => {
-            const active = pathname.startsWith(link.href);
-            const Icon = link.icon;
-            return (
-              <Link key={link.href} href={link.href} className={styles.tab} aria-current={active ? "page" : undefined}>
-                {active && <motion.span layoutId="tab-highlight" className={styles.tabHighlight} transition={reduce ? { duration: 0 } : motionTokens.spring.morph} aria-hidden="true" />}
-                <Icon size={21} strokeWidth={active ? 2 : 1.75} aria-hidden="true" />
-                <span className={styles.tabLabel}>{link.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
     </header>
   );
 }

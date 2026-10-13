@@ -76,6 +76,16 @@
   flex: none;
 }
 
+.bodyAction {
+  display: none;
+}
+
+/* Phones: the action moves under the title, so a long description is not squeezed beside it. */
+@media (max-width: 640px) {
+  .action { display: none; }
+  .bodyAction { display: flex; justify-content: flex-end; }
+}
+
 .body {
   display: grid;
   gap: var(--space-3);

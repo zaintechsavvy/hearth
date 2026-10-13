@@ -1,6 +1,6 @@
 "use client";
 
-import { House, LayoutGrid, Palette, Plus, Sparkles, Sun, Video } from "lucide-react";
+import { Clapperboard, House, LayoutGrid, Palette, Plus, Sparkles, Sun, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Alert } from "@/components/arc/alert/alert";
@@ -394,8 +394,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
                   <BackgroundPicker />
                 </PopoverContent>
               </Popover>
-              {canEdit && <Button variant="ghost" onClick={() => setSceneEditing("new")}>New scene</Button>}
-              {canEdit && <Button variant="ghost" onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" />Add tile</Button>}
+              {canEdit && <Button variant="ghost" className={styles.toolButton} aria-label="New scene" onClick={() => setSceneEditing("new")}><Clapperboard size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.toolLabel}>New scene</span></Button>}
+              {canEdit && <Button variant="ghost" className={styles.toolButton} aria-label="Add tile" onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.toolLabel}>Add tile</span></Button>}
               {canEdit && tiles.length > 0 && <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
             </>
           )}

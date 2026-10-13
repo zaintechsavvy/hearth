@@ -25,12 +25,6 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
-/* Phones keep a tab bar along the bottom; pages and floating buttons clear it. */
-:root { --tab-bar-height: 62px; --tab-bar-space: 0px; }
-@media (max-width: 640px) {
-  :root { --tab-bar-space: calc(var(--tab-bar-height) + env(safe-area-inset-bottom) + 20px); }
-}
-
 /* The canvas colour behind the wallpaper, matched to its lower edge, which shows when a page overscrolls. */
 :root { --page-floor: oklch(93.2% .003 260); }
 :root[data-wallpaper="linen"] { --page-floor: oklch(92.8% .011 75); }

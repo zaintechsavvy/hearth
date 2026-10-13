@@ -52,7 +52,7 @@
   position: absolute;
   inset: -20% -10% auto;
   height: 90%;
-  background: radial-gradient(60% 55% at 50% 0%, var(--light), transparent 72%);
+  background: radial-gradient(60% 55% at 50% 0%, var(--light), oklch(100% 0 0 / 0) 72%);
 }
 
 .grain {

@@ -2,7 +2,7 @@
   width: 100%;
   max-width: 1240px;
   margin-inline: auto;
-  padding: var(--space-4) clamp(16px, 4vw, 32px) calc(var(--space-16) + var(--tab-bar-space));
+  padding: var(--space-4) clamp(16px, 4vw, 32px) calc(var(--space-16) + env(safe-area-inset-bottom));
   display: grid;
   gap: var(--space-6);
 }
