@@ -1,4 +1,8 @@
+/* Capped so the grid inside always lays out in four columns, the arrangement this sample is built for. */
 .window {
+  width: 100%;
+  max-width: 680px;
+  justify-self: center;
   margin: 0;
   padding: var(--space-2);
   display: grid;
@@ -71,11 +75,6 @@
 
 .feed {
   object-fit: cover;
-}
-
-.camera[data-night-vision] .feed {
-  object-position: 72% 50%;
-  filter: contrast(1.05) brightness(1.08);
 }
 
 /* A faint, shifting grain so the still reads as a live feed. */
