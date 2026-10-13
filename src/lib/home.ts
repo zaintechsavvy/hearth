@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { camera, deviceOverride, integration, preference, scene, widgetItem } from "@/lib/db/schema";
 import { unseal } from "@/lib/crypto";
 import type { WidgetItem } from "@/lib/widgets/items";
-import { HOME_PAGE_ID, type DashboardPage, type SavedTile } from "@/lib/dashboard/layout";
+import { HOME_PAGE_ID, withoutOrphanTiles, type DashboardPage, type SavedTile } from "@/lib/dashboard/layout";
 import type { HearthScene } from "@/lib/scenes/types";
 import { parseDeviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
 import { createProvider } from "@/lib/integrations/registry";
@@ -122,7 +122,9 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
     return name ? { ...row, name, sourceName: row.name } : row;
   });
   const widgets = itemRows.map(row => ({ id: row.id, kind: row.kind, position: row.position, data: row.kind === "wifi" ? openWifi(row.data) : row.data }) as WidgetItem);
-  return { devices, integrations, cameras, scenes, layout: preferences.pages[0].layout, pages: preferences.pages, rooms: orderedRooms(preferences.rooms, devices), widgets };
+  const connected = new Set(rows.map(row => row.id));
+  const pages = preferences.pages.map(page => ({ ...page, layout: withoutOrphanTiles(page.layout, connected) }));
+  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets };
 }
 
 /** Sends a device a command. `by` says who, for the activity log: a person, the assistant, a scene, or an automation. */

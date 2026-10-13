@@ -1,4 +1,4 @@
-import type { Device } from "@/lib/devices/types";
+import { parseDeviceId, type Device } from "@/lib/devices/types";
 
 export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants"] as const;
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
@@ -213,6 +213,20 @@ export function suggestedTiles(sources: TileSource[]): TileConfig[] {
       const size = source.kind === "thermostat" && !firstThermostat ? "2x2" : defaultSize(source.kind, source.adjustable);
       return { id: newTileId(), kind: source.kind, link: source.id, size };
     });
+}
+
+/**
+ * Drops saved tiles that point at a device of a connection that no longer exists, so removing a connection never
+ * leaves "choose a device" tiles behind. RTSP camera, scene, and widget tiles are kept, and so are tiles of a
+ * connection that is only offline.
+ */
+export function withoutOrphanTiles<T extends SavedTile>(saved: T[], integrationIds: ReadonlySet<string>): T[] {
+  return saved.filter(entry => {
+    const link = entry.kind === undefined ? entry.id : entry.link;
+    if (!link || link.startsWith("camera:") || link.startsWith("scene:")) return true;
+    const device = parseDeviceId(link);
+    return !device || integrationIds.has(device.integrationId);
+  });
 }
 
 export function moveTile(tiles: TileConfig[], fromId: string, toId: string) {

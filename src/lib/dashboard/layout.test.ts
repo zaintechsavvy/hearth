@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTile, moveTile, removeTile, resolveLayout, suggestedTiles, type TileSource } from "./layout";
+import { createTile, moveTile, removeTile, resolveLayout, suggestedTiles, withoutOrphanTiles, type SavedTile, type TileSource } from "./layout";
 
 const sources: TileSource[] = [
   { id: "a:light", kind: "light", adjustable: true },
@@ -50,5 +50,19 @@ describe("editing", () => {
     const [a, b, c] = ["light", "switch", "fan"].map(kind => createTile(kind as "light"));
     expect(moveTile([a, b, c], c.id, a.id).map(tile => tile.id)).toEqual([c.id, a.id, b.id]);
     expect(removeTile([a, b, c], b.id)).toEqual([a, c]);
+  });
+});
+
+describe("withoutOrphanTiles", () => {
+  it("drops tiles of a removed connection and keeps everything else", () => {
+    const saved: SavedTile[] = [
+      { id: "t1", kind: "light", link: "gone:light.desk", size: "1x1" },
+      { id: "t2", kind: "lock", link: "ha:lock.front", size: "2x1" },
+      { id: "t3", kind: "camera", link: "camera:42", size: "2x2" },
+      { id: "t4", kind: "scene", link: "scene:evening", size: "2x1" },
+      { id: "t5", kind: "clock", link: null, size: "2x1" },
+      { id: "gone:switch.tv", size: "1x1" },
+    ];
+    expect(withoutOrphanTiles(saved, new Set(["ha"])).map(tile => tile.id)).toEqual(["t2", "t3", "t4", "t5"]);
   });
 });

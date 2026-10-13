@@ -1,7 +1,7 @@
 "use server";
 
 import { authed, firstIssue, OK, ownerOnly, type ActionResult, type CreatedResult } from "@/lib/action-helpers";
-import { and, eq } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { CameraSource } from "@/lib/cameras/stream-relay";
@@ -9,7 +9,7 @@ import { StreamRelay, relayStreamName } from "@/lib/cameras/stream-relay";
 import { ASSISTANT_PROVIDER_IDS, ASSISTANT_PROVIDERS } from "@/lib/assistant/providers";
 import { checkAssistantKey } from "@/lib/assistant/run";
 import { seal } from "@/lib/crypto";
-import { createTile, HOME_PAGE_ID, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES } from "@/lib/dashboard/layout";
+import { createTile, HOME_PAGE_ID, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES, withoutOrphanTiles } from "@/lib/dashboard/layout";
 import { tileSources } from "@/lib/dashboard/sources";
 import { db } from "@/lib/db";
 import { assistant, automation, calendar, camera, deviceOverride, integration, preference, reminder, scene } from "@/lib/db/schema";
@@ -85,7 +85,14 @@ export async function removeIntegration(id: string): Promise<ActionResult> {
   const denied = await ownerOnly();
   if (denied) return denied;
   return authed(async userId => {
-    await db.delete(integration).where(and(eq(integration.id, id), eq(integration.userId, userId)));
+    const removed = await db.delete(integration).where(and(eq(integration.id, id), eq(integration.userId, userId))).returning({ id: integration.id });
+    if (removed.length) {
+      // Its tiles and per-device names go with it, so connecting again starts from an empty dashboard.
+      const remaining = new Set((await db.select({ id: integration.id }).from(integration).where(eq(integration.userId, userId))).map(row => row.id));
+      const { layout, pages } = await getPreferences(userId);
+      await savePreferences(userId, { layout: withoutOrphanTiles(layout, remaining), pages: pages.map(page => ({ ...page, layout: withoutOrphanTiles(page.layout, remaining) })) });
+      await db.delete(deviceOverride).where(and(eq(deviceOverride.userId, userId), like(deviceOverride.deviceId, `${id}:%`)));
+    }
     revalidatePath("/", "layout");
     return OK;
   });
