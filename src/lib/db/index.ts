@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
@@ -67,3 +67,6 @@ const connection = cache.hearthDatabase ??= connect();
 
 export const db = connection.db;
 export const runMigrations = () => connection.migrate();
+
+/** Whether this bundle carries the migration files. Vercel deploys the proxy as its own function without them. */
+export const migrationsShipped = () => existsSync(join(migrationsFolder(), "meta", "_journal.json"));
