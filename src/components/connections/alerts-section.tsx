@@ -9,6 +9,7 @@ import { Glass } from "@/components/glass/glass";
 import type { AlertSettings } from "@/lib/activity-types";
 import { saveAlerts } from "@/lib/actions";
 import styles from "./connections.module.css";
+import { SettingsSection } from "./settings-section";
 
 type DeviceState = "unsupported" | "needs-install" | "blocked" | "off" | "on" | "loading";
 
@@ -91,13 +92,7 @@ export function AlertsSection({ alerts }: { alerts: AlertSettings }) {
   };
 
   return (
-    <section id="alerts" className={styles.section} aria-labelledby="alerts-title">
-      <div className={styles.sectionHeader}>
-        <div>
-          <h2 id="alerts-title" className={styles.sectionTitle}>Alerts</h2>
-          <p className={styles.sectionDescription}>Notifications on your phone or tablet. They come from your Hearth server, so it has to be running.</p>
-        </div>
-      </div>
+    <SettingsSection id="alerts" title="Alerts" description={<>Notifications on your phone or tablet. They come from your Hearth server, so it has to be running.</>}>
       <Glass shape="panel" className={styles.group}>
         <div className={styles.row}>
           <BellRing className={styles.rowIcon} size={20} strokeWidth={1.75} aria-hidden="true" />
@@ -122,6 +117,6 @@ export function AlertsSection({ alerts }: { alerts: AlertSettings }) {
             format={value => value === 0 ? "Never" : `After ${value} min`} onValueCommit={openMinutes => update({ openMinutes })} />
         </div>
       </Glass>
-    </section>
+    </SettingsSection>
   );
 }

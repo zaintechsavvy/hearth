@@ -83,6 +83,11 @@
     var(--m1);
 }
 
+/* A smooth gradient: one still blend from the top colour down, as set by `applyGradientVars`. */
+:root[data-wallpaper="gradient"][data-gradient-style="smooth"] .wallpaper {
+  background: var(--gradient, linear-gradient(180deg, var(--m1), var(--m2)));
+}
+
 .mesh {
   position: absolute;
   inset: 0;
@@ -90,7 +95,8 @@
   height: 100%;
 }
 
-/* Keeps text on glass legible over the brightest and darkest parts of a mesh. Still presets need none. */
+/* Keeps text on glass legible over the brightest and darkest parts of a mesh. Still presets need none; a dark
+   gradient keeps its depth, because the text on it turns light instead (see `[data-on-wall]` in globals.css). */
 .veil {
   position: absolute;
   inset: 0;
@@ -104,6 +110,18 @@
 
 :root[data-theme="dark"]:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="gradient"]) .veil {
   background: oklch(0% 0 0 / .28);
+}
+
+:root[data-wallpaper="gradient"][data-gradient-style="smooth"] .veil {
+  background: oklch(100% 0 0 / .06);
+}
+
+:root[data-backdrop="dark"][data-wallpaper="gradient"] .veil {
+  background: transparent;
+}
+
+:root[data-backdrop="dark"][data-wallpaper="gradient"] .light {
+  opacity: .12;
 }
 
 :root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="gradient"], [data-wallpaper="photo"]) .light {

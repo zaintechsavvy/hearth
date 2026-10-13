@@ -28,7 +28,7 @@ export function Landing() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
+      <header className={styles.header} data-on-wall>
         <Logo />
         <nav className={styles.headerNav} aria-label="Account">
           <Link href="/sign-in" className={styles.textLink}>Sign in</Link>
@@ -36,7 +36,7 @@ export function Landing() {
       </header>
 
       <main className={styles.hero}>
-        <motion.div className={styles.copy} {...rise(0)}>
+        <motion.div className={styles.copy} data-on-wall {...rise(0)}>
           <h1 className={styles.title}>Build your home today.</h1>
           <p className={styles.lede}>
             Hearth gathers your thermostat, cameras, lights, and Matter devices into one calm dashboard you arrange yourself.

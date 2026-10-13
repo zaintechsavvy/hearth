@@ -13,6 +13,7 @@ import { PasswordField } from "@/components/arc/password-field/password-field";
 import { Glass, glassSheetClass } from "@/components/glass/glass";
 import { addCamera, removeCamera, saveStreamRelay } from "@/lib/actions";
 import styles from "./connections.module.css";
+import { SettingsSection } from "./settings-section";
 
 export interface CameraSummary {
   id: string;
@@ -52,14 +53,7 @@ export function CamerasSection({ cameras, relayUrl }: { cameras: CameraSummary[]
   }
 
   return (
-    <section id="cameras" className={styles.section} aria-labelledby="cameras-title">
-      <div className={styles.sectionHeader}>
-        <div>
-          <h2 id="cameras-title" className={styles.sectionTitle}>Cameras</h2>
-          <p className={styles.sectionDescription}>RTSP cameras play through a go2rtc relay. Put one on the dashboard with Add tile, then Camera.</p>
-        </div>
-        <Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>
-      </div>
+    <SettingsSection id="cameras" title="Cameras" description={<>RTSP cameras play through a go2rtc relay. Put one on the dashboard with Add tile, then Camera.</>} action={<Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>}>
 
       <Glass shape="panel" className={styles.group}>
         <form className={styles.row} onSubmit={saveRelay}>
@@ -112,6 +106,6 @@ export function CamerasSection({ cameras, relayUrl }: { cameras: CameraSummary[]
           </form>
         </DialogContent>
       </Dialog>
-    </section>
+    </SettingsSection>
   );
 }

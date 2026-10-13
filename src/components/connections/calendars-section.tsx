@@ -14,6 +14,7 @@ import { Glass, glassSheetClass } from "@/components/glass/glass";
 import { addCalendar, removeCalendar } from "@/lib/actions";
 import { TILE_COLORS, type TileColor } from "@/lib/dashboard/layout";
 import styles from "./connections.module.css";
+import { SettingsSection } from "./settings-section";
 
 export interface CalendarRow {
   id: string;
@@ -44,14 +45,7 @@ export function CalendarsSection({ calendars }: { calendars: CalendarRow[] }) {
   }
 
   return (
-    <section id="calendars" className={styles.section} aria-labelledby="calendars-title">
-      <div className={styles.sectionHeader}>
-        <div>
-          <h2 id="calendars-title" className={styles.sectionTitle}>Calendars</h2>
-          <p className={styles.sectionDescription}>Google Calendar, iCloud, Outlook, or any iCal address, read only. Show them with a Calendar tile.</p>
-        </div>
-        <Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>
-      </div>
+    <SettingsSection id="calendars" title="Calendars" description={<>Google Calendar, iCloud, Outlook, or any iCal address, read only. Show them with a Calendar tile.</>} action={<Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>}>
 
       <Glass shape="panel" className={styles.group}>
         {calendars.length === 0 ? (
@@ -103,6 +97,6 @@ export function CalendarsSection({ calendars }: { calendars: CalendarRow[] }) {
           </form>
         </DialogContent>
       </Dialog>
-    </section>
+    </SettingsSection>
   );
 }

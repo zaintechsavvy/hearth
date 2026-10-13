@@ -38,7 +38,7 @@ html[data-theme="dark"] {
 :root[data-wallpaper="aurora"] { --page-floor: #c3d0fb; }
 :root[data-wallpaper="dusk"] { --page-floor: #fbcfd2; }
 :root[data-wallpaper="meadow"] { --page-floor: #cbe9da; }
-:root[data-wallpaper="gradient"] { --page-floor: var(--m2, oklch(93.2% .003 260)); }
+:root[data-wallpaper="gradient"] { --page-floor: var(--g-last, var(--m2, oklch(93.2% .003 260))); }
 :root[data-wallpaper="photo"] { --page-floor: oklch(24% .005 260); }
 :root[data-theme="dark"] { --page-floor: oklch(11.5% .003 260); }
 :root[data-theme="dark"][data-wallpaper="linen"] { --page-floor: oklch(12.5% .006 60); }
@@ -46,8 +46,29 @@ html[data-theme="dark"] {
 :root[data-theme="dark"][data-wallpaper="aurora"] { --page-floor: #0c1430; }
 :root[data-theme="dark"][data-wallpaper="dusk"] { --page-floor: #26121a; }
 :root[data-theme="dark"][data-wallpaper="meadow"] { --page-floor: #0d1f16; }
-:root[data-theme="dark"][data-wallpaper="gradient"] { --page-floor: var(--m1, oklch(11.5% .003 260)); }
+:root[data-theme="dark"][data-wallpaper="gradient"] { --page-floor: var(--g-last, var(--m1, oklch(11.5% .003 260))); }
 :root[data-theme="dark"][data-wallpaper="photo"] { --page-floor: oklch(12% .004 260); }
+
+/*
+ * Text that sits straight on the wallpaper, not on glass: greetings, page titles, section headings, and the buttons
+ * beside them. Mark the container with `data-on-wall`. On a dark backdrop its colours turn light, grey text
+ * included, and filled buttons flip to white so they still stand out. Glass inside such a container keeps its own
+ * colours only if it sets them, so keep these containers to headings and toolbars.
+ */
+:root[data-backdrop="dark"] [data-on-wall] {
+  --foreground: oklch(98.5% 0 0);
+  --text-secondary: oklch(98.5% 0 0 / .86);
+  --text-muted: oklch(98.5% 0 0 / .7);
+  --background: oklch(20% .02 260);
+  --surface: oklch(100% 0 0 / .16);
+  --surface-muted: oklch(100% 0 0 / .14);
+  --border: oklch(100% 0 0 / .24);
+  --border-subtle: oklch(100% 0 0 / .14);
+  --border-strong: oklch(100% 0 0 / .32);
+  --focus-outline: oklch(98.5% 0 0 / .85);
+  color: var(--foreground);
+  text-shadow: 0 1px 14px oklch(0% 0 0 / .22);
+}
 
 body {
   min-height: 100dvh;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Dices, Plus, Wand2, X } from "lucide-react";
+import { ArrowUpDown, Dices, Minus, Plus, Wand2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState, type CSSProperties } from "react";
 import useSWR from "swr";
@@ -13,19 +13,18 @@ import SegmentedControl from "@/components/arc/segmented-control/segmented-contr
 import { Slider } from "@/components/arc/slider/slider";
 import { Switch } from "@/components/arc/switch/switch";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
-import { gradientColors } from "@/components/glass/wallpaper";
 import { fetchPhotos, type PhotoSummary } from "@/components/shell/background-picker";
-import { applyGradientVars, applyPhotoVars, withNight } from "@/components/shell/background-vars";
+import { applyGradientVars, applyPhotoVars, shownColors, styleOf, withNight } from "@/components/shell/background-vars";
 import { paletteFromImage, resizeImage, uploadPhoto } from "@/components/shell/image-tools";
 import { closeStudio, openStudio, useStudio, type StudioTab } from "@/components/shell/studio-store";
 import { useHtmlPreference } from "@/components/shell/use-html-preference";
 import { usePrefersReducedMotion } from "@/components/shell/use-reduced-motion-preference";
 import { useResolvedTheme } from "@/components/shell/use-resolved-theme";
 import { useStoredJson } from "@/components/shell/use-stored-json";
-import { shufflePalette } from "@/lib/backgrounds/palette";
+import { backdropIsDark, mixHex, shufflePalette } from "@/lib/backgrounds/palette";
 import {
-  DEFAULT_GRADIENT, DEFAULT_WALLPAPER, GRADIENT_KEY, GRADIENT_PALETTES, GRADIENTS_KEY, MAX_GRADIENT_COLORS, PHOTO_KEY, WALLPAPER_KEY,
-  type CustomGradient, type PhotoBackground, type Wallpaper,
+  DEFAULT_GRADIENT, DEFAULT_WALLPAPER, GRADIENT_KEY, GRADIENT_SAMPLES, GRADIENTS_KEY, MAX_GRADIENT_COLORS, PHOTO_KEY, WALLPAPER_KEY,
+  type CustomGradient, type GradientStyle, type PhotoBackground, type Wallpaper,
 } from "@/lib/theme";
 import styles from "./background-studio.module.css";
 
@@ -57,18 +56,24 @@ function Studio({ tab }: { tab: StudioTab }) {
   );
 }
 
-function Preview({ children, style }: { children?: React.ReactNode; style?: CSSProperties }) {
+function Preview({ children, style, tone }: { children?: React.ReactNode; style?: CSSProperties; tone?: "light" | "dark" }) {
   return (
-    <figure className={styles.preview} style={style} aria-label="Preview">
+    <figure className={styles.preview} style={style} data-tone={tone} aria-label="Preview">
       {children}
+      <div className={styles.previewGreeting} aria-hidden="true">
+        <b>Good evening</b>
+        <small>2 lights on · 21° inside</small>
+      </div>
       <div className={styles.previewTiles} aria-hidden="true">
         <span className={`${glassClass("panel")} ${styles.previewTile}`}><b>21°</b><small>Living room</small></span>
         <span className={`${glassClass("panel")} ${styles.previewTile}`} data-on><b>80%</b><small>Pendants</small></span>
-        <span className={`${glassClass("panel")} ${styles.previewWide}`}><b>Front door</b><small>Locked</small></span>
+        <span className={`${glassClass("panel")} ${styles.previewTile}`}><b>Locked</b><small>Front door</small></span>
       </div>
     </figure>
   );
 }
+
+const STOP_NAMES = { 2: ["Top", "Bottom"], 3: ["Top", "Middle", "Bottom"] } as Record<number, string[]>;
 
 function GradientEditor() {
   const theme = useResolvedTheme();
@@ -78,6 +83,10 @@ function GradientEditor() {
   const [gradients, setGradients] = useStoredJson<CustomGradient[]>(GRADIENTS_KEY, NO_GRADIENTS);
   const saved = gradients.find(item => item.id === gradient.id);
   const changed = !saved || JSON.stringify(withNight(saved)) !== JSON.stringify(withNight(gradient));
+  const style = styleOf(gradient);
+  const colors = shownColors(gradient, theme);
+  const { colors: stops } = gradient;
+  const names = STOP_NAMES[stops.length] ?? stops.map((_, index) => `Colour ${index + 1}`);
 
   const update = (patch: Partial<CustomGradient>) => {
     const next = withNight({ ...gradient, ...patch });
@@ -85,71 +94,65 @@ function GradientEditor() {
     applyGradientVars(next, theme);
     setWallpaper("gradient");
   };
-  const setColor = (index: number, hex: string) => update({ colors: gradient.colors.map((color, position) => position === index ? hex.slice(0, 7) : color) });
+  /** Samples and shuffles start a new gradient, so they never overwrite a saved one. */
+  const start = (name: string, next: string[]) => update({ id: crypto.randomUUID(), name, colors: next });
+  const setColor = (index: number, hex: string) => update({ colors: stops.map((color, position) => position === index ? hex.slice(0, 7) : color) });
   const save = () => {
     const next = withNight(gradient.id === DEFAULT_GRADIENT.id ? { ...gradient, id: crypto.randomUUID() } : gradient);
     setGradient(next);
     setGradients(saved ? gradients.map(item => item.id === next.id ? next : item) : [...gradients, next].slice(-12));
   };
-  const startNew = () => update({ ...DEFAULT_GRADIENT, id: crypto.randomUUID(), name: `Gradient ${gradients.length + 1}`, colors: shufflePalette() });
 
   return (
     <div className={styles.editor}>
-      <Preview>
-        <MeshBackdrop className={styles.previewMesh} colors={gradientColors(gradient, theme)} still={still || gradient.motion === 0} motion={gradient.motion} swirl={gradient.swirl} distortion={gradient.distortion} grain={gradient.grain} />
+      <Preview tone={backdropIsDark(colors, style) ? "dark" : "light"}>
+        {style === "flowing"
+          ? <MeshBackdrop className={styles.previewMesh} colors={colors} still={still || gradient.motion === 0} motion={gradient.motion} swirl={gradient.swirl} distortion={gradient.distortion} />
+          : <span className={styles.previewMesh} style={{ background: `linear-gradient(180deg, ${colors.join(", ")})` }} />}
       </Preview>
 
-      <div className={styles.row}>
-        <Input label="Name" value={gradient.name} maxLength={30} onChange={event => update({ name: event.target.value })} />
-        <Button variant="ghost" onClick={startNew}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> New</Button>
-      </div>
+      <section className={styles.section} aria-labelledby="studio-samples">
+        <div className={styles.sectionHead}>
+          <h3 id="studio-samples" className={styles.heading}>Start from</h3>
+          <Button variant="ghost" size="sm" onClick={() => start("Shuffled", shufflePalette())}><Dices size={15} strokeWidth={1.75} aria-hidden="true" /> Surprise me</Button>
+        </div>
+        <div className={styles.samples} role="radiogroup" aria-labelledby="studio-samples">
+          {GRADIENT_SAMPLES.map(sample => (
+            <button key={sample.name} type="button" role="radio" aria-checked={stops.join() === sample.colors.join()} className={styles.sample} onClick={() => start(sample.name, [...sample.colors])}>
+              <span className={styles.sampleSwatch} style={{ background: `linear-gradient(180deg, ${sample.colors.join(", ")})` }} aria-hidden="true" />
+              <span className={styles.sampleName}>{sample.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
       <section className={styles.section} aria-labelledby="studio-colours">
         <div className={styles.sectionHead}>
           <h3 id="studio-colours" className={styles.heading}>Colours</h3>
-          <Button variant="ghost" size="sm" onClick={() => update({ colors: shufflePalette() })}><Dices size={15} strokeWidth={1.75} aria-hidden="true" /> Shuffle</Button>
+          <Button variant="ghost" size="sm" onClick={() => update({ colors: [...stops].reverse() })}><ArrowUpDown size={15} strokeWidth={1.75} aria-hidden="true" /> Swap</Button>
         </div>
-        <div className={styles.colors}>
-          {gradient.colors.map((color, index) => (
-            <div key={index} className={styles.color}>
-              <ColorPicker label={`Colour ${index + 1}`} value={color} onValueChange={hex => setColor(index, hex)} defaultFormat="hex" />
-              {gradient.colors.length > 2 && (
-                <button type="button" className={styles.removeColor} aria-label={`Remove colour ${index + 1}`} onClick={() => update({ colors: gradient.colors.filter((_, position) => position !== index) })}>
-                  <X size={12} strokeWidth={2.25} aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          ))}
-          {gradient.colors.length < MAX_GRADIENT_COLORS && (
-            <button type="button" className={styles.addColor} onClick={() => update({ colors: [...gradient.colors, shufflePalette()[1]] })}>
-              <Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add colour
-            </button>
-          )}
-        </div>
-        <div className={styles.palettes} role="list" aria-label="Starting palettes">
-          {GRADIENT_PALETTES.map(palette => (
-            <button key={palette.name} type="button" role="listitem" className={styles.palette} onClick={() => update({ colors: palette.colors })} title={palette.name}>
-              <span className={styles.paletteSwatch} style={{ background: `linear-gradient(120deg, ${palette.colors.join(", ")})` }} aria-hidden="true" />
-              <span>{palette.name}</span>
-            </button>
+        <div className={styles.stops}>
+          {stops.map((color, index) => (
+            <ColorPicker key={index} label={names[index]} value={color} onValueChange={hex => setColor(index, hex)} defaultFormat="hex" />
           ))}
         </div>
+        {stops.length < MAX_GRADIENT_COLORS
+          ? <Button variant="ghost" size="sm" className={styles.stopToggle} onClick={() => update({ colors: [stops[0], mixHex(stops[0], stops[stops.length - 1]), stops[stops.length - 1]] })}><Plus size={15} strokeWidth={1.75} aria-hidden="true" /> Add a middle colour</Button>
+          : <Button variant="ghost" size="sm" className={styles.stopToggle} onClick={() => update({ colors: [stops[0], stops[stops.length - 1]] })}><Minus size={15} strokeWidth={1.75} aria-hidden="true" /> Just two colours</Button>}
       </section>
 
-      <section className={styles.section} aria-labelledby="studio-feel">
-        <h3 id="studio-feel" className={styles.heading}>Feel</h3>
-        <Slider label="Motion" value={Math.round(gradient.motion * 100)} min={0} max={100} format={value => value === 0 ? "Still" : value < 34 ? "Slow" : value < 67 ? "Drifting" : "Lively"} onValueChange={value => update({ motion: value / 100 })} />
-        <Slider label="Swirl" value={Math.round(gradient.swirl * 100)} min={0} max={100} format={value => `${value}%`} onValueChange={value => update({ swirl: value / 100 })} />
-        <Slider label="Waves" value={Math.round(gradient.distortion * 100)} min={0} max={100} format={value => `${value}%`} onValueChange={value => update({ distortion: value / 100 })} />
-        <div className={styles.switches}>
-          <Switch label="Film grain" checked={gradient.grain} onCheckedChange={grain => update({ grain })} />
-          <Switch label="Darker at night" checked={gradient.dimAtNight} onCheckedChange={dimAtNight => update({ dimAtNight })} />
-        </div>
+      <section className={styles.section} aria-labelledby="studio-style">
+        <h3 id="studio-style" className={styles.heading}>Style</h3>
+        <SegmentedControl label="Style" value={style} onValueChange={value => update({ style: value as GradientStyle })} options={[{ value: "smooth", label: "Smooth" }, { value: "flowing", label: "Flowing" }]} />
+        {style === "flowing" && (
+          <Slider label="Movement" value={Math.round(gradient.motion * 100)} min={0} max={100} format={value => value === 0 ? "Still" : value < 34 ? "Slow" : value < 67 ? "Drifting" : "Lively"} onValueChange={value => update({ motion: value / 100 })} />
+        )}
+        <Switch label="Darker at night" checked={gradient.dimAtNight} onCheckedChange={dimAtNight => update({ dimAtNight })} />
       </section>
 
       <div className={styles.footer}>
-        <span className={styles.note}>{saved ? (changed ? "Unsaved changes" : "Saved to your gradients") : "Not in your gradients yet"}</span>
-        <Button onClick={save} disabled={!changed}>{saved ? "Save changes" : "Save gradient"}</Button>
+        <Input label="Name" className={styles.name} value={gradient.name} maxLength={30} onChange={event => update({ name: event.target.value })} />
+        <Button onClick={save} disabled={!changed}>{!saved ? "Save" : changed ? "Save changes" : "Saved"}</Button>
       </div>
     </div>
   );
@@ -174,7 +177,7 @@ function PhotoEditor() {
     const colors = await paletteFromImage(`/api/backgrounds/${photo.id}`).catch(() => []);
     setExtracting(false);
     if (colors.length < 2) return;
-    const next = withNight({ ...gradient, id: crypto.randomUUID(), name: "From my photo", colors: colors.slice(0, 4) });
+    const next = withNight({ ...gradient, id: crypto.randomUUID(), name: "From my photo", colors: colors.slice(0, MAX_GRADIENT_COLORS), style: "flowing" });
     setGradient(next);
     applyGradientVars(next, theme);
     setWallpaper("gradient");

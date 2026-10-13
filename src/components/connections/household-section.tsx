@@ -11,6 +11,7 @@ import SegmentedControl from "@/components/arc/segmented-control/segmented-contr
 import { Glass } from "@/components/glass/glass";
 import { createInvite, leaveHome, removeMember, revokeInvite, setGuestPages } from "@/lib/household-actions";
 import styles from "./connections.module.css";
+import { SettingsSection } from "./settings-section";
 
 export interface HouseholdMember {
   id: string;
@@ -55,8 +56,7 @@ export function HouseholdSection({ role, ownerName, members, invites, pages }: H
 
   if (role === "member") {
     return (
-      <section id="household" className={styles.section} aria-labelledby="household-title">
-        <div className={styles.sectionHeader}><div><h2 id="household-title" className={styles.sectionTitle}>Household</h2></div></div>
+      <SettingsSection id="household" title="Household">
         <Glass shape="panel" className={styles.group}>
           <div className={styles.row}>
             <Users className={styles.rowIcon} size={20} strokeWidth={1.75} aria-hidden="true" />
@@ -69,7 +69,7 @@ export function HouseholdSection({ role, ownerName, members, invites, pages }: H
             </div>
           </div>
         </Glass>
-      </section>
+      </SettingsSection>
     );
   }
 
@@ -83,13 +83,7 @@ export function HouseholdSection({ role, ownerName, members, invites, pages }: H
   };
 
   return (
-    <section id="household" className={styles.section} aria-labelledby="household-title">
-      <div className={styles.sectionHeader}>
-        <div>
-          <h2 id="household-title" className={styles.sectionTitle}>Household</h2>
-          <p className={styles.sectionDescription}>Members see and control everything and get alerts. Guests see only the pages you pick, and doors stay locked.</p>
-        </div>
-      </div>
+    <SettingsSection id="household" title="Household" description={<>Members see and control everything and get alerts. Guests see only the pages you pick, and doors stay locked.</>}>
       <Glass shape="panel" className={styles.group}>
         {members.map(member => (
           <div key={member.id} className={`${styles.row} ${member.role === "guest" ? styles.stacked : ""}`}>
@@ -139,6 +133,6 @@ export function HouseholdSection({ role, ownerName, members, invites, pages }: H
           </div>
         )}
       </Glass>
-    </section>
+    </SettingsSection>
   );
 }

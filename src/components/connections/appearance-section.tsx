@@ -6,6 +6,7 @@ import { BackgroundPicker } from "@/components/shell/background-picker";
 import { useHtmlPreference } from "@/components/shell/use-html-preference";
 import { ACCENTS, ACCENT_KEY, DEFAULT_ACCENT, type Accent } from "@/lib/theme";
 import styles from "./connections.module.css";
+import { SettingsSection } from "./settings-section";
 
 const capitalize = (value: string) => value[0].toUpperCase() + value.slice(1);
 
@@ -13,13 +14,7 @@ export function AppearanceSection() {
   const [accent, setAccent] = useHtmlPreference<Accent>(ACCENT_KEY, "accent", DEFAULT_ACCENT);
 
   return (
-    <section id="appearance" className={styles.section} aria-labelledby="appearance-title">
-      <div className={styles.sectionHeader}>
-        <div>
-          <h2 id="appearance-title" className={styles.sectionTitle}>Appearance</h2>
-          <p className={styles.sectionDescription}>Saved on this device. The dashboard has the same picker under Background.</p>
-        </div>
-      </div>
+    <SettingsSection id="appearance" title="Appearance" description={<>Saved on this device. The dashboard has the same picker under Background.</>}>
       <Glass shape="panel" className={styles.group}>
         <div className={`${styles.row} ${styles.stacked}`}>
           <div className={styles.rowText}>
@@ -38,6 +33,6 @@ export function AppearanceSection() {
           </div>
         </div>
       </Glass>
-    </section>
+    </SettingsSection>
   );
 }

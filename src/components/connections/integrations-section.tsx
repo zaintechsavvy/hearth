@@ -14,6 +14,7 @@ import { INTEGRATION_LABELS, type IntegrationKind } from "@/lib/integrations/typ
 import { AddIntegrationDialog } from "./add-integration-dialog";
 import { PairMatterDialog } from "./pair-matter-dialog";
 import styles from "./connections.module.css";
+import { SettingsSection } from "./settings-section";
 
 export interface IntegrationSummary {
   id: string;
@@ -36,14 +37,7 @@ export function IntegrationsSection({ integrations }: { integrations: Integratio
   };
 
   return (
-    <section id="connections" className={styles.section} aria-labelledby="integrations-title">
-      <div className={styles.sectionHeader}>
-        <div>
-          <h2 id="integrations-title" className={styles.sectionTitle}>Connections</h2>
-          <p className={styles.sectionDescription}>Where Hearth finds your devices.</p>
-        </div>
-        <Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>
-      </div>
+    <SettingsSection id="connections" title="Connections" description={<>Where Hearth finds your devices.</>} action={<Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>}>
 
       <Glass shape="panel" className={styles.group}>
         {integrations.length === 0 ? (
@@ -88,6 +82,6 @@ export function IntegrationsSection({ integrations }: { integrations: Integratio
 
       <AddIntegrationDialog open={adding} onOpenChange={setAdding} onAdded={() => { refresh(); router.push("/"); }} />
       <PairMatterDialog integration={pairing} onOpenChange={open => !open && setPairing(null)} onPaired={changed} />
-    </section>
+    </SettingsSection>
   );
 }

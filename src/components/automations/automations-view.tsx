@@ -46,7 +46,7 @@ export function AutomationsView() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
+      <header className={styles.header} data-on-wall>
         <div>
           <h1 className={styles.title}>Automations</h1>
           <p className={styles.lede}>Rules that run your home on their own. They never unlock a door or open a garage.</p>
@@ -74,7 +74,7 @@ export function AutomationsView() {
 
       {templates.length > 0 && (
         <section className={styles.templates} aria-labelledby="templates-title">
-          <h2 id="templates-title" className={styles.groupTitle}><Sparkles size={15} strokeWidth={1.75} aria-hidden="true" /> Start from an idea</h2>
+          <h2 id="templates-title" className={styles.groupTitle} data-on-wall><Sparkles size={15} strokeWidth={1.75} aria-hidden="true" /> Start from an idea</h2>
           <div className={styles.templateGrid}>
             {templates.map(({ template, rule }) => (
               <button key={template.id} type="button" className={`${styles.template}`} onClick={() => rule && setDraft(rule)}>
@@ -87,7 +87,7 @@ export function AutomationsView() {
       )}
 
       <section aria-labelledby="yours-title" className={styles.list}>
-        <h2 id="yours-title" className={styles.groupTitle}><Workflow size={15} strokeWidth={1.75} aria-hidden="true" /> Yours</h2>
+        <h2 id="yours-title" className={styles.groupTitle} data-on-wall><Workflow size={15} strokeWidth={1.75} aria-hidden="true" /> Yours</h2>
         {isLoading && !data ? <Glass shape="panel" className={styles.card}><Skeleton lines={3} label="Loading automations" /></Glass>
           : !data?.automations.length ? (
             <Glass shape="panel" className={styles.empty}>

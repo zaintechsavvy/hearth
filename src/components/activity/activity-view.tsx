@@ -72,7 +72,7 @@ export function ActivityView() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
+      <header className={styles.header} data-on-wall>
         <div>
           <h1 className={styles.title}>Activity</h1>
           <p className={styles.lede}>What happened at home, and who did it. Kept for 60 days.</p>
@@ -93,7 +93,7 @@ export function ActivityView() {
       ) : (
         [...days].map(([key, list]) => (
           <section key={key} className={styles.day} aria-label={dayLabel(new Date(key))}>
-            <h2 className={styles.dayTitle}>{dayLabel(new Date(key))}</h2>
+            <h2 className={styles.dayTitle} data-on-wall>{dayLabel(new Date(key))}</h2>
             <Glass shape="panel" className={styles.group}>
               <ol className={styles.list}>
                 {list.map(entry => {

@@ -10,7 +10,7 @@ export default async function AuthLayout({ children }: LayoutProps<"/">) {
   return (
     <div className={styles.page}>
       <Wallpaper />
-      <header className={styles.header}><Link href="/" aria-label="Hearth"><Logo /></Link></header>
+      <header className={styles.header} data-on-wall><Link href="/" aria-label="Hearth"><Logo /></Link></header>
       <main className={styles.main}>{children}</main>
     </div>
   );

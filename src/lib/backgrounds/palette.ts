@@ -17,12 +17,40 @@ export function hslToHex(hue: number, saturation: number, light: number) {
   return `#${[r, g, b].map(channel => Math.round((channel + m) * 255).toString(16).padStart(2, "0")).join("")}`;
 }
 
-/** A soft, harmonious set of four: analogous, split, or triadic around a random hue, light enough to sit behind glass. */
+/** Two shades of one colour, deep on top and light below, like a sky: calm, and never a rainbow. */
 export function shufflePalette(random: () => number = Math.random) {
-  const base = random() * 360;
-  const schemes = [[0, 28, -32, 180], [0, 150, 210, 30], [0, 120, 240, 60], [0, 18, 36, -20]];
-  const offsets = schemes[Math.floor(random() * schemes.length)];
-  return offsets.map((offset, index) => hslToHex(base + offset, 0.55 + random() * 0.3, index === 0 ? 0.9 : 0.74 + random() * 0.14));
+  const hue = random() * 360;
+  const saturation = 0.45 + random() * 0.25;
+  return [hslToHex(hue, saturation, 0.18 + random() * 0.1), hslToHex(hue + (random() - 0.5) * 24, saturation * 0.8, 0.72 + random() * 0.1)];
+}
+
+/** The colour halfway between two, for a middle stop that keeps a gradient's blend even. */
+export function mixHex(from: string, to: string) {
+  const a = parseInt(from.replace("#", ""), 16), b = parseInt(to.replace("#", ""), 16);
+  return `#${[16, 8, 0].map(shift => Math.round((((a >> shift) & 255) + ((b >> shift) & 255)) / 2).toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** WCAG relative luminance, 0 for black to 1 for white. */
+export function luminance(hex: string) {
+  const value = parseInt(hex.replace("#", ""), 16);
+  const [r, g, b] = [value >> 16, (value >> 8) & 255, value & 255].map(channel => {
+    const c = channel / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * Whether text drawn straight on this backdrop should be light. A smooth gradient runs top to bottom, and the
+ * greeting and page titles sit at the top, so its first colour counts most; a flowing one mixes everywhere.
+ * Mirrored in `THEME_BOOTSTRAP`.
+ */
+export function backdropIsDark(colors: string[], style: "smooth" | "flowing") {
+  if (colors.length === 0) return false;
+  const level = style === "smooth"
+    ? luminance(colors[0]) * 0.8 + luminance(colors[colors.length - 1]) * 0.2
+    : colors.reduce((sum, color) => sum + luminance(color), 0) / colors.length;
+  return level < 0.2;
 }
 
 /** The same colour for dark mode: much darker and a little calmer, so it reads as night rather than glare. */

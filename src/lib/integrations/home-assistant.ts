@@ -3,6 +3,7 @@ import {
   type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode,
 } from "@/lib/devices/types";
 import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
+import { unreachableMessage } from "./reach";
 import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type HistoryPoint, type IceCandidate, type IceServer, type Provider, type WebRtcAnswer } from "./types";
 
 export interface HassState {
@@ -190,7 +191,7 @@ export class HomeAssistantProvider implements Provider {
         headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" },
       });
     } catch {
-      throw new IntegrationError(`Could not reach Home Assistant at ${this.base.origin}.`);
+      throw new IntegrationError(unreachableMessage("Home Assistant", this.base));
     }
     if (response.status === 401) throw new IntegrationError("Home Assistant rejected the access token.");
     if (!response.ok) throw new IntegrationError(`Home Assistant answered with ${response.status} ${response.statusText}.`);
@@ -230,7 +231,7 @@ export class HomeAssistantProvider implements Provider {
         signal,
       });
     } catch {
-      throw new IntegrationError(`Could not reach Home Assistant at ${this.base.origin}.`);
+      throw new IntegrationError(unreachableMessage("Home Assistant", this.base));
     }
   }
 
@@ -321,7 +322,7 @@ export class HomeAssistantProvider implements Provider {
     try {
       return await fetch(new URL(`${path.slice(1)}${search}`, this.base), { cache: "no-store", signal });
     } catch {
-      throw new IntegrationError(`Could not reach Home Assistant at ${this.base.origin}.`);
+      throw new IntegrationError(unreachableMessage("Home Assistant", this.base));
     }
   }
 

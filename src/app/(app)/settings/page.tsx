@@ -9,7 +9,7 @@ import { CalendarsSection } from "@/components/connections/calendars-section";
 import { CamerasSection } from "@/components/connections/cameras-section";
 import { IntegrationsSection } from "@/components/connections/integrations-section";
 import { RoomsSection } from "@/components/connections/rooms-section";
-import { SettingsNav } from "@/components/connections/settings-nav";
+import { SettingsShell } from "@/components/connections/settings-shell";
 import { WallSection } from "@/components/connections/wall-section";
 import styles from "@/components/connections/connections.module.css";
 import type { CameraSource } from "@/lib/cameras/stream-relay";
@@ -50,11 +50,11 @@ export default async function ConnectionsPage() {
 
   return (
     <div className={styles.page}>
-      <header>
+      <header data-on-wall>
         <h1 className={styles.title}>Settings</h1>
-        <p className={styles.lede}>Connections, cameras, calendars, assistants, and how Hearth looks. Secrets are encrypted before they are stored.</p>
+        <p className={styles.lede}>Pick a section to open it. Passwords and keys are encrypted before they are stored.</p>
       </header>
-      <SettingsNav items={[
+      <SettingsShell items={[
         ...(owner ? [{ id: "connections", label: "Connections" }] : []),
         { id: "household", label: "Household" },
         { id: "rooms", label: "Rooms" },
@@ -64,7 +64,7 @@ export default async function ConnectionsPage() {
         { id: "appearance", label: "Appearance" },
         { id: "wall", label: "Wall tablet" },
         { id: "account", label: "Account" },
-      ]} />
+      ]}>
       {owner && <IntegrationsSection integrations={integrations.map(row => ({ id: row.id, name: row.name, kind: row.kind, ...publicConfig(row) }))} />}
       <HouseholdSection role={owner ? "owner" : "member"} ownerName={home.ownerName} members={members} invites={invites.map(item => ({ ...item, expiresAt: item.expiresAt.toISOString() }))} pages={preferences.pages.map(page => ({ id: page.id, name: page.name }))} />
       <RoomsSection />
@@ -75,6 +75,7 @@ export default async function ConnectionsPage() {
       <AppearanceSection />
       <WallSection />
       <AccountSection user={{ name: user.name, email: user.email }} />
+      </SettingsShell>
     </div>
   );
 }

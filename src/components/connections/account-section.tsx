@@ -5,14 +5,12 @@ import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
 import { Glass } from "@/components/glass/glass";
 import { authClient } from "@/lib/auth-client";
 import styles from "./connections.module.css";
+import { SettingsSection } from "./settings-section";
 
 export function AccountSection({ user }: { user: { name: string; email: string } }) {
   const router = useRouter();
   return (
-    <section id="account" className={styles.section} aria-labelledby="account-title">
-      <div className={styles.sectionHeader}>
-        <h2 id="account-title" className={styles.sectionTitle}>Account</h2>
-      </div>
+    <SettingsSection id="account" title="Account">
       <Glass shape="panel" className={styles.group}>
         <div className={styles.row}>
           <div className={styles.rowText}>
@@ -35,6 +33,6 @@ export function AccountSection({ user }: { user: { name: string; email: string }
           </div>
         </div>
       </Glass>
-    </section>
+    </SettingsSection>
   );
 }

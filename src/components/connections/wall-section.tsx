@@ -12,6 +12,7 @@ import { installPrompt } from "@/components/shell/service-worker";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { DEFAULT_WALL, WALL_KEY, type WallSettings } from "@/lib/wall";
 import styles from "./connections.module.css";
+import { SettingsSection } from "./settings-section";
 
 const WAKE_CLASSES = new Set(["motion", "occupancy", "door", "opening", "garage"]);
 const standalone = () => matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches;
@@ -26,13 +27,7 @@ export function WallSection() {
   const sensors = (home?.devices ?? []).filter(device => device.kind === "binary_sensor" && WAKE_CLASSES.has(device.sensorClass));
 
   return (
-    <section id="wall" className={styles.section} aria-labelledby="wall-title">
-      <div className={styles.sectionHeader}>
-        <div>
-          <h2 id="wall-title" className={styles.sectionTitle}>Wall tablet</h2>
-          <p className={styles.sectionDescription}>For a screen that stays on the wall. These settings belong to this device only.</p>
-        </div>
-      </div>
+    <SettingsSection id="wall" title="Wall tablet" description={<>For a screen that stays on the wall. These settings belong to this device only.</>}>
       <Glass shape="panel" className={styles.group}>
         <div className={styles.row}>
           <Tablet className={styles.rowIcon} size={20} strokeWidth={1.75} aria-hidden="true" />
@@ -78,6 +73,6 @@ export function WallSection() {
           {canInstall && !installed && <div className={styles.rowActions}><Button variant="secondary" onClick={() => void installPrompt.show()}>Install</Button></div>}
         </div>
       </Glass>
-    </section>
+    </SettingsSection>
   );
 }

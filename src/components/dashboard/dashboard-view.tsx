@@ -369,7 +369,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const suggestions = suggestedTiles(sources);
   return (
     <div className={styles.dashboard}>
-      <header className={styles.intro}>
+      <header className={styles.intro} data-on-wall>
         <div>
           <h1 className={styles.title}>{greeting(hour, userName)}</h1>
           <p className={styles.summary}>
@@ -479,7 +479,7 @@ function Welcome({ onCreated, onWidgets }: { onCreated: () => void; onWidgets: (
   const [creating, setCreating] = useState(false);
   return (
     <section className={styles.welcome} aria-labelledby="welcome-title">
-      <div className={styles.welcomeHeading}>
+      <div className={styles.welcomeHeading} data-on-wall>
         <h1 id="welcome-title" className={styles.title}>Welcome to Hearth</h1>
         <p className={styles.summary}>Start with a sample home, or bring in your own devices.</p>
       </div>

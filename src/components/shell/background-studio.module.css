@@ -13,6 +13,10 @@
   gap: var(--space-5);
 }
 
+.editor {
+  gap: var(--space-6);
+}
+
 .section {
   gap: var(--space-3);
 }
@@ -74,6 +78,37 @@
   font-size: var(--text-sm);
 }
 
+/* The greeting sits straight on the backdrop, as on the dashboard, so its colour shows whether text will read. */
+.previewGreeting {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  display: grid;
+  gap: 1px;
+  color: var(--foreground);
+}
+
+.previewGreeting b {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+}
+
+.previewGreeting small {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.preview[data-tone="dark"] .previewGreeting {
+  color: oklch(98.5% 0 0);
+  text-shadow: 0 1px 12px oklch(0% 0 0 / .25);
+}
+
+.preview[data-tone="dark"] .previewGreeting small {
+  color: oklch(98.5% 0 0 / .86);
+}
+
 .previewTiles {
   position: absolute;
   inset: auto var(--space-4) var(--space-4);
@@ -82,36 +117,26 @@
   gap: var(--space-2);
 }
 
-.previewTile,
-.previewWide {
+.previewTile {
   display: grid;
   align-content: end;
   gap: 2px;
-  aspect-ratio: 1;
+  aspect-ratio: 1.15;
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-xs);
 }
 
-.previewWide {
-  grid-column: span 3;
-  aspect-ratio: auto;
-  min-height: 44px;
-  align-content: center;
-}
-
-.previewTile b,
-.previewWide b {
+.previewTile b {
   font-size: var(--text-sm);
   font-weight: 500;
 }
 
-.previewTile small,
-.previewWide small {
+.previewTile small {
   color: var(--text-secondary);
 }
 
 .previewTile[data-on] {
-  background: linear-gradient(180deg, oklch(97% .03 85 / .9), oklch(88% .1 80 / .9));
+  background: linear-gradient(180deg, oklch(97% .03 85 / .92), oklch(88% .1 80 / .92));
   color: oklch(25% .02 80);
 }
 
@@ -119,95 +144,55 @@
   color: oklch(35% .03 80);
 }
 
-.row {
+.samples {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: var(--space-2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
 }
 
-.colors {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.color {
-  position: relative;
-}
-
-.removeColor {
-  position: absolute;
-  top: -6px;
-  right: -6px;
+.sample {
   display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--foreground);
-  color: var(--background);
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-standard);
-}
-
-.color:hover .removeColor,
-.removeColor:focus-visible {
-  opacity: 1;
-}
-
-@media (hover: none) {
-  .removeColor { opacity: 1; }
-}
-
-.addColor {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 0 var(--space-3);
-  min-height: 44px;
-  border-radius: var(--radius-control);
-  box-shadow: inset 0 0 0 1.5px var(--border);
+  gap: var(--space-2);
   color: var(--text-secondary);
   font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.addColor:hover {
+.sample[aria-checked="true"],
+.sample:hover {
   color: var(--foreground);
 }
 
-.palettes {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
-.palette {
-  display: grid;
-  gap: var(--space-1);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  text-align: start;
-}
-
-.palette:hover {
-  color: var(--foreground);
-}
-
-.paletteSwatch {
-  height: 28px;
+.sampleSwatch {
+  aspect-ratio: 4 / 3;
   border-radius: var(--radius-control);
   box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .08);
-  transition: transform var(--duration-spring) var(--ease-spring);
+  transition: transform var(--duration-spring) var(--ease-spring), box-shadow var(--duration-fast) var(--ease-standard);
 }
 
-.palette:active .paletteSwatch {
+.sample:active .sampleSwatch {
   transform: scale(.96);
 }
 
-.switches {
+.sample[aria-checked="true"] .sampleSwatch {
+  box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .08), 0 0 0 2px var(--surface-raised), 0 0 0 3.5px var(--foreground);
+}
+
+.stops {
   display: grid;
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+
+.stopToggle {
+  justify-self: start;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Stays reachable while the controls scroll, on frosted glass so nothing shows through behind it. */
@@ -216,7 +201,7 @@
   bottom: calc(var(--space-6) * -1);
   z-index: 2;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-3);
   margin-inline: calc(var(--space-6) * -1);
@@ -225,11 +210,6 @@
   background: color-mix(in oklab, var(--surface-raised) 82%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
   backdrop-filter: blur(16px) saturate(160%);
-}
-
-.note {
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
 }
 
 .photos {
@@ -250,5 +230,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .paletteSwatch, .removeColor { transition: none; }
+  .sampleSwatch { transition: none; }
 }

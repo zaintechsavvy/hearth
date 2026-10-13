@@ -16,6 +16,7 @@ import { Glass, glassSheetClass } from "@/components/glass/glass";
 import { addAssistant, removeAssistant, setDefaultAssistant } from "@/lib/actions";
 import { ASSISTANT_PROVIDERS, ASSISTANT_PROVIDER_IDS, type AssistantProvider } from "@/lib/assistant/providers";
 import styles from "./connections.module.css";
+import { SettingsSection } from "./settings-section";
 
 export interface AssistantSummary {
   id: string;
@@ -46,14 +47,7 @@ export function AssistantsSection({ assistants }: { assistants: AssistantSummary
   }
 
   return (
-    <section id="assistants" className={styles.section} aria-labelledby="assistants-title">
-      <div className={styles.sectionHeader}>
-        <div>
-          <h2 id="assistants-title" className={styles.sectionTitle}>AI assistants</h2>
-          <p className={styles.sectionDescription}>Bring your own API key, or point at a model you run yourself. Requests go from this server straight to the provider.</p>
-        </div>
-        <Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>
-      </div>
+    <SettingsSection id="assistants" title="AI assistants" description={<>Bring your own API key, or point at a model you run yourself. Requests go from this server straight to the provider.</>} action={<Button variant="secondary" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add</Button>}>
 
       <Glass shape="panel" className={styles.group}>
         {assistants.length === 0 ? (
@@ -107,6 +101,6 @@ export function AssistantsSection({ assistants }: { assistants: AssistantSummary
           </form>
         </DialogContent>
       </Dialog>
-    </section>
+    </SettingsSection>
   );
 }

@@ -1,3 +1,4 @@
+import { unreachableMessage } from "../reach";
 import { IntegrationError } from "../types";
 
 export interface MatterNode {
@@ -119,7 +120,7 @@ export class MatterServerClient {
           fail(error instanceof Error ? error.message : "The Matter server refused to stream updates.");
         });
       });
-      socket.addEventListener("error", () => fail(`Could not reach the Matter server at ${this.url}.`));
+      socket.addEventListener("error", () => fail(unreachableMessage("the Matter server", new URL(this.url))));
       socket.addEventListener("close", () => {
         if (this.socket === socket) this.socket = null;
         this.nodes.clear();

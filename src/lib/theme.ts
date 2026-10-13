@@ -13,11 +13,15 @@ export type Wallpaper = (typeof WALLPAPERS)[number];
 export type PresetWallpaper = (typeof PRESET_WALLPAPERS)[number];
 export type MeshWallpaper = (typeof MESH_WALLPAPERS)[number];
 
+export type GradientStyle = "smooth" | "flowing";
+
 export interface CustomGradient {
   id: string;
   name: string;
-  /** Two to five colours as #rrggbb. */
+  /** Two or three colours as #rrggbb, top first. */
   colors: string[];
+  /** A still top-to-bottom blend, or a slowly moving mesh. Gradients saved before styles existed are flowing. */
+  style?: GradientStyle;
   /** 0 holds still, 1 drifts briskly. */
   motion: number;
   /** 0 keeps soft blobs, 1 folds them into swirls. */
@@ -39,25 +43,20 @@ export interface PhotoBackground {
   dim: number;
 }
 
-export const MAX_GRADIENT_COLORS = 5;
+export const MAX_GRADIENT_COLORS = 3;
 export const GRADIENT_KEY = "hearth-gradient";
 export const GRADIENTS_KEY = "hearth-gradients";
 export const PHOTO_KEY = "hearth-photo";
 
-/** Starting points for the gradient studio; each can be edited freely. */
-export const GRADIENT_PALETTES: { name: string; colors: string[] }[] = [
-  { name: "Lagoon", colors: ["#d4f1f4", "#75e6da", "#189ab4", "#a7c7e7"] },
-  { name: "Peach", colors: ["#ffe5d9", "#ffcad4", "#f4acb7", "#fff1e6"] },
-  { name: "Nebula", colors: ["#e0c3fc", "#8ec5fc", "#c2a0f7", "#f9d5ff"] },
-  { name: "Citrus", colors: ["#fff3b0", "#ffd166", "#ffadad", "#caffbf"] },
-  { name: "Mint", colors: ["#e8f8f5", "#b8f2e6", "#aed9e0", "#d8f3dc"] },
-  { name: "Ember", colors: ["#ffd6a5", "#ff9b85", "#ff6b6b", "#ffc9de"] },
-  { name: "Glacier", colors: ["#eef4ff", "#c9d6ff", "#e2e2e2", "#b8c6db"] },
-  { name: "Midnight", colors: ["#141e30", "#243b55", "#3a1c71", "#1f4068"] },
+/** Starting points for the gradient studio: one colour each, deep on top and light below. */
+export const GRADIENT_SAMPLES: { name: string; colors: [string, string] }[] = [
+  { name: "Ocean", colors: ["#0f2a5c", "#7fb2f0"] },
+  { name: "Forest", colors: ["#1d3b2a", "#a9c5a0"] },
+  { name: "Sunset", colors: ["#9a3412", "#fdba74"] },
 ];
 
 export const DEFAULT_GRADIENT: CustomGradient = {
-  id: "default", name: "My gradient", colors: GRADIENT_PALETTES[2].colors, motion: 0.3, swirl: 0.35, distortion: 0.8, grain: false, dimAtNight: true,
+  id: "default", name: GRADIENT_SAMPLES[0].name, colors: GRADIENT_SAMPLES[0].colors, style: "smooth", motion: 0.25, swirl: 0.15, distortion: 0.5, grain: false, dimAtNight: true,
 };
 export const DEFAULT_WALLPAPER: Wallpaper = "studio";
 
@@ -84,4 +83,4 @@ export const ACCENT_KEY = "hearth-accent";
 export const WALLPAPER_KEY = "hearth-wallpaper";
 
 /** Runs before first paint so the page never flashes the wrong theme or backdrop. Keep it dependency free. */
-export const THEME_BOOTSTRAP = `(()=>{try{var r=document.documentElement,s=localStorage,p=s.getItem("${THEME_KEY}")||"system",d=p==="dark"||(p==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.dataset.theme=d?"dark":"light";var a=s.getItem("${ACCENT_KEY}");if(a)r.dataset.accent=a;var w=s.getItem("${WALLPAPER_KEY}");if(w)r.dataset.wallpaper=w;if(w==="gradient"){var g=JSON.parse(s.getItem("${GRADIENT_KEY}")||"null");var c=g&&(d&&g.dimAtNight&&g.night||g.colors);if(c&&c.length)for(var i=0;i<4;i++)r.style.setProperty("--m"+(i+1),c[i%c.length])}if(w==="photo"){var f=JSON.parse(s.getItem("${PHOTO_KEY}")||"null");if(f&&/^[\\w-]+$/.test(f.id)){r.style.setProperty("--photo","url(/api/backgrounds/"+f.id+")");r.style.setProperty("--photo-blur",(+f.blur||0)+"px");r.style.setProperty("--photo-dim",String(+f.dim||0))}}}catch(e){}})()`;
+export const THEME_BOOTSTRAP = `(()=>{try{var r=document.documentElement,s=localStorage,p=s.getItem("${THEME_KEY}")||"system",d=p==="dark"||(p==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.dataset.theme=d?"dark":"light";var a=s.getItem("${ACCENT_KEY}");if(a)r.dataset.accent=a;var w=s.getItem("${WALLPAPER_KEY}");if(w)r.dataset.wallpaper=w;if(w==="gradient"){var g=JSON.parse(s.getItem("${GRADIENT_KEY}")||"null");var c=g&&(d&&g.dimAtNight&&g.night||g.colors);if(c&&c.length){for(var i=0;i<4;i++)r.style.setProperty("--m"+(i+1),c[i%c.length]);var t=g.style||"flowing",L=function(h){var n=parseInt(h.slice(1),16);return [n>>16,n>>8&255,n&255].map(function(v){v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)}).reduce(function(x,v,j){return x+v*[.2126,.7152,.0722][j]},0)},v=t==="smooth"?L(c[0])*.8+L(c[c.length-1])*.2:c.reduce(function(x,h){return x+L(h)},0)/c.length;r.dataset.gradientStyle=t;r.style.setProperty("--gradient","linear-gradient(180deg,"+c.join(",")+")");r.style.setProperty("--g-last",c[c.length-1]);if(v<.2)r.dataset.backdrop="dark"}}if(w==="photo"){var f=JSON.parse(s.getItem("${PHOTO_KEY}")||"null");if(f&&/^[\\w-]+$/.test(f.id)){r.style.setProperty("--photo","url(/api/backgrounds/"+f.id+")");r.style.setProperty("--photo-blur",(+f.blur||0)+"px");r.style.setProperty("--photo-dim",String(+f.dim||0))}}}catch(e){}})()`;

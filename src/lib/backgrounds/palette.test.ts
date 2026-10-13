@@ -1,16 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { darkenForNight, hexToHsl, hslToHex, paletteFromPixels, shufflePalette } from "./palette";
+import { backdropIsDark, darkenForNight, hexToHsl, hslToHex, luminance, paletteFromPixels, shufflePalette } from "./palette";
 
 describe("palette helpers", () => {
   it("round trips hsl", () => {
     expect(hslToHex(...hexToHsl("#3a86ff"))).toBe("#3a86ff");
   });
 
-  it("shuffles four light colours", () => {
+  it("shuffles a deep shade over a light one of the same colour", () => {
     let seed = 0.42;
-    const palette = shufflePalette(() => (seed = (seed * 9301 + 49297) % 233280 / 233280));
-    expect(palette).toHaveLength(4);
-    for (const hex of palette) expect(hexToHsl(hex)[2]).toBeGreaterThan(0.6);
+    const [top, bottom] = shufflePalette(() => (seed = (seed * 9301 + 49297) % 233280 / 233280));
+    expect(hexToHsl(top)[2]).toBeLessThan(0.3);
+    expect(hexToHsl(bottom)[2]).toBeGreaterThan(0.7);
+    expect(Math.abs(hexToHsl(top)[0] - hexToHsl(bottom)[0]) % 360).toBeLessThan(13);
+  });
+
+  it("measures luminance", () => {
+    expect(luminance("#000000")).toBe(0);
+    expect(luminance("#ffffff")).toBeCloseTo(1);
+  });
+
+  it("calls a navy to sky gradient dark and a pastel one light", () => {
+    expect(backdropIsDark(["#0f2a5c", "#7fb2f0"], "smooth")).toBe(true);
+    expect(backdropIsDark(["#e0c3fc", "#8ec5fc"], "smooth")).toBe(false);
+    expect(backdropIsDark(["#e3f3df", "#cbe9da"], "flowing")).toBe(false);
   });
 
   it("darkens for night", () => {

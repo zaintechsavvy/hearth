@@ -11,6 +11,7 @@ import { useHome } from "@/components/dashboard/use-home";
 import { Glass } from "@/components/glass/glass";
 import { addRoom, removeRoom, renameRoom, reorderRooms } from "@/lib/actions";
 import styles from "./connections.module.css";
+import { SettingsSection } from "./settings-section";
 
 /** Every room Hearth shows: the ones you made and the ones your integrations reported, renamed, ordered, or removed here. */
 export function RoomsSection() {
@@ -38,13 +39,7 @@ export function RoomsSection() {
   };
 
   return (
-    <section id="rooms" className={styles.section} aria-labelledby="rooms-title">
-      <div className={styles.sectionHeader}>
-        <div>
-          <h2 id="rooms-title" className={styles.sectionTitle}>Rooms</h2>
-          <p className={styles.sectionDescription}>Rename, reorder, or add rooms. Changes stay in Hearth; Home Assistant keeps its areas. Move a device from its tile&apos;s Customize.</p>
-        </div>
-      </div>
+    <SettingsSection id="rooms" title="Rooms" description={<>Rename, reorder, or add rooms. Changes stay in Hearth; Home Assistant keeps its areas. Move a device from its tile&apos;s Customize.</>}>
       <Glass shape="panel" className={styles.group}>
         {rooms.length === 0 && (
           <div className={styles.row}>
@@ -71,6 +66,6 @@ export function RoomsSection() {
           </div>
         </form>
       </Glass>
-    </section>
+    </SettingsSection>
   );
 }

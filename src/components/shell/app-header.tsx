@@ -35,7 +35,7 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
 
   return (
     <header className={styles.header} data-wall-hide>
-      <span className={styles.brandRow}>
+      <span className={styles.brandRow} data-on-wall>
         <Link href="/dashboard" className={styles.brand} aria-label="Hearth home"><Logo /></Link>
         {role !== "owner" && <span className={styles.household} title={role === "guest" ? "You are a guest" : "You share this home"}>{ownerName.split(" ")[0]}&apos;s home{role === "guest" ? " · Guest" : ""}</span>}
       </span>
@@ -52,7 +52,7 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
           })}
         </nav>
       </GlassSurface>
-      <div className={styles.account}>
+      <div className={styles.account} data-on-wall>
         <CommandMenuButton className={styles.search} />
         <UserMenu
           user={user}
