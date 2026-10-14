@@ -77,6 +77,16 @@ export function describeAction(device: Device, command: DeviceCommand) {
       return `Volume ${command.value}%`;
     case "output":
       return `Play on ${command.output}`;
+    case "shuffle":
+      return command.on ? "Shuffle on" : "Shuffle off";
+    case "repeat":
+      return `Repeat ${command.mode}`;
+    case "join":
+      return "Group speakers";
+    case "unjoin":
+      return "Play alone";
+    case "playMedia":
+      return "Play a favourite";
   }
 }
 

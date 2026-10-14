@@ -124,6 +124,7 @@ export interface SceneDevice extends DeviceBase {
 }
 
 export type MediaState = "playing" | "paused" | "idle" | "off";
+export type RepeatMode = "off" | "all" | "one";
 
 export interface MediaPlayerDevice extends DeviceBase {
   kind: "media_player";
@@ -141,7 +142,18 @@ export interface MediaPlayerDevice extends DeviceBase {
   /** Where it can play: speakers, Bluetooth devices, or a receiver's inputs, as the integration names them. */
   outputs: string[];
   output: string | null;
-  can: { pause: boolean; seek: boolean; next: boolean; previous: boolean; volume: boolean; output: boolean };
+  shuffle: boolean | null;
+  repeat: RepeatMode | null;
+  /** Players playing together, leader first, as device ids; empty when it plays alone. */
+  group: string[];
+  /** What is playing, as the player can be asked to play it again. */
+  media: { id: string; type: string } | null;
+  can: {
+    pause: boolean; seek: boolean; next: boolean; previous: boolean; volume: boolean; output: boolean;
+    shuffle: boolean; repeat: boolean; group: boolean; play: boolean;
+    /** It can say what plays next, as Music Assistant players can. */
+    queue: boolean;
+  };
 }
 
 export type Device =
@@ -164,7 +176,13 @@ export type DeviceCommand =
   | { type: "media"; action: "play" | "pause" | "next" | "previous" }
   | { type: "seek"; position: number }
   | { type: "volume"; value: number }
-  | { type: "output"; output: string };
+  | { type: "output"; output: string }
+  | { type: "shuffle"; on: boolean }
+  | { type: "repeat"; mode: RepeatMode }
+  /** Adds players to this one's group; `members` are device ids. */
+  | { type: "join"; members: string[] }
+  | { type: "unjoin" }
+  | { type: "playMedia"; id: string; mediaType: string };
 
 /** Changes that open the home up. The UI confirms them, and the assistant leaves them to a person. */
 export function isSensitive(device: Device, command: DeviceCommand) {
@@ -242,6 +260,16 @@ export function applyCommand<T extends Device>(device: T, command: DeviceCommand
       return device.kind === "media_player" ? { ...device, volume: clamp(command.value, 0, 100) } : device;
     case "output":
       return device.kind === "media_player" ? { ...device, output: command.output } : device;
+    case "shuffle":
+      return device.kind === "media_player" ? { ...device, shuffle: command.on } : device;
+    case "repeat":
+      return device.kind === "media_player" ? { ...device, repeat: command.mode } : device;
+    case "join":
+      return device.kind === "media_player" ? { ...device, group: [...new Set([device.id, ...device.group, ...command.members])] } : device;
+    case "unjoin":
+      return device.kind === "media_player" ? { ...device, group: [] } : device;
+    case "playMedia":
+      return device.kind === "media_player" ? { ...device, state: "playing" } : device;
   }
 }
 

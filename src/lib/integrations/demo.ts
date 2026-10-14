@@ -25,12 +25,27 @@ const TRACKS = [
   { title: "Paper Planes in June", artist: "Margo Vale", duration: 245, artwork: "/demo/covers/2.svg" },
   { title: "Night Bus", artist: "The Quiet Hours", duration: 198, artwork: "/demo/covers/3.svg" },
   { title: "Fieldnotes", artist: "Ada Rowe", duration: 176, artwork: "/demo/covers/4.svg" },
-];
+].map((track, index) => ({ ...track, media: { id: `demo:track:${index}`, type: "music" } }));
 
-function playTrack(device: MediaPlayerDevice, step: number): MediaPlayerDevice {
-  const index = TRACKS.findIndex(track => track.title === device.title);
-  const track = TRACKS[(index + step + TRACKS.length) % TRACKS.length];
-  return { ...device, ...track, position: 0, positionAt: new Date().toISOString() };
+const trackIndex = (device: MediaPlayerDevice) => Math.max(0, TRACKS.findIndex(track => track.title === device.title));
+
+function playTrack(device: MediaPlayerDevice, step: number, at = trackIndex(device) + step): MediaPlayerDevice {
+  const track = TRACKS[((at % TRACKS.length) + TRACKS.length) % TRACKS.length];
+  return { ...device, ...track, state: "playing", position: 0, positionAt: new Date().toISOString() };
+}
+
+const DEMO_CAN = { pause: true, seek: true, next: true, previous: true, volume: true, shuffle: true, repeat: true, group: true, play: true, queue: true };
+
+/** Grouped players play the leader's track, so every member follows a change to it. */
+function followLeader(home: DemoHome, leaderId: string) {
+  const leader = home.devices.get(leaderId);
+  if (leader?.kind !== "media_player") return;
+  for (const memberId of leader.group.slice(1)) {
+    const member = home.devices.get(memberId);
+    if (member?.kind !== "media_player") continue;
+    const { title, artist, artwork, duration, position, positionAt, state, media, shuffle, repeat } = leader;
+    home.devices.set(memberId, { ...member, title, artist, artwork, duration, position, positionAt, state, media, shuffle, repeat, group: leader.group });
+  }
 }
 
 export function seedDemoDevices(integrationId: string): Device[] {
@@ -54,8 +69,13 @@ export function seedDemoDevices(integrationId: string): Device[] {
     { ...base("evening", "Evening", null), kind: "scene", variant: "scene" },
     {
       ...base("music", "Music", "Living room"), kind: "media_player", state: "playing", ...TRACKS[0], position: 52, positionAt: new Date().toISOString(),
-      volume: 35, outputs: ["Living room speaker", "Kitchen speaker", "AirPods Pro", "Bose SoundLink Flex"], output: "Living room speaker",
-      can: { pause: true, seek: true, next: true, previous: true, volume: true, output: true },
+      volume: 35, outputs: ["Living room speaker", "AirPods Pro", "Bose SoundLink Flex"], output: "Living room speaker", shuffle: false, repeat: "off", group: [],
+      can: { ...DEMO_CAN, output: true },
+    },
+    {
+      ...base("kitchen-speaker", "Kitchen speaker", "Kitchen"), kind: "media_player", state: "idle", title: null, artist: null, artwork: null, position: null, positionAt: null, duration: null,
+      volume: 50, outputs: [], output: null, shuffle: false, repeat: "off", group: [], media: null,
+      can: { ...DEMO_CAN, output: false },
     },
   ];
 }
@@ -65,7 +85,11 @@ function simulate(home: DemoHome, now: number) {
   const seconds = (now - home.updatedAt) / 1000;
   home.updatedAt = now;
   for (const [id, device] of home.devices) {
-    if (device.kind === "media_player" && device.state === "playing" && device.duration && (livePosition(device, now) ?? 0) >= device.duration) home.devices.set(id, playTrack(device, 1));
+    if (device.kind === "media_player" && device.group[0] !== undefined && device.group[0] !== id) continue;
+    if (device.kind === "media_player" && device.state === "playing" && device.duration && (livePosition(device, now) ?? 0) >= device.duration) {
+      home.devices.set(id, device.repeat === "one" ? playTrack(device, 0) : playTrack(device, 1));
+      followLeader(home, id);
+    }
     if (device.kind !== "thermostat" || device.current === null) continue;
     const goal = device.mode === "off" || device.target === null ? AMBIENT : device.target;
     const heats = device.mode !== "off" && device.mode !== "cool" && goal > device.current + 0.05;
@@ -134,16 +158,49 @@ export class DemoProvider implements Provider {
     return { devices: [...this.home().devices.values()], unsupported: {} };
   }
 
+  /** The demo playlist around the current track: the ones before it as recently played, and the next one up. */
+  async mediaQueue(nativeId: string) {
+    const device = this.home().devices.get(deviceId(this.integrationId, nativeId));
+    if (device?.kind !== "media_player" || !device.title) return { recent: [], next: null };
+    const at = trackIndex(device);
+    const pick = (index: number) => { const track = TRACKS[(index + TRACKS.length) % TRACKS.length]; return { title: track.title, artist: track.artist, media: track.media }; };
+    return { recent: [pick(at - 1), pick(at - 2), pick(at - 3)], next: pick(at + 1) };
+  }
+
+  private playMedia(home: DemoHome, device: MediaPlayerDevice, command: DeviceCommand) {
+    const leaderId = device.group[0] ?? device.id;
+    const leader = (home.devices.get(leaderId) ?? device) as MediaPlayerDevice;
+    if (command.type === "media" && (command.action === "next" || command.action === "previous")) {
+      // Previous restarts a track a few seconds in, like a real player, and goes back one only near the start.
+      const back = command.action === "previous" && (livePosition(leader) ?? 0) > 3 ? 0 : -1;
+      home.devices.set(leaderId, playTrack(leader, command.action === "next" ? 1 : back));
+    } else if (command.type === "playMedia") {
+      const at = TRACKS.findIndex(track => track.media.id === command.id);
+      if (at >= 0) home.devices.set(leaderId, playTrack(leader, 0, at));
+    } else if (command.type === "join") {
+      home.devices.set(device.id, applyCommand(device, command));
+    } else if (command.type === "unjoin") {
+      const rest = device.group.filter(member => member !== device.id);
+      home.devices.set(device.id, { ...device, group: [] });
+      for (const member of rest) {
+        const other = home.devices.get(member);
+        if (other?.kind === "media_player") home.devices.set(member, { ...other, group: rest.length > 1 ? rest : [] });
+      }
+      return;
+    } else {
+      home.devices.set(command.type === "volume" || command.type === "output" ? device.id : leaderId, applyCommand(command.type === "volume" || command.type === "output" ? device : leader, command));
+    }
+    followLeader(home, leaderId);
+  }
+
   async execute(nativeId: string, command: DeviceCommand) {
     const home = this.home();
     const id = deviceId(this.integrationId, nativeId);
     const device = home.devices.get(id);
     if (!device) throw new IntegrationError("That demo device does not exist.");
     await new Promise(resolve => setTimeout(resolve, 180));
-    const skip = device.kind === "media_player" && command.type === "media" && (command.action === "next" || command.action === "previous");
-    // Previous restarts a track a few seconds in, like a real player, and goes back one only near the start.
-    const back = skip && command.action === "previous" && (livePosition(device as MediaPlayerDevice) ?? 0) > 3 ? 0 : -1;
-    home.devices.set(id, skip ? playTrack(device as MediaPlayerDevice, command.action === "next" ? 1 : back) : applyCommand(device, command));
+    if (device.kind === "media_player") this.playMedia(home, device, command);
+    else home.devices.set(id, applyCommand(device, command));
     notify(home);
     if (device.kind === "cover" && command.type === "cover" && command.action !== "stop") {
       setTimeout(() => {

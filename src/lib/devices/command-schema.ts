@@ -18,4 +18,9 @@ export const deviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("seek"), position: z.number().min(0).max(86_400) }),
   z.object({ type: z.literal("volume"), value: z.number().min(0).max(100) }),
   z.object({ type: z.literal("output"), output: z.string().min(1).max(200) }),
+  z.object({ type: z.literal("shuffle"), on: z.boolean() }),
+  z.object({ type: z.literal("repeat"), mode: z.enum(["off", "all", "one"]) }),
+  z.object({ type: z.literal("join"), members: z.array(z.string().min(1).max(300)).min(1).max(20) }),
+  z.object({ type: z.literal("unjoin") }),
+  z.object({ type: z.literal("playMedia"), id: z.string().min(1).max(500), mediaType: z.string().min(1).max(60) }),
 ]);

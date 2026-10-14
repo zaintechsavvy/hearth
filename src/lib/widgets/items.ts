@@ -76,6 +76,13 @@ export const ITEM_SCHEMAS = {
     /** The latest scan from a tracker such as 17TRACK, when one follows this package. */
     track: z.object({ status: z.string(), info: z.string(), location: z.string(), at: z.string().nullable() }).nullable().default(null),
   }),
+  /** A track or playlist saved from a music player, to play again from any player. */
+  favorite: z.object({
+    title: z.string().trim().min(1).max(200),
+    artist: z.string().trim().max(200).default(""),
+    contentId: z.string().min(1).max(500),
+    contentType: z.string().min(1).max(60),
+  }),
   plant: z.object({
     name: name("plant"),
     emoji: z.string().max(8).default("🪴"),

@@ -1,5 +1,5 @@
 import {
-  clamp, deviceId, type BinarySensorClass, type CoverClass, type CoverState, type Device, type DeviceCommand, type EventClass, type LockState, type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode, type MediaPlayerDevice, type MediaState,
+  clamp, deviceId, type BinarySensorClass, type CoverClass, type CoverState, type Device, type DeviceCommand, type EventClass, type LockState, type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode, type MediaPlayerDevice, type MediaState, type RepeatMode, parseDeviceId,
 } from "@/lib/devices/types";
 import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
 import { unreachableMessage } from "./reach";
@@ -154,7 +154,8 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
 }
 
 /** Home Assistant's `MediaPlayerEntityFeature` bits that Hearth uses. */
-const MEDIA = { pause: 1, seek: 2, volume: 4, previous: 16, next: 32, output: 2048 } as const;
+const MEDIA = { pause: 1, seek: 2, volume: 4, previous: 16, next: 32, play: 512, output: 2048, shuffle: 32_768, repeat: 262_144, group: 524_288 } as const;
+const REPEAT: Record<string, RepeatMode> = { off: "off", all: "all", one: "one" };
 const MEDIA_STATES: Record<string, MediaState> = { playing: "playing", buffering: "playing", paused: "paused", on: "idle", idle: "idle", standby: "idle", off: "off" };
 
 /** A short key for a cover picture, so its address changes with the track and the browser can cache it. */
@@ -172,6 +173,8 @@ function mapMediaPlayer(base: Pick<MediaPlayerDevice, "id" | "integrationId" | "
   const outputs = Array.isArray(attributes.source_list) ? attributes.source_list.filter((item): item is string => typeof item === "string") : [];
   const level = num(attributes.volume_level);
   const has = (bit: number) => (features & bit) === bit;
+  const members = Array.isArray(attributes.group_members) ? attributes.group_members.filter((item): item is string => typeof item === "string") : [];
+  const contentId = str(attributes.media_content_id), contentType = str(attributes.media_content_type);
   return {
     ...base,
     kind: "media_player",
@@ -185,12 +188,56 @@ function mapMediaPlayer(base: Pick<MediaPlayerDevice, "id" | "integrationId" | "
     volume: level === null ? null : Math.round(level * 100),
     outputs,
     output: str(attributes.source),
-    can: { pause: has(MEDIA.pause), seek: has(MEDIA.seek), next: has(MEDIA.next), previous: has(MEDIA.previous), volume: has(MEDIA.volume) && level !== null, output: has(MEDIA.output) && outputs.length > 0 },
+    shuffle: typeof attributes.shuffle === "boolean" ? attributes.shuffle : null,
+    repeat: REPEAT[str(attributes.repeat) ?? ""] ?? null,
+    group: members.length > 1 ? members.map(member => deviceId(base.integrationId, member)) : [],
+    media: contentId && contentType ? { id: contentId, type: contentType } : null,
+    can: {
+      pause: has(MEDIA.pause), seek: has(MEDIA.seek), next: has(MEDIA.next), previous: has(MEDIA.previous), volume: has(MEDIA.volume) && level !== null,
+      output: has(MEDIA.output) && outputs.length > 0, shuffle: has(MEDIA.shuffle), repeat: has(MEDIA.repeat), group: has(MEDIA.group), play: has(MEDIA.play),
+      queue: "mass_player_type" in attributes,
+    },
   };
 }
 
 function roundTo(value: number, step: number) {
   return Math.round(value / step) * step;
+}
+
+export interface PlayedTrack {
+  title: string;
+  artist: string | null;
+  media: { id: string; type: string } | null;
+}
+
+export interface MediaQueue {
+  recent: PlayedTrack[];
+  next: PlayedTrack | null;
+}
+
+/** Each track a player moved through, newest first, without repeats or the one playing now. */
+export function recentTracks(states: HassState[], current: string | null, limit = 8): PlayedTrack[] {
+  const seen = new Set(current ? [current] : []);
+  const tracks: PlayedTrack[] = [];
+  for (const state of [...states].reverse()) {
+    const title = str(state.attributes.media_title);
+    if (!title || seen.has(title)) continue;
+    seen.add(title);
+    const id = str(state.attributes.media_content_id), type = str(state.attributes.media_content_type);
+    tracks.push({ title, artist: str(state.attributes.media_artist), media: id && type ? { id, type } : null });
+    if (tracks.length === limit) break;
+  }
+  return tracks;
+}
+
+function queuedTrack(item: Record<string, unknown> | null): PlayedTrack | null {
+  if (!item) return null;
+  const media = (item.media_item ?? {}) as Record<string, unknown>;
+  const title = str(media.name) ?? str(item.name);
+  if (!title) return null;
+  const artists = Array.isArray(media.artists) ? media.artists as Record<string, unknown>[] : [];
+  const uri = str(media.uri);
+  return { title, artist: artists.length ? str(artists[0].name) : null, media: uri ? { id: uri, type: "music" } : null };
 }
 
 export interface TrackedPackage {
@@ -379,6 +426,22 @@ export class HomeAssistantProvider implements Provider {
     }
   }
 
+  /**
+   * What played on a media player today, from Home Assistant's history, and what plays next where Music Assistant
+   * runs it. The history keeps each track's content id, so a recent track can be played again.
+   */
+  async mediaQueue(entityId: string, current: string | null, askQueue: boolean): Promise<MediaQueue> {
+    if (!entityId.startsWith("media_player.")) throw new IntegrationError("That device is not a media player.");
+    const since = new Date(Date.now() - 86_400_000).toISOString();
+    const [history, queue] = await Promise.all([
+      this.request<HassState[][]>(`api/history/period/${encodeURIComponent(since)}?filter_entity_id=${encodeURIComponent(entityId)}`).catch(() => []),
+      askQueue
+        ? this.request<{ service_response?: Record<string, { next_item?: Record<string, unknown> | null }> }>("api/services/music_assistant/get_queue?return_response", { method: "POST", body: JSON.stringify({ entity_id: entityId }) }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+    return { recent: recentTracks(history[0] ?? [], current), next: queuedTrack(queue?.service_response?.[entityId]?.next_item ?? null) };
+  }
+
   /** The 17TRACK integration's config entry, when Home Assistant has one set up. */
   async packageTracker() {
     const template = "{% set found = integration_entities('seventeentrack') %}{{ config_entry_id(found[0]) if found else '' }}";
@@ -457,6 +520,18 @@ export class HomeAssistantProvider implements Provider {
         return void await this.call("media_player", "volume_set", { ...target, volume_level: clamp(command.value, 0, 100) / 100 });
       case "output":
         return void await this.call("media_player", "select_source", { ...target, source: command.output });
+      case "shuffle":
+        return void await this.call("media_player", "shuffle_set", { ...target, shuffle: command.on });
+      case "repeat":
+        return void await this.call("media_player", "repeat_set", { ...target, repeat: command.mode });
+      case "join": {
+        const members = command.members.map(parseDeviceId).filter(member => member?.integrationId === this.integrationId).map(member => member!.nativeId);
+        return void await this.call("media_player", "join", { ...target, group_members: members });
+      }
+      case "unjoin":
+        return void await this.call("media_player", "unjoin", target);
+      case "playMedia":
+        return void await this.call("media_player", "play_media", { ...target, media_content_id: command.id, media_content_type: command.mediaType });
     }
   }
 

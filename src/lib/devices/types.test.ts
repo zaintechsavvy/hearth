@@ -19,7 +19,7 @@ describe("devices", () => {
 });
 
 describe("livePosition", () => {
-  const base = { id: "a:m", integrationId: "a", name: "Music", room: null, available: true, kind: "media_player" as const, title: "T", artist: null, artwork: null, duration: 100, volume: null, outputs: [], output: null, can: { pause: true, seek: true, next: true, previous: true, volume: false, output: false } };
+  const base = { id: "a:m", integrationId: "a", name: "Music", room: null, available: true, kind: "media_player" as const, title: "T", artist: null, artwork: null, duration: 100, volume: null, outputs: [], output: null, shuffle: null, repeat: null, group: [], media: null, can: { pause: true, seek: true, next: true, previous: true, volume: false, output: false, shuffle: false, repeat: false, group: false, play: false, queue: false } };
 
   it("runs the clock forward while playing and holds it while paused", () => {
     const at = Date.parse("2026-10-14T10:00:00Z");

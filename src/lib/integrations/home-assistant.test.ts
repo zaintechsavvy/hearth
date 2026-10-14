@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapHassState } from "./home-assistant";
+import { mapHassState, recentTracks } from "./home-assistant";
 
 describe("mapHassState", () => {
   it("maps a dimmable light to a 0 to 100 brightness", () => {
@@ -63,6 +63,7 @@ describe("media players", () => {
       friendly_name: "Spotify", supported_features: 1 | 2 | 4 | 16 | 32 | 2048, media_title: "Night Bus", media_artist: "The Quiet Hours",
       entity_picture: "/api/media_player_proxy/media_player.spotify?token=secret&cache=ab12", media_position: 30, media_position_updated_at: "2026-10-14T10:00:00Z",
       media_duration: 198, volume_level: 0.42, source_list: ["Kitchen", "AirPods Pro"], source: "Kitchen",
+      shuffle: true, repeat: "one", group_members: ["media_player.spotify", "media_player.kitchen"], media_content_id: "spotify:track:1", media_content_type: "music",
     },
   };
 
@@ -76,6 +77,15 @@ describe("media players", () => {
   it("serves the cover through Hearth without passing on the picture token", () => {
     const device = mapHassState("ha", spotify, "C");
     expect(device?.kind === "media_player" && device.artwork).toBe("/api/devices/ha%3Amedia_player.spotify/artwork?v=ab12");
+  });
+
+  it("maps shuffle, repeat, the speaker group, and what can play again", () => {
+    expect(mapHassState("ha", spotify, "C")).toMatchObject({ shuffle: true, repeat: "one", group: ["ha:media_player.spotify", "ha:media_player.kitchen"], media: { id: "spotify:track:1", type: "music" } });
+  });
+
+  it("lists recently played tracks newest first, without the current one", () => {
+    const state = (title: string) => ({ entity_id: "media_player.spotify", state: "playing", attributes: { media_title: title, media_artist: "A", media_content_id: `id:${title}`, media_content_type: "music" } });
+    expect(recentTracks([state("One"), state("Two"), state("Two"), state("Three")], "Three").map(track => track.title)).toEqual(["Two", "One"]);
   });
 
   it("offers no outputs or volume the player cannot use", () => {
