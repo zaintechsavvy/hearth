@@ -47,6 +47,21 @@
   box-shadow: inset 0 1px 0 oklch(100% 0 0), 0 16px 40px -14px oklch(0% 0 0 / .6);
 }
 
+/* A tile set to glow fills with its own colour while on, so it reads from across the room. */
+.tile.tile[data-glow][data-on] {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--tile-color) 34%, oklch(99% 0 0)), color-mix(in oklab, var(--tile-color) 52%, oklch(96% 0 0)));
+  border-color: color-mix(in oklab, var(--tile-color) 40%, oklch(100% 0 0));
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .8), 0 16px 40px -14px color-mix(in oklab, var(--tile-color) 60%, transparent);
+}
+
+:root[data-theme="dark"] .tile.tile[data-glow][data-on] {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--tile-color) 60%, oklch(92% 0 0)), color-mix(in oklab, var(--tile-color) 74%, oklch(80% 0 0)));
+}
+
+.tile[data-glow][data-on] .icon {
+  color: color-mix(in oklab, var(--tile-color) 55%, oklch(20% 0 0));
+}
+
 .tile[data-unavailable] {
   opacity: .5;
 }

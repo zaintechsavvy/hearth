@@ -15,9 +15,11 @@ interface DeviceTileProps {
   interactive?: boolean;
   onOpenControls?: () => void;
   onOpenHistory?: () => void;
+  /** What a press and hold does; null for nothing, undefined for the tile's own default. */
+  onHold?: (() => void) | null;
 }
 
-export function DeviceTile({ device, onOpenControls, onOpenHistory, ...props }: DeviceTileProps) {
-  if (device.kind === "light" || device.kind === "switch" || device.kind === "fan") return <ToggleTile device={device} onOpenControls={onOpenControls} {...props} />;
-  return <StateTile device={device} onOpenHistory={onOpenHistory} {...props} />;
+export function DeviceTile({ device, onOpenControls, onOpenHistory, onHold, ...props }: DeviceTileProps) {
+  if (device.kind === "light" || device.kind === "switch" || device.kind === "fan") return <ToggleTile device={device} onOpenControls={onOpenControls} onHold={onHold} {...props} />;
+  return <StateTile device={device} onOpenHistory={onOpenHistory} onHold={onHold} {...props} />;
 }

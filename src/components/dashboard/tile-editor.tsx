@@ -12,10 +12,12 @@ import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dial
 import { Input } from "@/components/arc/input/input";
 import { RadioCards } from "@/components/arc/radio-cards/radio-cards";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
+import { Select } from "@/components/arc/select/select";
+import { Switch } from "@/components/arc/switch/switch";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { glassSheetClass } from "@/components/glass/glass";
 import { KIND_INFO } from "@/lib/dashboard/catalog";
-import { isWidget, SIZE_OPTIONS, spanOf, TILE_COLORS, TILE_ICONS, type TileColor, type TileConfig, type TileIcon, type TileKind, type TileSize } from "@/lib/dashboard/layout";
+import { isWidget, SIZE_OPTIONS, spanOf, TILE_COLORS, TILE_ICONS, type TileColor, type TileConfig, type TileHold, type TileIcon, type TileKind, type TileOptions, type TileSize } from "@/lib/dashboard/layout";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { RoomPicker } from "./room-picker";
 import { TILE_ICON_COMPONENTS, iconLabel } from "./tiles/tile-icons";
@@ -46,6 +48,8 @@ export interface EditableTile {
   adjustable: boolean;
   icon: TileIcon | null;
   color: TileColor | null;
+  /** How this tile can be tuned: what holding it may do, and whether it has an icon, colour, and status line. */
+  tuning?: { holds: { value: string; label: string }[]; styled: boolean };
 }
 
 interface TileEditorProps {
@@ -165,6 +169,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
                 </section>
               </>
             )}
+            {tile.tuning && <TuningSection tile={tile} tuning={tile.tuning} onChange={onChange} />}
             <div className={styles.actions}>
               <div className={styles.extra}>
                 <ConfirmMorph label="Remove tile" prompt="Remove this tile?" pendingLabel="Removing" doneLabel="Removed" onConfirm={() => { onRemove(); close(false); }} />
@@ -221,6 +226,29 @@ function LinkSection({ tile, onChange, onRelink, rooms, onIdentity }: Pick<TileE
           onBlur={event => onChange({ label: event.target.value.trim() || undefined })} />
       )}
       {tile.identity && <IdentityFields key={tile.identity.id} identity={tile.identity} rooms={rooms} onIdentity={onIdentity} />}
+    </section>
+  );
+}
+
+/** Settings that belong to this one tile: its own name, what it shows, how it lights up, and what holding it does. */
+function TuningSection({ tile, tuning, onChange }: { tile: EditableTile; tuning: NonNullable<EditableTile["tuning"]>; onChange: TileEditorProps["onChange"] }) {
+  const { config } = tile;
+  const options = config.options ?? {};
+  const set = (patch: Partial<TileOptions>) => onChange({ options: { ...options, ...patch } });
+  const holdDefault = tuning.holds.some(hold => hold.value === "controls") ? "controls" : "none";
+  return (
+    <section aria-labelledby="tile-tuning" className={styles.section}>
+      <h3 id="tile-tuning" className={styles.heading}>On this tile</h3>
+      <Input label="Name on this tile" placeholder={tile.linkedName ?? undefined} defaultValue={config.label ?? ""} maxLength={60}
+        description="Only this tile. Leave it empty to use the device's name."
+        onBlur={event => onChange({ label: event.target.value.trim() || undefined })} />
+      <div className={styles.switches}>
+        <Switch label="Show the room" checked={!options.hideRoom} onCheckedChange={on => set({ hideRoom: on ? undefined : true })} />
+        {tuning.styled && <Switch label="Show the status" checked={!options.hideStatus} onCheckedChange={on => set({ hideStatus: on ? undefined : true })} />}
+        {tuning.styled && config.size !== "1x2" && <Switch label="Glow in its colour when on" checked={Boolean(options.glow)} onCheckedChange={on => set({ glow: on || undefined })} />}
+      </div>
+      <Select label="When held" value={options.hold ?? holdDefault} onValueChange={value => set({ hold: value === holdDefault ? undefined : value as TileHold })}
+        options={[...tuning.holds, { value: "none", label: "Nothing" }]} />
     </section>
   );
 }

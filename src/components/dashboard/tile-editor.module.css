@@ -192,3 +192,8 @@
   text-decoration-color: var(--border-strong);
   text-underline-offset: 3px;
 }
+
+.switches {
+  display: grid;
+  gap: var(--space-3);
+}

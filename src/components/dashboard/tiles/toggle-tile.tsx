@@ -22,6 +22,8 @@ interface ToggleTileProps {
   interactive?: boolean;
   /** Opens colour, white, and brightness controls; lights only. */
   onOpenControls?: () => void;
+  /** Overrides the press and hold; null turns it off. */
+  onHold?: (() => void) | null;
 }
 
 const levelOf = (device: ToggleDevice) => device.kind === "light" ? device.brightness : device.kind === "fan" ? device.speed : 0;
@@ -34,7 +36,7 @@ export function describeDevice(device: ToggleDevice, shownLevel = levelOf(device
 }
 
 /** Lights, switches, and fans: tap to switch, with a vertical level in the tall and large templates. */
-export function ToggleTile({ device, config, onCommand, interactive = true, onOpenControls }: ToggleTileProps) {
+export function ToggleTile({ device, config, onCommand, interactive = true, onOpenControls, onHold }: ToggleTileProps) {
   const [error, setError] = useState<string | null>(null);
   const style = defaultStyle(device);
   const Icon = TILE_ICON_COMPONENTS[config.icon ?? style.icon];
@@ -42,7 +44,7 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
   const disabled = !device.available || !interactive;
   const spin = device.kind === "fan" && device.on ? { "--spin-duration": `${Math.max(0.5, 3 - device.speed / 100 * 2.4)}s` } as CSSProperties : undefined;
   const controls = device.kind === "light" && hasControls(device) && interactive && device.available ? onOpenControls : undefined;
-  const press = useLongPress(controls);
+  const press = useLongPress(onHold === undefined ? controls : onHold ?? undefined);
   const tint = device.kind === "light" ? lightTint(device) : null;
   const colorable = device.kind === "light" && (device.supportsColor || device.temperatureRange !== null);
 
@@ -58,13 +60,13 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
       <Icon size={size} strokeWidth={1.75} />
     </span>
   );
-  const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-tinted": tint ? "" : undefined, style: tint ? { "--tile-color": tint } as CSSProperties : undefined };
+  const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-tinted": tint ? "" : undefined, "data-glow": config.options?.glow || undefined, style: tint ? { "--tile-color": tint } as CSSProperties : undefined };
+  const detail = [device.room, config.options?.hideStatus ? null : describeDevice(device)].filter(Boolean).join(" · ");
   const swatch = controls && colorable && (
     <button type="button" className={`${styles.swatch} ${glassClass("pill")}`} onClick={controls} aria-label={`Colour and brightness for ${device.name}`} title="Colour and brightness">
       <span className={styles.swatchDot} style={tint ? { "--swatch": tint } as CSSProperties : undefined} aria-hidden="true" />
     </button>
   );
-  const room = device.room ? `${device.room} · ` : "";
 
   if ((config.size === "1x2" || config.size === "2x2") && hasLevel(device)) {
     const label = `${device.name} ${device.kind === "fan" ? "speed" : "brightness"}`;
@@ -92,7 +94,7 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
           <span className={styles.badge}>{icon(24)}</span>
           <span className={styles.text}>
             <span className={styles.name}>{device.name}</span>
-            <span className={`${styles.meta} ${error ? styles.error : ""}`}>{error ?? `${room}${describeDevice(device)}`}</span>
+            {(error || detail) && <span className={`${styles.meta} ${error ? styles.error : ""}`}>{error ?? detail}</span>}
           </span>
         </button>
         <LevelPill label={label} value={levelOf(device)} on={device.on} disabled={disabled} onToggle={toggle} onCommit={commitLevel} className={level.sidePill} />
@@ -125,7 +127,7 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
           <span className={styles.badge}>{icon(22)}</span>
           <span className={styles.text}>
             <span className={styles.name}>{device.name}</span>
-            <span className={`${styles.meta} ${error ? styles.error : ""}`}>{error ?? `${room}${describeDevice(device)}`}</span>
+            {(error || detail) && <span className={`${styles.meta} ${error ? styles.error : ""}`}>{error ?? detail}</span>}
           </span>
         </>
       )}

@@ -12,6 +12,7 @@ import {
   isSensitive, type BinarySensorDevice, type CoverDevice, type DeviceCommand, type EventDevice, type LockDevice, type SceneDevice, type SensorDevice,
 } from "@/lib/devices/types";
 import { LevelPill } from "./level-pill";
+import { useLongPress } from "./use-long-press";
 import { MiniTrend } from "./mini-trend";
 import { TILE_ICON_COMPONENTS } from "./tile-icons";
 import styles from "./tile.module.css";
@@ -26,6 +27,8 @@ interface StateTileProps {
   interactive?: boolean;
   /** Readings open their history when tapped. */
   onOpenHistory?: () => void;
+  /** What a press and hold does; null or undefined for nothing. */
+  onHold?: (() => void) | null;
 }
 
 const LOCK_TEXT: Record<LockDevice["state"], string> = { locked: "Locked", unlocked: "Unlocked", locking: "Locking", unlocking: "Unlocking", jammed: "Jammed", open: "Open", unknown: "Unknown" };
@@ -138,7 +141,7 @@ function SensitiveConfirm({ device, state, onConfirm, onClose }: { device: State
   );
 }
 
-export function StateTile({ device, config, onCommand, interactive = true, onOpenHistory }: StateTileProps) {
+export function StateTile({ device, config, onCommand, interactive = true, onOpenHistory, onHold }: StateTileProps) {
   const now = useSyncExternalStore(subscribeMinute, minute, () => 0);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<DeviceCommand | null>(null);
@@ -162,8 +165,9 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   };
   const request = (next: DeviceCommand) => isSensitive(device, next) ? setPending(next) : run(next);
 
-  const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-template": "toggle", "data-on": active || undefined };
-  const meta = error ?? (ran ? "Done" : `${device.room && config.size !== "1x1" ? `${device.room} · ` : ""}${text}`);
+  const press = useLongPress(onHold ?? undefined);
+  const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-template": "toggle", "data-on": active || undefined, "data-glow": config.options?.glow || undefined, ...press };
+  const meta = error ?? (ran ? "Done" : [device.room && config.size !== "1x1" ? device.room : null, config.options?.hideStatus && device.kind !== "sensor" ? null : text].filter(Boolean).join(" · "));
   const isReading = device.kind === "sensor";
   const confirm = pending && <SensitiveConfirm device={device} state={text} onConfirm={() => run(pending)} onClose={() => setPending(null)} />;
 

@@ -31,7 +31,7 @@ import { DoorbellBanner } from "./doorbell-banner";
 import type { Candidate } from "./entity-chooser";
 import { HomeGrid } from "./home-grid";
 import { IntegrationCameraTile } from "./integration-camera-tile";
-import { LightControls } from "./light-controls";
+import { hasControls, LightControls } from "./light-controls";
 import { HistorySheet } from "./history-sheet";
 import { SceneEditor } from "./scene-editor";
 import { Thermostat, formatTemperature } from "./thermostat";
@@ -258,7 +258,10 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     const integration = home.integrations.find(item => item.id === device.integrationId);
     return integration ? INTEGRATION_LABELS[integration.kind] : "The integration";
   };
-  const editable = customizingTile ? editableTile(customizingTile, resolve(customizingTile), nameOf(customizingTile), sourceLabel) : null;
+  const editable = customizingTile ? editableTile(customizingTile, resolve(customizingTile), nameOf(customizingTile), sourceLabel, [
+    ...home.scenes.map(scene => ({ value: `scene:${scene.id}`, name: scene.name })),
+    ...home.devices.filter(device => device.kind === "scene").map(device => ({ value: `device:${device.id}`, name: device.name })),
+  ]) : null;
   const customizingLink = customizingTile ? resolve(customizingTile) : null;
   const customizingScene = customizingLink?.type === "scene" ? customizingLink.scene : null;
 
@@ -294,11 +297,22 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     if (!linked) return <PlaceholderTile tile={tile} missing={tile.link !== null} interactive={interactive} onLink={() => setDialog({ mode: "link", tile })} />;
     if (linked.type === "scene") return <SceneTile scene={linked.scene} config={tile} interactive={interactive} onRun={() => runScene(linked.scene)} />;
     if (linked.type === "camera") return preview ? <CameraPreview name={linked.camera.name} /> : <CameraTile camera={linked.camera} fill />;
-    const device = linked.device;
+    const source = linked.device;
+    // A tile can carry its own name and leave the room off; commands still go to the device itself.
+    const device = { ...source, name: tile.label?.trim() || source.name, room: tile.options?.hideRoom ? null : source.room } as typeof source;
+    const hold = tile.options?.hold;
+    const scene = hold?.startsWith("scene:") ? home.scenes.find(item => `scene:${item.id}` === hold) : undefined;
+    const runs = hold?.startsWith("device:") ? devices.get(hold.slice("device:".length)) : undefined;
+    const onHold = !interactive || hold === undefined ? undefined
+      : scene ? () => void runScene(scene)
+      : runs?.kind === "scene" ? () => void send(runs, { type: "activate" }).catch(() => {})
+      : hold === "history" ? () => setCharting(source.id)
+      : hold === "controls" && source.kind === "light" ? () => setControlling(source.id)
+      : null;
     if (device.kind === "thermostat") return <Thermostat device={device} onCommand={command => send(device, command)} onOpenHistory={interactive ? () => setCharting(device.id) : undefined} />;
     if (device.kind === "camera") return preview ? <CameraPreview name={device.name} /> : <IntegrationCameraTile camera={device} />;
     if (device.kind === "media_player") return <MediaTile tileId={tile.id} device={device} layout={tile.size === "4x2" ? "player" : "bar"} interactive={interactive} onCommand={command => send(device, command)} />;
-    return <DeviceTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} onOpenControls={() => setControlling(device.id)} onOpenHistory={() => setCharting(device.id)} />;
+    return <DeviceTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} onOpenControls={() => setControlling(device.id)} onOpenHistory={() => setCharting(device.id)} onHold={onHold} />;
   };
 
   const charted = charting ? devices.get(charting) : undefined;
@@ -452,7 +466,7 @@ function mergeFiltered(all: TileConfig[], changed: TileConfig[]) {
   return all.map(tile => ids.has(tile.id) ? queue.shift() ?? tile : tile);
 }
 
-function editableTile(tile: TileConfig, linked: Linked | null, name: string, sourceLabel: (device: Device) => string): EditableTile {
+function editableTile(tile: TileConfig, linked: Linked | null, name: string, sourceLabel: (device: Device) => string, scenes: { value: string; name: string }[]): EditableTile {
   const info = KIND_INFO[tile.kind];
   const base = { config: tile, kind: tile.kind, name, linkedName: null as string | null, adjustable: true, icon: null, color: null };
   if (isWidget(tile.kind)) return { ...base, linkedName: tile.kind === "weather" ? tile.options?.place?.name ?? null : null };
@@ -464,9 +478,15 @@ function editableTile(tile: TileConfig, linked: Linked | null, name: string, sou
   }
   const device = linked.device;
   const identity = { id: device.id, name: device.name, sourceName: device.sourceName, room: device.room, sourceRoom: device.sourceRoom, roomEditable: true, source: sourceLabel(device) };
-  if (!isStyled(device.kind)) return { ...base, linkedName: device.name, identity, adjustable: false };
+  const holds = [
+    ...(device.kind === "light" && hasControls(device) ? [{ value: "controls", label: "Open colour and brightness" }] : []),
+    ...(device.kind === "sensor" ? [{ value: "history", label: "Show history" }] : []),
+    ...scenes.map(scene => ({ value: scene.value, label: `Run ${scene.name}` })),
+  ];
+  const tuning = { tuning: { holds, styled: isStyled(device.kind) } };
+  if (!isStyled(device.kind)) return { ...base, ...tuning, linkedName: device.name, identity, adjustable: false };
   const style = defaultStyle(device);
-  return { ...base, linkedName: device.name, identity, adjustable: hasLevel(device), icon: tile.icon ?? style.icon, color: tile.color ?? style.color };
+  return { ...base, ...tuning, linkedName: device.name, identity, adjustable: hasLevel(device), icon: tile.icon ?? style.icon, color: tile.color ?? style.color };
 }
 
 function Welcome({ onCreated, onWidgets }: { onCreated: () => void; onWidgets: () => void }) {

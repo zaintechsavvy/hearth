@@ -167,6 +167,19 @@ export class DemoProvider implements Provider {
     return { recent: [pick(at - 1), pick(at - 2), pick(at - 3)], next: pick(at + 1) };
   }
 
+  /** The demo's Evening scene: low warm lights, the porch on, and the coffee machine off. */
+  private evening(home: DemoHome) {
+    const set = (nativeId: string, command: DeviceCommand) => {
+      const id = deviceId(this.integrationId, nativeId);
+      const target = home.devices.get(id);
+      if (target) home.devices.set(id, applyCommand(target, command));
+    };
+    set("kitchen-pendants", { type: "brightness", value: 30 });
+    set("living-lamp", { type: "brightness", value: 25 });
+    set("porch", { type: "power", on: true });
+    set("coffee", { type: "power", on: false });
+  }
+
   private playMedia(home: DemoHome, device: MediaPlayerDevice, command: DeviceCommand) {
     const leaderId = device.group[0] ?? device.id;
     const leader = (home.devices.get(leaderId) ?? device) as MediaPlayerDevice;
@@ -200,6 +213,7 @@ export class DemoProvider implements Provider {
     if (!device) throw new IntegrationError("That demo device does not exist.");
     await new Promise(resolve => setTimeout(resolve, 180));
     if (device.kind === "media_player") this.playMedia(home, device, command);
+    else if (device.kind === "scene" && nativeId === "evening") this.evening(home);
     else home.devices.set(id, applyCommand(device, command));
     notify(home);
     if (device.kind === "cover" && command.type === "cover" && command.action !== "stop") {

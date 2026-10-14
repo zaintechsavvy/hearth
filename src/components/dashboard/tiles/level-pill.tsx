@@ -5,6 +5,8 @@ import { clamp } from "@/lib/devices/types";
 import styles from "./level-pill.module.css";
 
 const DRAG_THRESHOLD = 4;
+/** A press held this long without moving is a hold, which the tile handles, not a tap that toggles. Matches `useLongPress`. */
+const HOLD_MS = 450;
 const KEY_STEPS: Record<string, number> = { ArrowUp: 5, ArrowRight: 5, ArrowDown: -5, ArrowLeft: -5, PageUp: 25, PageDown: -25 };
 
 interface LevelPillProps {
@@ -25,7 +27,7 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
   const [drag, setDrag] = useState<number | null>(null);
   const [sent, setSent] = useState<number | null>(null);
   const commits = useRef(0);
-  const gesture = useRef<{ y: number; from: number; moved: boolean } | null>(null);
+  const gesture = useRef<{ y: number; from: number; moved: boolean; at: number } | null>(null);
   const shown = drag ?? sent ?? (on ? value : 0);
 
   function send(level: number) {
@@ -37,7 +39,7 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
   function down(event: PointerEvent<HTMLDivElement>) {
     if (disabled || event.button !== 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    gesture.current = { y: event.clientY, from: shown, moved: false };
+    gesture.current = { y: event.clientY, from: shown, moved: false, at: event.timeStamp };
   }
 
   function move(event: PointerEvent<HTMLDivElement>) {
@@ -49,12 +51,12 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
     setDrag(clamp(Math.round(current.from + delta / event.currentTarget.clientHeight * 100), 0, 100));
   }
 
-  function up() {
+  function up(event: PointerEvent<HTMLDivElement>) {
     const current = gesture.current;
     gesture.current = null;
     if (!current) return;
     if (current.moved && drag !== null) send(drag);
-    else onToggle();
+    else if (event.timeStamp - current.at < HOLD_MS) onToggle();
     setDrag(null);
   }
 

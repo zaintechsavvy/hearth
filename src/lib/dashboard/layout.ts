@@ -38,7 +38,16 @@ export interface TileOptions {
   calendars?: string[];
   /** Countdown and Wi-Fi: the one item this tile shows. */
   itemId?: string;
+  /** Device tiles: leave the room or the status line off this tile. */
+  hideRoom?: boolean;
+  hideStatus?: boolean;
+  /** Device tiles: fill with the tile's colour while on, instead of white. */
+  glow?: boolean;
+  /** What a press and hold does: a light's controls, a reading's history, a Hearth scene (`scene:<id>`), a scene from a connection (`device:<id>`), or nothing. */
+  hold?: TileHold;
 }
+
+export type TileHold = "controls" | "history" | "none" | `scene:${string}` | `device:${string}`;
 
 /** One tile someone put on their dashboard. */
 export interface TileConfig {
@@ -49,7 +58,7 @@ export interface TileConfig {
   size: TileSize;
   icon?: TileIcon;
   color?: TileColor;
-  /** A name for a tile that is not linked yet, such as "Front door". */
+  /** The tile's own name: for a tile not linked yet, or to call a linked device something else on this tile only. */
   label?: string;
   options?: TileOptions;
 }
