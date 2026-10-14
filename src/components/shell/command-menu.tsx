@@ -1,10 +1,7 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import {
-  CalendarDays, Clapperboard, DoorOpen, House, LayoutGrid, Lightbulb, Lock, Moon, Palette, Plug, Plus, Search, Settings, Sparkles, Sun, Timer, Warehouse, Wind,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarDays, Clapperboard, DoorOpen, House, LayoutGrid, Lightbulb, Lock, Moon, Music, Palette, Plug, Plus, Search, Settings, Sparkles, Sun, Timer, type LucideIcon, Warehouse, Wind } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { CommandPalette, type CommandItem } from "@/components/arc/command-palette/command-palette";
@@ -23,7 +20,7 @@ export const ADD_TILE_EVENT = "hearth-add-tile";
 const OPEN_EVENT = "hearth-command-menu";
 export const openCommandMenu = () => window.dispatchEvent(new Event(OPEN_EVENT));
 
-const KIND_ICONS: Partial<Record<Device["kind"], LucideIcon>> = { light: Lightbulb, switch: Plug, fan: Wind, lock: Lock, cover: Warehouse, scene: Clapperboard };
+const KIND_ICONS: Partial<Record<Device["kind"], LucideIcon>> = { light: Lightbulb, switch: Plug, fan: Wind, lock: Lock, cover: Warehouse, scene: Clapperboard, media_player: Music };
 const SETTINGS = [
   { id: "connections", label: "Connections" }, { id: "rooms", label: "Rooms" }, { id: "cameras", label: "Cameras" },
   { id: "calendars", label: "Calendars" }, { id: "alerts", label: "Alerts" }, { id: "appearance", label: "Appearance" }, { id: "assistants", label: "Assistants" },
@@ -80,6 +77,9 @@ function deviceCommand(device: Device): { label: string; command: DeviceCommand 
       return device.state === "closed" ? null : { label: `Close ${device.name}`, command: { type: "cover", action: "close" } };
     case "scene":
       return { label: `Run ${device.name}`, command: { type: "activate" } };
+    case "media_player":
+      if (device.state === "off") return null;
+      return device.state === "playing" ? { label: `Pause ${device.name}`, command: { type: "media", action: "pause" } } : { label: `Play ${device.name}`, command: { type: "media", action: "play" } };
     default:
       return null;
   }

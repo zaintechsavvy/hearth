@@ -20,6 +20,7 @@ export const KIND_INFO: Record<TileKind, KindInfo> = {
   camera: { label: "Camera", description: "A live view", icon: "camera", color: "graphite" },
   event: { label: "Doorbell", description: "When it last rang, with an alert", icon: "bell-ring", color: "rose" },
   scene: { label: "Scene", description: "Set several things at once", icon: "clapperboard", color: "violet" },
+  media_player: { label: "Music", description: "What is playing, and the speaker or Bluetooth device it plays on", icon: "music", color: "rose" },
   weather: { label: "Weather", description: "Now and the days ahead for any city", icon: "sun", color: "blue" },
   calendar: { label: "Calendar", description: "What is coming up, from Google Calendar or any iCal feed", icon: "calendar", color: "rose" },
   reminders: { label: "Reminders", description: "A short list to check off", icon: "list-checks", color: "amber" },
@@ -34,13 +35,13 @@ export const KIND_INFO: Record<TileKind, KindInfo> = {
 };
 
 export const ADDABLE_KINDS: TileKind[] = [
-  "light", "switch", "fan", "thermostat", "lock", "cover", "camera", "event", "binary_sensor", "sensor", "scene",
+  "light", "switch", "fan", "thermostat", "lock", "cover", "camera", "media_player", "event", "binary_sensor", "sensor", "scene",
   "weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants",
 ];
 
 /** Widgets grouped for the gallery, under the devices. */
 export const GALLERY_SECTIONS: { title: string; kinds: TileKind[] }[] = [
-  { title: "Devices", kinds: ["light", "switch", "fan", "thermostat", "lock", "cover", "camera", "event", "binary_sensor", "sensor", "scene"] },
+  { title: "Devices", kinds: ["light", "switch", "fan", "thermostat", "lock", "cover", "camera", "media_player", "event", "binary_sensor", "sensor", "scene"] },
   { title: "Everyday", kinds: ["weather", "calendar", "clock", "countdown", "timers"] },
   { title: "Household", kinds: ["bins", "medications", "reminders", "notes", "plants", "wifi"] },
 ];

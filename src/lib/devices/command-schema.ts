@@ -14,4 +14,8 @@ export const deviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("cover"), action: z.enum(["open", "close", "stop"]) }),
   z.object({ type: z.literal("coverPosition"), value: z.number().min(0).max(100) }),
   z.object({ type: z.literal("activate") }),
+  z.object({ type: z.literal("media"), action: z.enum(["play", "pause", "next", "previous"]) }),
+  z.object({ type: z.literal("seek"), position: z.number().min(0).max(86_400) }),
+  z.object({ type: z.literal("volume"), value: z.number().min(0).max(100) }),
+  z.object({ type: z.literal("output"), output: z.string().min(1).max(200) }),
 ]);

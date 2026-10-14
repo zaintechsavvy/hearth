@@ -1,4 +1,4 @@
-import { applyCommand, deviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
+import { applyCommand, deviceId, livePosition, type Device, type DeviceCommand, type MediaPlayerDevice } from "@/lib/devices/types";
 import { IntegrationError, type DeviceList, type HistoryPoint, type Provider } from "./types";
 
 interface DemoHome {
@@ -19,6 +19,20 @@ const TICK_MS = 5000;
 /** How long the demo garage door takes to travel. */
 const TRAVEL_MS = 3000;
 
+/** An original playlist with abstract covers, so the demo player has something to show. */
+const TRACKS = [
+  { title: "Slow Tide", artist: "Harbor Lights", duration: 222, artwork: "/demo/covers/1.svg" },
+  { title: "Paper Planes in June", artist: "Margo Vale", duration: 245, artwork: "/demo/covers/2.svg" },
+  { title: "Night Bus", artist: "The Quiet Hours", duration: 198, artwork: "/demo/covers/3.svg" },
+  { title: "Fieldnotes", artist: "Ada Rowe", duration: 176, artwork: "/demo/covers/4.svg" },
+];
+
+function playTrack(device: MediaPlayerDevice, step: number): MediaPlayerDevice {
+  const index = TRACKS.findIndex(track => track.title === device.title);
+  const track = TRACKS[(index + step + TRACKS.length) % TRACKS.length];
+  return { ...device, ...track, position: 0, positionAt: new Date().toISOString() };
+}
+
 export function seedDemoDevices(integrationId: string): Device[] {
   const base = (nativeId: string, name: string, room: string | null) => ({ id: deviceId(integrationId, nativeId), integrationId, name, room, available: true });
   return [
@@ -38,6 +52,11 @@ export function seedDemoDevices(integrationId: string): Device[] {
     { ...base("hall-temp", "Hallway", "Entry"), kind: "sensor", sensorClass: "temperature", value: 21.4, unit: "°C" },
     { ...base("doorbell", "Doorbell", "Entry"), kind: "event", eventClass: "doorbell", last: null },
     { ...base("evening", "Evening", null), kind: "scene", variant: "scene" },
+    {
+      ...base("music", "Music", "Living room"), kind: "media_player", state: "playing", ...TRACKS[0], position: 52, positionAt: new Date().toISOString(),
+      volume: 35, outputs: ["Living room speaker", "Kitchen speaker", "AirPods Pro", "Bose SoundLink Flex"], output: "Living room speaker",
+      can: { pause: true, seek: true, next: true, previous: true, volume: true, output: true },
+    },
   ];
 }
 
@@ -46,6 +65,7 @@ function simulate(home: DemoHome, now: number) {
   const seconds = (now - home.updatedAt) / 1000;
   home.updatedAt = now;
   for (const [id, device] of home.devices) {
+    if (device.kind === "media_player" && device.state === "playing" && device.duration && (livePosition(device, now) ?? 0) >= device.duration) home.devices.set(id, playTrack(device, 1));
     if (device.kind !== "thermostat" || device.current === null) continue;
     const goal = device.mode === "off" || device.target === null ? AMBIENT : device.target;
     const heats = device.mode !== "off" && device.mode !== "cool" && goal > device.current + 0.05;
@@ -120,7 +140,10 @@ export class DemoProvider implements Provider {
     const device = home.devices.get(id);
     if (!device) throw new IntegrationError("That demo device does not exist.");
     await new Promise(resolve => setTimeout(resolve, 180));
-    home.devices.set(id, applyCommand(device, command));
+    const skip = device.kind === "media_player" && command.type === "media" && (command.action === "next" || command.action === "previous");
+    // Previous restarts a track a few seconds in, like a real player, and goes back one only near the start.
+    const back = skip && command.action === "previous" && (livePosition(device as MediaPlayerDevice) ?? 0) > 3 ? 0 : -1;
+    home.devices.set(id, skip ? playTrack(device as MediaPlayerDevice, command.action === "next" ? 1 : back) : applyCommand(device, command));
     notify(home);
     if (device.kind === "cover" && command.type === "cover" && command.action !== "stop") {
       setTimeout(() => {

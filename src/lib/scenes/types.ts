@@ -69,6 +69,14 @@ export function describeAction(device: Device, command: DeviceCommand) {
       return `${command.value}% open`;
     case "activate":
       return "Run";
+    case "media":
+      return { play: "Play", pause: "Pause", next: "Next track", previous: "Previous track" }[command.action];
+    case "seek":
+      return "Seek";
+    case "volume":
+      return `Volume ${command.value}%`;
+    case "output":
+      return `Play on ${command.output}`;
   }
 }
 

@@ -1,6 +1,5 @@
 import {
-  clamp, deviceId, type BinarySensorClass, type CoverClass, type CoverState, type Device, type DeviceCommand, type EventClass, type LockState,
-  type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode,
+  clamp, deviceId, type BinarySensorClass, type CoverClass, type CoverState, type Device, type DeviceCommand, type EventClass, type LockState, type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode, type MediaPlayerDevice, type MediaState,
 } from "@/lib/devices/types";
 import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
 import { unreachableMessage } from "./reach";
@@ -143,6 +142,8 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
     }
     case "camera":
       return { ...base, kind: "camera", streamable: true };
+    case "media_player":
+      return mapMediaPlayer(base, entity, features);
     case "event":
       return { ...base, kind: "event", eventClass: EVENT_CLASSES[deviceClass ?? ""] ?? "other", last: timestamp(entity.state) };
     default: {
@@ -150,6 +151,42 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
       return variant ? { ...base, kind: "scene", variant, available: true } : null;
     }
   }
+}
+
+/** Home Assistant's `MediaPlayerEntityFeature` bits that Hearth uses. */
+const MEDIA = { pause: 1, seek: 2, volume: 4, previous: 16, next: 32, output: 2048 } as const;
+const MEDIA_STATES: Record<string, MediaState> = { playing: "playing", buffering: "playing", paused: "paused", on: "idle", idle: "idle", standby: "idle", off: "off" };
+
+/** A short key for a cover picture, so its address changes with the track and the browser can cache it. */
+export function artworkKey(picture: string) {
+  const cache = picture.match(/[?&]cache=([^&]+)/)?.[1];
+  if (cache) return cache;
+  let hash = 0;
+  for (const char of picture) hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  return (hash >>> 0).toString(36);
+}
+
+function mapMediaPlayer(base: Pick<MediaPlayerDevice, "id" | "integrationId" | "name" | "room" | "available">, entity: HassState, features: number): MediaPlayerDevice {
+  const { attributes } = entity;
+  const picture = str(attributes.entity_picture);
+  const outputs = Array.isArray(attributes.source_list) ? attributes.source_list.filter((item): item is string => typeof item === "string") : [];
+  const level = num(attributes.volume_level);
+  const has = (bit: number) => (features & bit) === bit;
+  return {
+    ...base,
+    kind: "media_player",
+    state: MEDIA_STATES[entity.state] ?? "idle",
+    title: str(attributes.media_title),
+    artist: str(attributes.media_artist) ?? str(attributes.media_album_name) ?? str(attributes.app_name),
+    artwork: picture ? `/api/devices/${encodeURIComponent(base.id)}/artwork?v=${artworkKey(picture)}` : null,
+    position: num(attributes.media_position),
+    positionAt: str(attributes.media_position_updated_at),
+    duration: num(attributes.media_duration),
+    volume: level === null ? null : Math.round(level * 100),
+    outputs,
+    output: str(attributes.source),
+    can: { pause: has(MEDIA.pause), seek: has(MEDIA.seek), next: has(MEDIA.next), previous: has(MEDIA.previous), volume: has(MEDIA.volume) && level !== null, output: has(MEDIA.output) && outputs.length > 0 },
+  };
 }
 
 function roundTo(value: number, step: number) {
@@ -317,6 +354,23 @@ export class HomeAssistantProvider implements Provider {
     return stream.result.url;
   }
 
+  /** The cover of what a media player is playing. Home Assistant proxies it, and remote covers are fetched as they are. */
+  async artwork(entityId: string, signal: AbortSignal) {
+    if (!entityId.startsWith("media_player.")) throw new IntegrationError("That device is not a media player.");
+    const picture = str((await this.request<HassState>(`api/states/${entityId}`)).attributes.entity_picture);
+    if (!picture) throw new IntegrationError("Nothing is playing.");
+    const remote = /^https?:\/\//i.test(picture);
+    try {
+      return await fetch(remote ? picture : new URL(picture.replace(/^\//, ""), this.base), {
+        headers: remote ? undefined : { Authorization: `Bearer ${this.token}` },
+        cache: "no-store",
+        signal,
+      });
+    } catch {
+      throw new IntegrationError(unreachableMessage("Home Assistant", this.base));
+    }
+  }
+
   async cameraHlsFetch(path: string, search: string, signal: AbortSignal) {
     if (!path.startsWith("/api/hls/")) throw new IntegrationError("Not a stream address.");
     try {
@@ -367,6 +421,14 @@ export class HomeAssistantProvider implements Provider {
         return void await this.call("cover", "set_cover_position", { ...target, position: clamp(Math.round(command.value), 0, 100) });
       case "activate":
         return void await this.call(domain, domain === "button" || domain === "input_button" ? "press" : "turn_on", target);
+      case "media":
+        return void await this.call("media_player", { play: "media_play", pause: "media_pause", next: "media_next_track", previous: "media_previous_track" }[command.action], target);
+      case "seek":
+        return void await this.call("media_player", "media_seek", { ...target, seek_position: Math.max(0, command.position) });
+      case "volume":
+        return void await this.call("media_player", "volume_set", { ...target, volume_level: clamp(command.value, 0, 100) / 100 });
+      case "output":
+        return void await this.call("media_player", "select_source", { ...target, source: command.output });
     }
   }
 

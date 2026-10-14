@@ -1,11 +1,11 @@
 "use client";
 
 import type { TileConfig } from "@/lib/dashboard/layout";
-import type { CameraDevice, Device, DeviceCommand, ThermostatDevice } from "@/lib/devices/types";
+import type { CameraDevice, Device, DeviceCommand, MediaPlayerDevice, ThermostatDevice } from "@/lib/devices/types";
 import { StateTile } from "./state-tile";
 import { ToggleTile } from "./toggle-tile";
 
-export type TileDevice = Exclude<Device, ThermostatDevice | CameraDevice>;
+export type TileDevice = Exclude<Device, ThermostatDevice | CameraDevice | MediaPlayerDevice>;
 
 interface DeviceTileProps {
   device: TileDevice;

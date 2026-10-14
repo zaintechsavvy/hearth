@@ -30,5 +30,7 @@ export function describeState(device: Device) {
       return "camera (read only)";
     case "scene":
       return `${device.variant}, run with activate`;
+    case "media_player":
+      return `${device.state}${device.title ? `: ${device.title}${device.artist ? ` by ${device.artist}` : ""}` : ""}${device.volume !== null ? `, volume ${device.volume}%` : ""}${device.outputs.length ? `, outputs ${device.outputs.join(" / ")} (now ${device.output ?? "unknown"})` : ""}`;
   }
 }

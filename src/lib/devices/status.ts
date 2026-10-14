@@ -2,7 +2,7 @@ import type { Device } from "./types";
 
 const KIND_LABELS: Record<Device["kind"], string> = {
   light: "Light", switch: "Switch", fan: "Fan", thermostat: "Thermostat", lock: "Lock", cover: "Cover", binary_sensor: "Sensor",
-  sensor: "Reading", camera: "Camera", event: "Button", scene: "Scene",
+  sensor: "Reading", camera: "Camera", event: "Button", scene: "Scene", media_player: "Music",
 };
 
 /** A short type name for lists, such as "Garage door" or "Temperature". */
@@ -49,5 +49,9 @@ export function statusText(device: Device): string {
       return device.streamable ? "Live view" : "No video over Matter";
     case "scene":
       return "Runs on tap";
+    case "media_player":
+      if (device.state === "off") return "Off";
+      if (!device.title) return device.state === "idle" ? "Nothing playing" : device.state === "playing" ? "Playing" : "Paused";
+      return `${device.state === "playing" ? "Playing" : "Paused"} · ${device.title}`;
   }
 }

@@ -54,3 +54,32 @@ describe("mapHassState", () => {
     expect(map("update.core", "off")).toBeNull();
   });
 });
+
+describe("media players", () => {
+  const spotify = {
+    entity_id: "media_player.spotify",
+    state: "playing",
+    attributes: {
+      friendly_name: "Spotify", supported_features: 1 | 2 | 4 | 16 | 32 | 2048, media_title: "Night Bus", media_artist: "The Quiet Hours",
+      entity_picture: "/api/media_player_proxy/media_player.spotify?token=secret&cache=ab12", media_position: 30, media_position_updated_at: "2026-10-14T10:00:00Z",
+      media_duration: 198, volume_level: 0.42, source_list: ["Kitchen", "AirPods Pro"], source: "Kitchen",
+    },
+  };
+
+  it("maps what is playing, where, and what the player can do", () => {
+    expect(mapHassState("ha", spotify, "C")).toMatchObject({
+      kind: "media_player", state: "playing", title: "Night Bus", artist: "The Quiet Hours", duration: 198, volume: 42,
+      outputs: ["Kitchen", "AirPods Pro"], output: "Kitchen", can: { pause: true, seek: true, next: true, previous: true, volume: true, output: true },
+    });
+  });
+
+  it("serves the cover through Hearth without passing on the picture token", () => {
+    const device = mapHassState("ha", spotify, "C");
+    expect(device?.kind === "media_player" && device.artwork).toBe("/api/devices/ha%3Amedia_player.spotify/artwork?v=ab12");
+  });
+
+  it("offers no outputs or volume the player cannot use", () => {
+    const device = mapHassState("ha", { entity_id: "media_player.tv", state: "off", attributes: { supported_features: 0 } }, "C");
+    expect(device).toMatchObject({ state: "off", title: null, artwork: null, volume: null, can: { volume: false, output: false, next: false } });
+  });
+});

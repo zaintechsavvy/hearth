@@ -38,6 +38,7 @@ import { Thermostat, formatTemperature } from "./thermostat";
 import { TileDialog, type TileDialogMode } from "./tile-dialog";
 import { TileEditor, type EditableTile } from "./tile-editor";
 import { DeviceTile } from "./tiles/device-tile";
+import { MediaTile } from "./media/media-tile";
 import { PlaceholderTile } from "./tiles/placeholder-tile";
 import { SceneTile } from "./tiles/scene-tile";
 import { useHome } from "./use-home";
@@ -293,6 +294,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     const device = linked.device;
     if (device.kind === "thermostat") return <Thermostat device={device} onCommand={command => send(device, command)} onOpenHistory={interactive ? () => setCharting(device.id) : undefined} />;
     if (device.kind === "camera") return preview ? <CameraPreview name={device.name} /> : <IntegrationCameraTile camera={device} />;
+    if (device.kind === "media_player") return <MediaTile tileId={tile.id} device={device} layout={tile.size === "4x2" ? "player" : "bar"} interactive={interactive} onCommand={command => send(device, command)} />;
     return <DeviceTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} onOpenControls={() => setControlling(device.id)} onOpenHistory={() => setCharting(device.id)} />;
   };
 

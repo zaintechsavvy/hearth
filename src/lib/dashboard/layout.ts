@@ -6,7 +6,7 @@ export type TileKind = Device["kind"] | WidgetKind;
 export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x1" | "4x2" | "4x3";
 
 export const TILE_KINDS = [
-  "light", "switch", "fan", "thermostat", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", ...WIDGET_KINDS,
+  "light", "switch", "fan", "thermostat", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", "media_player", ...WIDGET_KINDS,
 ] as const satisfies readonly TileKind[];
 export const TILE_SIZES = ["1x1", "2x1", "1x2", "2x2", "2x3", "2x4", "3x3", "4x1", "4x2", "4x3"] as const satisfies readonly TileSize[];
 export const TILE_COLORS = ["amber", "orange", "rose", "violet", "blue", "teal", "green", "graphite"] as const;
@@ -87,6 +87,7 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   scene: SWITCHABLE,
   thermostat: [{ size: "2x2", label: "Compact" }, { size: "3x3", label: "Large" }],
   camera: [{ size: "2x2", label: "Square" }, { size: "4x2", label: "Wide" }, { size: "4x3", label: "Large" }],
+  media_player: [{ size: "4x1", label: "Bar" }, { size: "4x2", label: "Player" }],
   weather: [{ size: "2x1", label: "Now" }, { size: "2x2", label: "Today" }, { size: "4x2", label: "Week" }],
   calendar: [{ size: "2x2", label: "Next up" }, { size: "2x3", label: "Agenda" }, { size: "2x4", label: "Tall" }, { size: "4x2", label: "Wide" }],
   reminders: [{ size: "2x2", label: "Short list" }, { size: "2x3", label: "List" }, { size: "2x4", label: "Tall" }],
@@ -101,11 +102,11 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
 };
 
 /** Kinds whose tiles take an icon and a colour. */
-export type StyledKind = Exclude<TileKind, "thermostat" | "camera" | WidgetKind>;
-export const isStyled = (kind: TileKind): kind is StyledKind => kind !== "thermostat" && kind !== "camera" && !isWidget(kind);
+export type StyledKind = Exclude<TileKind, "thermostat" | "camera" | "media_player" | WidgetKind>;
+export const isStyled = (kind: TileKind): kind is StyledKind => kind !== "thermostat" && kind !== "camera" && kind !== "media_player" && !isWidget(kind);
 export const isWidget = (kind: TileKind): kind is WidgetKind => (WIDGET_KINDS as readonly string[]).includes(kind);
 
-const KIND_ORDER: TileKind[] = ["thermostat", "scene", "light", "fan", "switch", "lock", "cover", "binary_sensor", "sensor", "event", "camera"];
+const KIND_ORDER: TileKind[] = ["thermostat", "media_player", "scene", "light", "fan", "switch", "lock", "cover", "binary_sensor", "sensor", "event", "camera"];
 
 export const cameraTileId = (cameraId: string) => `camera:${cameraId}`;
 
@@ -130,6 +131,7 @@ export function defaultSize(kind: TileKind, adjustable = false): TileSize {
     case "reminders":
       return "2x3";
     case "bins":
+    case "media_player":
       return "4x1";
     case "countdown":
     case "timers":

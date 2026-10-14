@@ -1,0 +1,420 @@
+.tile {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Keeps the bar's place in the grid while it is open over the page. */
+.lifted {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-panel);
+  box-shadow: inset 0 0 0 1.5px oklch(50% 0 0 / .1);
+}
+
+/* The bar: cover, title and artist, the three controls, and the rail along the bottom. */
+.bar {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: clamp(10px, 3cqi, 14px);
+  row-gap: clamp(8px, 7cqh, 12px);
+  padding: clamp(10px, 10cqh, 16px) clamp(12px, 3.5cqi, 18px);
+}
+
+.tap {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tap:active ~ .art {
+  scale: .96;
+}
+
+.art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: clamp(40px, 50cqh, 60px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 10px;
+  background: linear-gradient(148deg, oklch(90% .01 260), oklch(84% .01 260));
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: scale var(--duration-fast) var(--ease-standard);
+}
+
+.cover {
+  position: absolute;
+  inset: 0;
+  background: center / cover no-repeat;
+}
+
+.text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.title {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: var(--text-base);
+  font-weight: 500;
+  letter-spacing: -.01em;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.by {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ops {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.op {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), scale var(--duration-fast) var(--ease-standard);
+}
+
+.op:hover:not(:disabled) {
+  color: var(--foreground);
+  background: oklch(50% 0 0 / .08);
+}
+
+.op:active:not(:disabled) {
+  scale: .9;
+}
+
+/* Play is the one dark control, so it is found without looking. */
+.op[data-lead] {
+  width: 40px;
+  height: 40px;
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.op[data-lead]:hover:not(:disabled) {
+  background: var(--foreground);
+  color: var(--background);
+  opacity: .88;
+}
+
+.playGlyph {
+  translate: 1px 0;
+}
+
+.ops[data-large] {
+  justify-self: center;
+  gap: 18px;
+}
+
+.ops[data-large] .op[data-side] {
+  width: 44px;
+  height: 44px;
+}
+
+.ops[data-large] .op[data-lead] {
+  width: 58px;
+  height: 58px;
+}
+
+.rail {
+  grid-column: 1 / -1;
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .16);
+  pointer-events: none;
+}
+
+.run {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--foreground);
+}
+
+/* Narrow bars keep play and next; the full player has every control. */
+@container cell (max-width: 300px) {
+  .bar .op[aria-label="Previous"] { display: none; }
+}
+
+/* The full player, in its own tile or opened over the page. */
+.player {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  width: 100%;
+  height: 100%;
+  padding: 18px;
+}
+
+.head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.headTap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  text-align: start;
+  border-radius: 16px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.head > .art,
+.headTap > .art {
+  width: 72px;
+  border-radius: 14px;
+}
+
+.head > .text,
+.headTap > .text {
+  align-self: center;
+}
+
+.head .title {
+  font-size: var(--text-lg);
+}
+
+.head > .art + .text {
+  grid-column: 1;
+}
+
+.head:not(:has(.headTap)) {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.outputButton {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+}
+
+.outputButton:hover,
+.outputButton[aria-pressed="true"] {
+  color: var(--foreground);
+  background: oklch(50% 0 0 / .08);
+}
+
+.body {
+  display: grid;
+  gap: 18px;
+}
+
+.timeline {
+  display: grid;
+  gap: 8px;
+}
+
+.scrubber {
+  display: grid;
+  padding-block: 8px;
+  margin-block: -8px;
+  border-radius: 999px;
+  touch-action: none;
+}
+
+.scrubber[data-seekable] {
+  cursor: pointer;
+}
+
+.scrubber[data-seekable]:hover .rail,
+.scrubber[data-seekable]:focus-visible .rail {
+  height: 5px;
+}
+
+.scrubber .rail {
+  transition: height var(--duration-fast) var(--ease-standard);
+}
+
+.clock {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
+
+/* The slider keeps its name for screen readers; the speaker icons say what it is. */
+.volume > * > :first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.where {
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.outputs {
+  display: grid;
+  gap: 8px;
+}
+
+.outputsHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.back {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-left: -6px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+}
+
+.back:hover {
+  color: var(--foreground);
+  background: oklch(50% 0 0 / .08);
+}
+
+.outputsTitle {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.outputList {
+  display: grid;
+  gap: 2px;
+}
+
+.output {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 12px;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  text-align: start;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.output:hover {
+  background: oklch(50% 0 0 / .07);
+}
+
+.output[aria-checked="true"] {
+  background: oklch(50% 0 0 / .08);
+  font-weight: 500;
+}
+
+.outputIcon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: oklch(50% 0 0 / .09);
+  color: var(--text-secondary);
+}
+
+.outputName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note {
+  padding-inline: 10px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+/* A player tile too short for everything drops the volume first, then the clock. */
+@container cell (max-height: 300px) {
+  .tile .volume,
+  .tile .where { display: none; }
+  .tile .player { gap: 12px; padding: 14px; }
+  .tile .body { gap: 12px; }
+}
+
+@container cell (max-height: 230px) {
+  .tile .clock { display: none; }
+  .tile .head > .art { width: 56px; }
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: oklch(20% .01 260 / .22);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  display: grid;
+  place-items: start center;
+  padding: max(14vh, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+.card {
+  width: min(380px, calc(100vw - 32px));
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art, .op, .output, .scrubber .rail { transition: none; }
+}

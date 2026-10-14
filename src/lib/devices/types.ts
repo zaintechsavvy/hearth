@@ -123,9 +123,30 @@ export interface SceneDevice extends DeviceBase {
   variant: SceneVariant;
 }
 
+export type MediaState = "playing" | "paused" | "idle" | "off";
+
+export interface MediaPlayerDevice extends DeviceBase {
+  kind: "media_player";
+  state: MediaState;
+  title: string | null;
+  artist: string | null;
+  /** An address the browser can load the cover from, which changes with the track. */
+  artwork: string | null;
+  /** Seconds into the track at `positionAt`; the browser runs the clock forward while it plays. */
+  position: number | null;
+  positionAt: string | null;
+  duration: number | null;
+  /** 0 to 100, or null when the player has no volume. */
+  volume: number | null;
+  /** Where it can play: speakers, Bluetooth devices, or a receiver's inputs, as the integration names them. */
+  outputs: string[];
+  output: string | null;
+  can: { pause: boolean; seek: boolean; next: boolean; previous: boolean; volume: boolean; output: boolean };
+}
+
 export type Device =
   | LightDevice | SwitchDevice | FanDevice | ThermostatDevice
-  | LockDevice | CoverDevice | BinarySensorDevice | SensorDevice | CameraDevice | EventDevice | SceneDevice;
+  | LockDevice | CoverDevice | BinarySensorDevice | SensorDevice | CameraDevice | EventDevice | SceneDevice | MediaPlayerDevice;
 export type DeviceKind = Device["kind"];
 
 export type DeviceCommand =
@@ -139,7 +160,11 @@ export type DeviceCommand =
   | { type: "lock"; locked: boolean }
   | { type: "cover"; action: "open" | "close" | "stop" }
   | { type: "coverPosition"; value: number }
-  | { type: "activate" };
+  | { type: "activate" }
+  | { type: "media"; action: "play" | "pause" | "next" | "previous" }
+  | { type: "seek"; position: number }
+  | { type: "volume"; value: number }
+  | { type: "output"; output: string };
 
 /** Changes that open the home up. The UI confirms them, and the assistant leaves them to a person. */
 export function isSensitive(device: Device, command: DeviceCommand) {
@@ -208,7 +233,24 @@ export function applyCommand<T extends Device>(device: T, command: DeviceCommand
       return device.kind === "cover" ? { ...device, position: clamp(command.value, 0, 100), state: command.value === 0 ? "closed" : "open" } : device;
     case "activate":
       return device;
+    case "media":
+      if (device.kind !== "media_player" || command.action === "next" || command.action === "previous") return device;
+      return { ...device, state: command.action === "play" ? "playing" : "paused", position: livePosition(device), positionAt: new Date().toISOString() };
+    case "seek":
+      return device.kind === "media_player" ? { ...device, position: command.position, positionAt: new Date().toISOString() } : device;
+    case "volume":
+      return device.kind === "media_player" ? { ...device, volume: clamp(command.value, 0, 100) } : device;
+    case "output":
+      return device.kind === "media_player" ? { ...device, output: command.output } : device;
   }
+}
+
+/** Where a track is now, in seconds: the reported position plus the time it has been playing since. */
+export function livePosition(device: MediaPlayerDevice, now = Date.now()) {
+  if (device.position === null) return null;
+  const elapsed = device.state === "playing" && device.positionAt ? Math.max(0, (now - Date.parse(device.positionAt)) / 1000) : 0;
+  const at = device.position + elapsed;
+  return device.duration ? Math.min(at, device.duration) : at;
 }
 
 export function clamp(value: number, min: number, max: number) {

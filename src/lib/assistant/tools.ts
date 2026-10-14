@@ -16,9 +16,10 @@ export const CONTROL_TOOL = {
     type: "object",
     properties: {
       device_id: { type: "string", description: "The device id, exactly as it appears in the device list." },
-      action: { type: "string", enum: ["turn_on", "turn_off", "set_brightness", "set_color", "set_white", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate"] },
-      value: { type: "number", description: "Brightness, fan speed, or cover position (0 closed, 100 open) from 0 to 100; a target temperature in the thermostat's own unit; or, for set_white, a white temperature in kelvin (2700 warm, 4000 neutral, 6500 daylight)." },
+      action: { type: "string", enum: ["turn_on", "turn_off", "set_brightness", "set_color", "set_white", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate", "play", "pause", "next_track", "previous_track", "set_volume", "set_output"] },
+      value: { type: "number", description: "Brightness, fan speed, volume, or cover position (0 closed, 100 open) from 0 to 100; a target temperature in the thermostat's own unit; or, for set_white, a white temperature in kelvin (2700 warm, 4000 neutral, 6500 daylight)." },
       color: { type: "string", description: "For set_color, the colour as #rrggbb." },
+      output: { type: "string", description: "For set_output, one of the media player's outputs, exactly as listed." },
       mode: { type: "string", enum: ["off", "heat", "cool", "auto"], description: "The thermostat mode, for set_mode." },
     },
     required: ["device_id", "action"],
@@ -63,9 +64,10 @@ const sceneCreate = z.object({ name: z.string().min(1).max(60), devices: z.array
 function toolInputShape() {
   return z.object({
     device_id: z.string(),
-    action: z.enum(["turn_on", "turn_off", "set_brightness", "set_color", "set_white", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate"]),
+    action: z.enum(["turn_on", "turn_off", "set_brightness", "set_color", "set_white", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate", "play", "pause", "next_track", "previous_track", "set_volume", "set_output"]),
     value: z.number().optional(),
     color: z.string().optional(),
+    output: z.string().optional(),
     mode: z.enum(["off", "heat", "cool", "auto"]).optional(),
   });
 }
@@ -152,6 +154,18 @@ function commandFor(device: Device, input: ToolInput): DeviceCommand | string {
       if (device.kind !== "thermostat") return `${device.name} is not a thermostat.`;
       if (!input.mode || !device.modes.includes(input.mode)) return `${device.name} supports these modes: ${device.modes.join(", ")}.`;
       return { type: "thermostatMode", mode: input.mode };
+    case "play":
+    case "pause":
+    case "next_track":
+    case "previous_track":
+      if (device.kind !== "media_player") return `${device.name} is not a media player.`;
+      return { type: "media", action: input.action === "next_track" ? "next" : input.action === "previous_track" ? "previous" : input.action };
+    case "set_volume":
+      if (device.kind !== "media_player" || !device.can.volume) return `${device.name} has no volume control.`;
+      return input.value === undefined ? "set_volume needs a value from 0 to 100." : { type: "volume", value: Math.max(0, Math.min(100, input.value)) };
+    case "set_output":
+      if (device.kind !== "media_player" || !device.can.output) return `${device.name} cannot switch outputs.`;
+      return input.output && device.outputs.includes(input.output) ? { type: "output", output: input.output } : `${device.name} can play on: ${device.outputs.join(", ")}.`;
   }
 }
 

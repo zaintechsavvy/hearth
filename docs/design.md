@@ -22,6 +22,7 @@ Each thing has one home. Shortcuts may point at it, but they never become a seco
 - **Ghost** (text only) is for Cancel and for small tools in a row or toolbar.
 - **Placement:** a page's actions sit at the top right, beside the title. A section's add button sits at the right of the section heading, and under it on phones. A dialog's actions sit bottom right, Cancel first, the primary last. On phones a confirmation's actions fill the width, the hold button on top under the thumb.
 - **Icons in buttons** are 16px; row icons 20px; empty states 24px. All icons use a 1.75 stroke.
+- **The music player's play button is the one hero control:** a dark circle, its glyph 16px in the bar and 20px in the full player, so it is found without looking.
 
 ## Removing and confirming
 
