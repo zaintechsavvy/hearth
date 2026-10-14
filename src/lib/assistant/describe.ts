@@ -30,6 +30,14 @@ export function describeState(device: Device) {
       return "camera (read only)";
     case "scene":
       return `${device.variant}, run with activate`;
+    case "person":
+      return `${device.home ? "home" : `away${device.place ? ` at ${device.place}` : ""}`} (read only)`;
+    case "vacuum":
+      return `${device.state}${device.battery !== null ? `, battery ${device.battery}%` : ""}`;
+    case "alarm":
+      return `${device.state}, modes ${device.modes.join("/")}`;
+    case "todo":
+      return `${device.open} items not done; add with add_item`;
     case "media_player":
       return `${device.state}${device.title ? `: ${device.title}${device.artist ? ` by ${device.artist}` : ""}` : ""}${device.volume !== null ? `, volume ${device.volume}%` : ""}${device.outputs.length ? `, outputs ${device.outputs.join(" / ")} (now ${device.output ?? "unknown"})` : ""}`;
   }

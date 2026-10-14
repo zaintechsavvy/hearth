@@ -193,3 +193,8 @@
 @media (prefers-reduced-motion: reduce) {
   .chip, .iconOption { transition: none; }
 }
+
+.note {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}

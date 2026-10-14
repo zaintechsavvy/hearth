@@ -1,8 +1,9 @@
-import { applyCommand, deviceId, livePosition, type Device, type DeviceCommand, type MediaPlayerDevice } from "@/lib/devices/types";
+import { applyCommand, deviceId, livePosition, type Device, type DeviceCommand, type MediaPlayerDevice, type TodoItem } from "@/lib/devices/types";
 import { IntegrationError, type DeviceList, type HistoryPoint, type Provider } from "./types";
 
 interface DemoHome {
   devices: Map<string, Device>;
+  lists: Map<string, TodoItem[]>;
   updatedAt: number;
   listeners: Set<() => void>;
   timer?: ReturnType<typeof setInterval>;
@@ -65,6 +66,23 @@ export function seedDemoDevices(integrationId: string): Device[] {
     { ...base("back-door", "Back door", "Kitchen"), kind: "binary_sensor", sensorClass: "door", active: false },
     { ...base("back-door-battery", "Back door battery", "Kitchen"), kind: "sensor", sensorClass: "battery", value: 82, unit: "%" },
     { ...base("hall-temp", "Hallway", "Entry"), kind: "sensor", sensorClass: "temperature", value: 21.4, unit: "°C" },
+    { ...base("living-humidity", "Living room humidity", "Living room"), kind: "sensor", sensorClass: "humidity", value: 44, unit: "%" },
+    { ...base("bedroom-temp", "Bedroom", "Bedroom"), kind: "sensor", sensorClass: "temperature", value: 19.8, unit: "°C" },
+    { ...base("bedroom-window", "Bedroom window", "Bedroom"), kind: "binary_sensor", sensorClass: "window", active: true },
+    { ...base("hall-motion", "Hallway motion", "Entry"), kind: "binary_sensor", sensorClass: "motion", active: false },
+    { ...base("home-power", "Home power", null), kind: "sensor", sensorClass: "power", value: 640, unit: "W" },
+    { ...base("home-energy", "Home energy", null), kind: "sensor", sensorClass: "energy", value: 1214.4, unit: "kWh" },
+    { ...base("washer-power", "Washer power", "Laundry"), kind: "sensor", sensorClass: "power", value: 0, unit: "W" },
+    { ...base("fridge-power", "Fridge power", "Kitchen"), kind: "sensor", sensorClass: "power", value: 85, unit: "W" },
+    { ...base("tv-power", "TV power", "Living room"), kind: "sensor", sensorClass: "power", value: 112, unit: "W" },
+    { ...base("front-door-battery", "Front door lock battery", "Entry"), kind: "sensor", sensorClass: "battery", value: 18, unit: "%" },
+    { ...base("hall-motion-battery", "Hallway motion battery", "Entry"), kind: "sensor", sensorClass: "battery", value: 64, unit: "%" },
+    { ...base("garden-sensor", "Garden sensor", "Outside"), kind: "sensor", sensorClass: "temperature", value: null, unit: "°C", available: false },
+    { ...base("zain", "Zain", null), kind: "person", home: true, place: null, picture: null, since: new Date(Date.now() - 2.5 * 3_600_000).toISOString(), battery: 72 },
+    { ...base("sam", "Sam", null), kind: "person", home: false, place: "Work", picture: null, since: new Date(Date.now() - 4 * 3_600_000).toISOString(), battery: 41 },
+    { ...base("vacuum", "Robot vacuum", "Living room"), kind: "vacuum", state: "docked", battery: 100, can: { start: true, pause: true, stop: true, dock: true, locate: true } },
+    { ...base("alarm", "Alarm", null), kind: "alarm", state: "disarmed", modes: ["home", "away", "night"], codeFormat: "number", codeToArm: false },
+    { ...base("shopping", "Shopping list", null), kind: "todo", open: 3, can: { add: true, remove: true, check: true } },
     { ...base("doorbell", "Doorbell", "Entry"), kind: "event", eventClass: "doorbell", last: null },
     { ...base("evening", "Evening", null), kind: "scene", variant: "scene" },
     {
@@ -85,6 +103,10 @@ function simulate(home: DemoHome, now: number) {
   const seconds = (now - home.updatedAt) / 1000;
   home.updatedAt = now;
   for (const [id, device] of home.devices) {
+    if (device.kind === "vacuum" && device.state === "cleaning") home.devices.set(id, { ...device, battery: Math.max(15, (device.battery ?? 100) - seconds * 0.05) | 0 });
+    if (device.kind === "vacuum" && device.state === "returning") home.devices.set(id, { ...device, state: "docked" });
+    if (device.kind === "vacuum" && device.state === "docked" && (device.battery ?? 100) < 100) home.devices.set(id, { ...device, battery: Math.min(100, (device.battery ?? 0) + Math.ceil(seconds * 0.2)) });
+    if (device.kind === "alarm" && device.state === "arming") home.devices.set(id, { ...device, state: "armed_away" });
     if (device.kind === "media_player" && device.group[0] !== undefined && device.group[0] !== id) continue;
     if (device.kind === "media_player" && device.state === "playing" && device.duration && (livePosition(device, now) ?? 0) >= device.duration) {
       home.devices.set(id, device.repeat === "one" ? playTrack(device, 0) : playTrack(device, 1));
@@ -104,13 +126,41 @@ function notify(home: DemoHome) {
   for (const listener of home.listeners) listener();
 }
 
+/**
+ * Believable use: energy counts up through the day from a running total, the washer ran a cycle that ended about
+ * 35 minutes ago, and other power readings hover around their current draw.
+ */
+function demoUsage(nativeId: string, current: number, from: Date, to: Date): HistoryPoint[] {
+  const step = Math.max(5 * 60_000, (to.getTime() - from.getTime()) / 288);
+  const midnight = new Date(to); midnight.setHours(0, 0, 0, 0);
+  const points: HistoryPoint[] = [];
+  for (let t = from.getTime(); t <= to.getTime(); t += step) {
+    let v: number;
+    if (nativeId === "home-energy") {
+      // A running total: 9.4 kWh so far today, about 14 a day before that.
+      const atMidnight = current - 9.4;
+      v = t < midnight.getTime() ? atMidnight - (midnight.getTime() - t) / 86_400_000 * 14 : atMidnight + (t - midnight.getTime()) / Math.max(1, to.getTime() - midnight.getTime()) * 9.4;
+    } else if (nativeId === "washer-power") {
+      const ago = (to.getTime() - t) / 60_000;
+      v = ago > 35 && ago < 125 ? Math.round(350 + Math.abs(Math.sin(ago / 7)) * 1700) : 0;
+    } else {
+      v = Math.max(0, current + Math.sin(t / 2_400_000) * current * 0.25);
+    }
+    points.push({ t, v: Math.round(v * 10) / 10 });
+  }
+  return points;
+}
+
 export class DemoProvider implements Provider {
   constructor(private readonly integrationId: string) {}
 
   private home() {
     let home = homes.get(this.integrationId);
     if (!home) {
-      home = { devices: new Map(seedDemoDevices(this.integrationId).map(device => [device.id, device])), updatedAt: Date.now(), listeners: new Set() };
+      home = {
+        devices: new Map(seedDemoDevices(this.integrationId).map(device => [device.id, device])), updatedAt: Date.now(), listeners: new Set(),
+        lists: new Map([[deviceId(this.integrationId, "shopping"), ["Milk", "Eggs", "Coffee beans"].map(summary => ({ uid: summary.toLowerCase().replaceAll(" ", "-"), summary, done: false })).concat({ uid: "bread", summary: "Bread", done: true })]]),
+      };
       homes.set(this.integrationId, home);
     }
     simulate(home, Date.now());
@@ -141,6 +191,7 @@ export class DemoProvider implements Provider {
     const device = this.home().devices.get(deviceId(this.integrationId, nativeId));
     const current = device?.kind === "sensor" ? device.value : device?.kind === "thermostat" ? device.current : null;
     if (current === null || current === undefined) return null;
+    if (device?.kind === "sensor" && (device.sensorClass === "energy" || device.sensorClass === "power")) return demoUsage(nativeId, current, from, to);
     const swing = device?.kind === "sensor" && device.sensorClass === "humidity" ? 6 : device?.kind === "sensor" && device.sensorClass === "battery" ? 0 : 1.6;
     const step = Math.max(5 * 60_000, (to.getTime() - from.getTime()) / 288);
     const points: HistoryPoint[] = [];
@@ -156,6 +207,10 @@ export class DemoProvider implements Provider {
 
   async listDevices(): Promise<DeviceList> {
     return { devices: [...this.home().devices.values()], unsupported: {} };
+  }
+
+  async todoItems(nativeId: string) {
+    return this.home().lists.get(deviceId(this.integrationId, nativeId)) ?? [];
   }
 
   /** The demo playlist around the current track: the ones before it as recently played, and the next one up. */
@@ -212,6 +267,17 @@ export class DemoProvider implements Provider {
     const device = home.devices.get(id);
     if (!device) throw new IntegrationError("That demo device does not exist.");
     await new Promise(resolve => setTimeout(resolve, 180));
+    if (command.type === "alarm" && device.kind === "alarm" && command.action === "disarm" && command.code !== "1234") throw new IntegrationError("That code is not right. The demo alarm's code is 1234.");
+    if (command.type === "todo") {
+      const items: TodoItem[] = home.lists.get(id) ?? [];
+      const next: TodoItem[] = command.action === "add" ? [{ uid: crypto.randomUUID(), summary: command.item, done: false }, ...items]
+        : command.action === "remove" ? items.filter(item => item.uid !== command.item)
+        : items.map(item => item.uid === command.item ? { ...item, done: command.action === "check" } : item);
+      home.lists.set(id, next);
+      home.devices.set(id, { ...device, open: next.filter(item => !item.done).length } as Device);
+      notify(home);
+      return;
+    }
     if (device.kind === "media_player") this.playMedia(home, device, command);
     else if (device.kind === "scene" && nativeId === "evening") this.evening(home);
     else home.devices.set(id, applyCommand(device, command));

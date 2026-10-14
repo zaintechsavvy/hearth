@@ -38,6 +38,17 @@ import { Thermostat, formatTemperature } from "./thermostat";
 import { TileDialog, type TileDialogMode } from "./tile-dialog";
 import { TileEditor, type EditableTile } from "./tile-editor";
 import { DeviceTile } from "./tiles/device-tile";
+import { AlarmTile } from "./devices/alarm-tile";
+import { AnnounceTile } from "./glance/announce-tile";
+import { AppliancesTile } from "./glance/appliances-tile";
+import { BatteriesTile } from "./glance/batteries-tile";
+import { EnergyTile } from "./glance/energy-tile";
+import { PeopleTile } from "./glance/people-tile";
+import { RoomTile } from "./glance/room-tile";
+import { ChartTile } from "./devices/chart-tile";
+import { PersonTile } from "./devices/person-tile";
+import { TodoTile } from "./devices/todo-tile";
+import { VacuumTile } from "./devices/vacuum-tile";
 import { MediaTile } from "./media/media-tile";
 import { useMinute } from "./widgets/use-minute";
 import { activeRule, NO_PAGE_RULES, PAGE_SCHEDULE_KEY, type PageRule } from "@/lib/page-schedule";
@@ -216,7 +227,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     const source = link ? sourceById.get(link) : undefined;
     const tile = createTile(source?.kind ?? kind, link, source?.adjustable ?? false, options ? { options } : {});
     change([...tiles, tile]);
-    if (isHousehold(kind) && (kind === "countdown" || kind === "wifi" || (["bins", "medications", "plants", "packages"].includes(kind) && itemsOf(home.widgets, ITEM_KIND_FOR[kind]).length === 0))) {
+    if (isHousehold(kind) && (kind === "countdown" || kind === "wifi" || (["bins", "medications", "plants", "packages", "appliances"].includes(kind) && itemsOf(home.widgets, ITEM_KIND_FOR[kind]).length === 0))) {
       setManaging({ kind, tile });
     }
   };
@@ -305,6 +316,18 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         return <TimersTile tile={tile} items={itemsOf(home.widgets, "timer")} interactive={interactive} onManage={() => setManaging({ kind: "timers", tile })} />;
       case "plants":
         return <PlantsTile tile={tile} items={itemsOf(home.widgets, "plant")} interactive={interactive} onManage={itemId => setManaging({ kind: "plants", tile, itemId })} />;
+      case "energy":
+        return <EnergyTile tile={tile} devices={home.devices} />;
+      case "people":
+        return <PeopleTile tile={tile} devices={home.devices} now={minuteNow} />;
+      case "batteries":
+        return <BatteriesTile tile={tile} devices={home.devices} />;
+      case "room":
+        return <RoomTile tile={tile} devices={home.devices} rooms={home.rooms} interactive={interactive} onPick={room => change(updateTile(tiles, tile.id, { options: { ...tile.options, room } }))} onOpen={setRoom} onCommand={send} />;
+      case "announce":
+        return <AnnounceTile tile={tile} devices={home.devices} interactive={interactive} onOptions={patch => change(updateTile(tiles, tile.id, { options: { ...tile.options, ...patch } }))} onCommand={send} />;
+      case "appliances":
+        return <AppliancesTile tile={tile} items={itemsOf(home.widgets, "appliance")} devices={home.devices} now={minuteNow} interactive={interactive} onManage={() => setManaging({ kind: "appliances", tile })} />;
       case "packages":
         return <PackagesTile tile={tile} items={itemsOf(home.widgets, "package")} interactive={interactive} onManage={itemId => setManaging({ kind: "packages", tile, itemId })} />;
     }
@@ -327,7 +350,12 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     if (device.kind === "thermostat") return <Thermostat device={device} onCommand={command => send(device, command)} onOpenHistory={interactive ? () => setCharting(device.id) : undefined} />;
     if (device.kind === "camera") return preview ? <CameraPreview name={device.name} /> : <IntegrationCameraTile camera={device} />;
     if (device.kind === "media_player") return <MediaTile tileId={tile.id} device={device} layout={tile.size === "4x2" ? "player" : "bar"} interactive={interactive} onCommand={command => send(device, command)} />;
-    return <DeviceTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} onOpenControls={() => setControlling(device.id)} onOpenHistory={() => setCharting(device.id)} onHold={onHold} />;
+    if (device.kind === "vacuum") return <VacuumTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} />;
+    if (device.kind === "alarm") return <AlarmTile device={device} config={tile} interactive={interactive} openMethod={home.openMethod} onCommand={(command, pin) => send(device, command, pin)} />;
+    if (device.kind === "todo") return <TodoTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} />;
+    if (device.kind === "person") return <PersonTile device={device} config={tile} now={minuteNow} />;
+    if (device.kind === "sensor" && (tile.size === "2x2" || tile.size === "4x2")) return <ChartTile device={device} config={tile} onOpen={interactive ? () => setCharting(device.id) : undefined} />;
+    return <DeviceTile device={device} config={tile} interactive={interactive} openMethod={home.openMethod} onCommand={(command, pin) => send(device, command, pin)} onOpenControls={() => setControlling(device.id)} onOpenHistory={() => setCharting(device.id)} onHold={onHold} />;
   };
 
   const charted = charting ? devices.get(charting) : undefined;

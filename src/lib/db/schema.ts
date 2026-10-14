@@ -3,6 +3,7 @@ import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { DashboardPage, SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
 import type { ItemKind } from "@/lib/widgets/items";
 import { DEFAULT_ALERTS, type ActivityCategory, type AlertSettings } from "@/lib/activity-types";
+import { DEFAULT_SECURITY, type SecuritySettings } from "@/lib/security-types";
 import type { Action, Condition, HomeLocation, Trigger } from "@/lib/automations/types";
 import type { SceneAction } from "@/lib/scenes/types";
 
@@ -92,6 +93,8 @@ export const preference = pgTable("preference", {
   alerts: jsonb("alerts").$type<AlertSettings>().notNull().default(DEFAULT_ALERTS),
   /** Rooms the person made in Hearth, in their chosen order. Rooms from integrations are added to these when shown. */
   rooms: jsonb("rooms").$type<string[]>().notNull().default([]),
+  /** How opening the home is confirmed, with the hashed PIN when there is one. */
+  security: jsonb("security").$type<SecuritySettings>().notNull().default(DEFAULT_SECURITY),
   updatedAt: updatedAt(),
 });
 

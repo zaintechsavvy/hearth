@@ -16,10 +16,11 @@ export const CONTROL_TOOL = {
     type: "object",
     properties: {
       device_id: { type: "string", description: "The device id, exactly as it appears in the device list." },
-      action: { type: "string", enum: ["turn_on", "turn_off", "set_brightness", "set_color", "set_white", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate", "play", "pause", "next_track", "previous_track", "set_volume", "set_output"] },
+      action: { type: "string", enum: ["turn_on", "turn_off", "set_brightness", "set_color", "set_white", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate", "play", "pause", "next_track", "previous_track", "set_volume", "set_output", "start_cleaning", "dock", "arm_home", "arm_away", "arm_night", "disarm", "add_item", "announce"] },
       value: { type: "number", description: "Brightness, fan speed, volume, or cover position (0 closed, 100 open) from 0 to 100; a target temperature in the thermostat's own unit; or, for set_white, a white temperature in kelvin (2700 warm, 4000 neutral, 6500 daylight)." },
       color: { type: "string", description: "For set_color, the colour as #rrggbb." },
       output: { type: "string", description: "For set_output, one of the media player's outputs, exactly as listed." },
+      text: { type: "string", description: "For add_item, the item to add to a list; for announce, what the speaker should say." },
       mode: { type: "string", enum: ["off", "heat", "cool", "auto"], description: "The thermostat mode, for set_mode." },
     },
     required: ["device_id", "action"],
@@ -64,10 +65,11 @@ const sceneCreate = z.object({ name: z.string().min(1).max(60), devices: z.array
 function toolInputShape() {
   return z.object({
     device_id: z.string(),
-    action: z.enum(["turn_on", "turn_off", "set_brightness", "set_color", "set_white", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate", "play", "pause", "next_track", "previous_track", "set_volume", "set_output"]),
+    action: z.enum(["turn_on", "turn_off", "set_brightness", "set_color", "set_white", "set_fan_speed", "set_temperature", "set_mode", "lock", "unlock", "open", "close", "stop", "set_position", "activate", "play", "pause", "next_track", "previous_track", "set_volume", "set_output", "start_cleaning", "dock", "arm_home", "arm_away", "arm_night", "disarm", "add_item", "announce"]),
     value: z.number().optional(),
     color: z.string().optional(),
     output: z.string().optional(),
+    text: z.string().max(300).optional(),
     mode: z.enum(["off", "heat", "cool", "auto"]).optional(),
   });
 }
@@ -103,7 +105,7 @@ function safeJson(text: string): unknown {
 export function toCommand(device: Device, input: ToolInput): DeviceCommand | string {
   const command = commandFor(device, input);
   if (typeof command !== "string" && isSensitive(device, command)) {
-    return `For safety, ${device.name} can only be ${command.type === "lock" ? "unlocked" : "opened"} from the dashboard. Tell the person to do it there.`;
+    return `For safety, ${device.name} can only be ${command.type === "lock" ? "unlocked" : command.type === "alarm" ? "disarmed" : "opened"} from the dashboard. Tell the person to do it there.`;
   }
   return command;
 }
@@ -154,10 +156,26 @@ function commandFor(device: Device, input: ToolInput): DeviceCommand | string {
       if (device.kind !== "thermostat") return `${device.name} is not a thermostat.`;
       if (!input.mode || !device.modes.includes(input.mode)) return `${device.name} supports these modes: ${device.modes.join(", ")}.`;
       return { type: "thermostatMode", mode: input.mode };
+    case "start_cleaning":
+    case "dock":
+      return device.kind === "vacuum" ? { type: "vacuum", action: input.action === "dock" ? "dock" : "start" } : `${device.name} is not a robot vacuum.`;
+    case "arm_home":
+    case "arm_away":
+    case "arm_night":
+      return device.kind === "alarm" ? { type: "alarm", action: "arm", mode: input.action.slice(4) as "home" | "away" | "night" } : `${device.name} is not an alarm.`;
+    case "disarm":
+      return device.kind === "alarm" ? { type: "alarm", action: "disarm" } : `${device.name} is not an alarm.`;
+    case "add_item":
+      if (device.kind !== "todo") return `${device.name} is not a list.`;
+      return input.text?.trim() ? { type: "todo", action: "add", item: input.text.trim() } : "add_item needs the text of the item.";
+    case "announce":
+      if (device.kind !== "media_player") return `${device.name} is not a speaker.`;
+      return input.text?.trim() ? { type: "announce", message: input.text.trim() } : "announce needs what to say.";
     case "play":
     case "pause":
     case "next_track":
     case "previous_track":
+      if (device.kind === "vacuum" && input.action === "pause") return { type: "vacuum", action: "pause" };
       if (device.kind !== "media_player") return `${device.name} is not a media player.`;
       return { type: "media", action: input.action === "next_track" ? "next" : input.action === "previous_track" ? "previous" : input.action };
     case "set_volume":

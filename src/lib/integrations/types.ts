@@ -30,6 +30,8 @@ export interface Provider {
   cameraHls?(nativeId: string): Promise<string>;
   /** What a media player played recently, and what it plays next when it knows. */
   mediaQueue?(nativeId: string, current: string | null, askQueue: boolean): Promise<{ recent: { title: string; artist: string | null; media: { id: string; type: string } | null }[]; next: { title: string; artist: string | null; media: { id: string; type: string } | null } | null }>;
+  /** The items on a shopping or to-do list. */
+  todoItems?(nativeId: string): Promise<{ uid: string; summary: string; done: boolean }[]>;
   /** The cover art of what a media player is playing. */
   artwork?(nativeId: string, signal: AbortSignal): Promise<Response>;
   /** A device's readings between two times, from the integration's own history, or null when it keeps none. */

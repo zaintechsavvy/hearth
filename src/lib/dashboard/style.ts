@@ -58,5 +58,13 @@ export function defaultStyle(device: Device): { icon: TileIcon; color: TileColor
       return { icon: device.name.match(/doorbell/i) ? "bell-ring" : "camera", color: "graphite" };
     case "media_player":
       return { icon: "music", color: "rose" };
+    case "person":
+      return { icon: "user", color: "blue" };
+    case "vacuum":
+      return { icon: "circle-dot", color: "teal" };
+    case "alarm":
+      return { icon: "siren", color: "rose" };
+    case "todo":
+      return { icon: "shopping-cart", color: "green" };
   }
 }

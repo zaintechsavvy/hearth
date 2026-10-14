@@ -41,6 +41,14 @@ const SUMMARIES: Record<string, (value?: number, mode?: string) => string> = {
   previous_track: () => "Previous track",
   set_volume: value => `Volume ${value}%`,
   set_output: () => "Output changed",
+  start_cleaning: () => "Cleaning",
+  dock: () => "Going home",
+  arm_home: () => "Armed, home",
+  arm_away: () => "Arming, away",
+  arm_night: () => "Armed, night",
+  disarm: () => "Disarmed",
+  add_item: () => "Added",
+  announce: () => "Announced",
 };
 
 export async function askAssistant(userId: string, history: ChatTurn[]) {

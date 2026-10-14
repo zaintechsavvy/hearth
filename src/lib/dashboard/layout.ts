@@ -1,12 +1,13 @@
 import { parseDeviceId, type Device } from "@/lib/devices/types";
 
-export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages"] as const;
+export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "room", "appliances", "announce", "batteries"] as const;
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
 export type TileKind = Device["kind"] | WidgetKind;
 export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x1" | "4x2" | "4x3";
 
 export const TILE_KINDS = [
-  "light", "switch", "fan", "thermostat", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", "media_player", ...WIDGET_KINDS,
+  "light", "switch", "fan", "thermostat", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", "media_player",
+  "person", "vacuum", "alarm", "todo", ...WIDGET_KINDS,
 ] as const satisfies readonly TileKind[];
 export const TILE_SIZES = ["1x1", "2x1", "1x2", "2x2", "2x3", "2x4", "3x3", "4x1", "4x2", "4x3"] as const satisfies readonly TileSize[];
 export const TILE_COLORS = ["amber", "orange", "rose", "violet", "blue", "teal", "green", "graphite"] as const;
@@ -20,6 +21,7 @@ export const TILE_ICONS = [
   "car", "baby", "dog", "cat", "bell", "house", "lock-open", "door-closed", "garage", "activity", "thermometer",
   "battery", "gauge", "clapperboard", "play", "shield", "bell-ring", "camera", "calendar", "list-checks", "clock",
   "trash", "recycle", "pill", "hourglass", "sticky-note", "wifi", "timer", "sprout", "package",
+  "user", "users", "circle-dot", "shopping-cart", "megaphone", "siren",
 ] as const;
 export type TileIcon = (typeof TILE_ICONS)[number];
 
@@ -45,6 +47,12 @@ export interface TileOptions {
   glow?: boolean;
   /** What a press and hold does: a light's controls, a reading's history, a Hearth scene (`scene:<id>`), a scene from a connection (`device:<id>`), or nothing. */
   hold?: TileHold;
+  /** Energy: price per kWh, for today's cost. */
+  price?: number;
+  /** Room card: which room. */
+  room?: string;
+  /** Announcements: the speakers it last spoke on. */
+  speakers?: string[];
 }
 
 export type TileHold = "controls" | "history" | "none" | `scene:${string}` | `device:${string}`;
@@ -87,11 +95,15 @@ const LEVELLED: SizeOption[] = [...SWITCHABLE, { size: "1x2", label: "Slider" },
 export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   light: LEVELLED,
   fan: LEVELLED,
-  cover: LEVELLED,
+  cover: [...SWITCHABLE, { size: "1x2", label: "Tall" }, { size: "2x2", label: "Large" }],
   switch: SWITCHABLE,
-  lock: SWITCHABLE,
+  lock: [...SWITCHABLE, { size: "1x2", label: "Tall" }],
   binary_sensor: SWITCHABLE,
-  sensor: SWITCHABLE,
+  sensor: [...SWITCHABLE, { size: "2x2", label: "Chart" }, { size: "4x2", label: "Wide chart" }],
+  person: SWITCHABLE,
+  vacuum: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }],
+  alarm: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Keypad" }],
+  todo: [{ size: "2x2", label: "Short list" }, { size: "2x3", label: "List" }, { size: "2x4", label: "Tall" }],
   event: SWITCHABLE,
   scene: SWITCHABLE,
   thermostat: [{ size: "2x2", label: "Compact" }, { size: "3x3", label: "Large" }],
@@ -109,14 +121,21 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   timers: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x2", label: "Wide" }],
   plants: [{ size: "2x2", label: "Small" }, { size: "2x3", label: "Tall" }, { size: "4x2", label: "Wide" }],
   packages: [{ size: "2x2", label: "Small" }, { size: "2x3", label: "Tall" }, { size: "4x2", label: "Wide" }],
+  energy: [{ size: "2x2", label: "Today" }, { size: "4x2", label: "With chart" }],
+  people: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x1", label: "Wide" }],
+  room: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }],
+  appliances: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x1", label: "Wide" }],
+  announce: [{ size: "2x2", label: "Card" }, { size: "4x2", label: "Wide" }],
+  batteries: [{ size: "2x2", label: "Card" }, { size: "2x3", label: "Tall" }],
 };
 
 /** Kinds whose tiles take an icon and a colour. */
-export type StyledKind = Exclude<TileKind, "thermostat" | "camera" | "media_player" | WidgetKind>;
-export const isStyled = (kind: TileKind): kind is StyledKind => kind !== "thermostat" && kind !== "camera" && kind !== "media_player" && !isWidget(kind);
+const UNSTYLED = new Set<TileKind>(["thermostat", "camera", "media_player", "vacuum", "alarm", "todo"]);
+export type StyledKind = Exclude<TileKind, "thermostat" | "camera" | "media_player" | "vacuum" | "alarm" | "todo" | WidgetKind>;
+export const isStyled = (kind: TileKind): kind is StyledKind => !UNSTYLED.has(kind) && !isWidget(kind);
 export const isWidget = (kind: TileKind): kind is WidgetKind => (WIDGET_KINDS as readonly string[]).includes(kind);
 
-const KIND_ORDER: TileKind[] = ["thermostat", "media_player", "scene", "light", "fan", "switch", "lock", "cover", "binary_sensor", "sensor", "event", "camera"];
+const KIND_ORDER: TileKind[] = ["thermostat", "alarm", "media_player", "vacuum", "todo", "person", "scene", "light", "fan", "switch", "lock", "cover", "binary_sensor", "sensor", "event", "camera"];
 
 export const cameraTileId = (cameraId: string) => `camera:${cameraId}`;
 
@@ -143,6 +162,18 @@ export function defaultSize(kind: TileKind, adjustable = false): TileSize {
     case "bins":
     case "media_player":
       return "4x1";
+    case "vacuum":
+    case "alarm":
+    case "people":
+    case "room":
+    case "appliances":
+      return "2x1";
+    case "todo":
+      return "2x3";
+    case "energy":
+    case "announce":
+    case "batteries":
+      return "2x2";
     case "countdown":
     case "timers":
       return "2x1";

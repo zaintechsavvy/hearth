@@ -11,6 +11,8 @@ import { defaultStyle } from "@/lib/dashboard/style";
 import {
   isSensitive, type BinarySensorDevice, type CoverDevice, type DeviceCommand, type EventDevice, type LockDevice, type SceneDevice, type SensorDevice,
 } from "@/lib/devices/types";
+import type { OpenMethod } from "@/lib/security-types";
+import { PinPad } from "../pin-pad";
 import { LevelPill } from "./level-pill";
 import { useLongPress } from "./use-long-press";
 import { MiniTrend } from "./mini-trend";
@@ -23,7 +25,10 @@ export type StateDevice = LockDevice | CoverDevice | BinarySensorDevice | Sensor
 interface StateTileProps {
   device: StateDevice;
   config: TileConfig;
-  onCommand: (command: DeviceCommand) => Promise<void>;
+  /** `pin` is the household PIN, when the home confirms opening with one. */
+  onCommand: (command: DeviceCommand, pin?: string) => Promise<void>;
+  /** How opening this home is confirmed. */
+  openMethod?: OpenMethod;
   interactive?: boolean;
   /** Readings open their history when tapped. */
   onOpenHistory?: () => void;
@@ -100,6 +105,13 @@ function tapCommand(device: StateDevice): DeviceCommand | null {
   }
 }
 
+/** The word on a tall card's button: what a tap does next. */
+function actionWord(command: DeviceCommand) {
+  if (command.type === "lock") return command.locked ? "Lock" : "Unlock";
+  if (command.type === "cover") return command.action === "open" ? "Open" : command.action === "stop" ? "Stop" : "Close";
+  return "Run";
+}
+
 const CONFIRM_CLOSE_MS = 700;
 
 function confirmText(device: StateDevice, state: string) {
@@ -110,6 +122,18 @@ function confirmText(device: StateDevice, state: string) {
     hold: `Hold to ${verb}`,
     done: verb === "unlock" ? "Unlocking" : "Opening",
   };
+}
+
+/** The PIN way to open the home: the server checks the PIN, so a wrong one is refused there and shown here. */
+function PinConfirm({ device, state, onPin, onClose }: { device: StateDevice; state: string; onPin: (pin: string) => Promise<string | null>; onClose: () => void }) {
+  const verb = device.kind === "lock" ? "Unlock" : "Open";
+  return (
+    <Dialog open onOpenChange={open => !open && onClose()}>
+      <DialogContent className={glassSheetClass} title={`${verb} ${device.name}?`} description={`${device.name} is ${state.toLowerCase()}. Enter the household PIN to ${verb.toLowerCase()} it.`}>
+        <PinPad label="Household PIN" submitLabel={verb} onSubmit={onPin} />
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function SensitiveConfirm({ device, state, onConfirm, onClose }: { device: StateDevice; state: string; onConfirm: () => void; onClose: () => void }) {
@@ -141,7 +165,7 @@ function SensitiveConfirm({ device, state, onConfirm, onClose }: { device: State
   );
 }
 
-export function StateTile({ device, config, onCommand, interactive = true, onOpenHistory, onHold }: StateTileProps) {
+export function StateTile({ device, config, onCommand, interactive = true, onOpenHistory, onHold, openMethod = "hold" }: StateTileProps) {
   const now = useSyncExternalStore(subscribeMinute, minute, () => 0);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<DeviceCommand | null>(null);
@@ -169,7 +193,9 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-template": "toggle", "data-on": active || undefined, "data-glow": config.options?.glow || undefined, ...press };
   const meta = error ?? (ran ? "Done" : [device.room && config.size !== "1x1" ? device.room : null, config.options?.hideStatus && device.kind !== "sensor" ? null : text].filter(Boolean).join(" · "));
   const isReading = device.kind === "sensor";
-  const confirm = pending && <SensitiveConfirm device={device} state={text} onConfirm={() => run(pending)} onClose={() => setPending(null)} />;
+  const confirm = pending && (openMethod === "pin"
+    ? <PinConfirm device={device} state={text} onClose={() => setPending(null)} onPin={pin => onCommand(pending, pin).then(() => { setPending(null); return null; }, cause => cause instanceof Error ? cause.message : "That did not work.")} />
+    : <SensitiveConfirm device={device} state={text} onConfirm={() => run(pending)} onClose={() => setPending(null)} />);
 
   if (device.kind === "cover" && device.canSetPosition && (config.size === "1x2" || config.size === "2x2")) {
     const commit = async (value: number) => { await request({ type: "coverPosition", value }); };
@@ -203,6 +229,23 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
             {pill(level.sidePill)}
           </div>
         )}
+        {confirm}
+      </>
+    );
+  }
+
+  if ((device.kind === "lock" || device.kind === "cover") && config.size === "1x2" && command) {
+    return (
+      <>
+        <div className={`${glassClass("panel")} ${styles.tile} ${styles.tall}`} {...shared}>
+          <span className={styles.tallBadge}><span className={styles.icon} aria-hidden="true"><Icon size={26} strokeWidth={1.75} /></span></span>
+          <span className={styles.tallText}>
+            <span className={styles.tallState}>{error ? "Try again" : text}</span>
+            <span className={styles.name}>{device.name}</span>
+            {device.room && <span className={styles.meta}>{device.room}</span>}
+          </span>
+          <button type="button" className={styles.tallAction} disabled={disabled} onClick={() => request(command)} aria-label={`${actionWord(command)} ${device.name}`}>{actionWord(command)}</button>
+        </div>
         {confirm}
       </>
     );

@@ -19,6 +19,8 @@ import { runAutomationNow } from "@/lib/monitor/automations";
 import { getPreferences, loadHome, orderedRooms, streamRelayUrl } from "@/lib/home";
 import { parseDeviceId } from "@/lib/devices/types";
 import { saveScene } from "@/lib/scenes/service";
+import { hashPin } from "@/lib/security";
+import { PIN_PATTERN } from "@/lib/security-types";
 import { MatterProvider } from "@/lib/integrations/matter/provider";
 import { createProvider } from "@/lib/integrations/registry";
 import { INTEGRATION_LABELS, IntegrationError, type IntegrationConfig } from "@/lib/integrations/types";
@@ -176,6 +178,9 @@ const tileSchema = z.object({
     hideRoom: z.boolean().optional(),
     hideStatus: z.boolean().optional(),
     glow: z.boolean().optional(),
+    price: z.number().min(0).max(10).optional(),
+    room: z.string().max(60).optional(),
+    speakers: z.array(z.string().max(300)).max(20).optional(),
     hold: z.custom<TileHold>(value => typeof value === "string" && /^(controls|history|none|scene:[\w-]{1,100}|device:[\w.:-]{1,300})$/.test(value)).optional(),
   }).optional(),
 });
@@ -528,6 +533,28 @@ export async function saveHomeLocation(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "Pick a place from the list." };
   return authed(async userId => {
     await savePreferences(userId, { location: parsed.data });
+    return OK;
+  });
+}
+
+/** Chooses how opening the home is confirmed. Switching to a PIN, or changing it, needs the new PIN. */
+export async function setOpenMethod(method: unknown, pin?: string): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
+  const parsed = z.enum(["hold", "pin"]).safeParse(method);
+  if (!parsed.success) return { ok: false, error: "Pick hold or PIN." };
+  return authed(async userId => {
+    const { security } = await getPreferences(userId);
+    if (parsed.data === "hold") {
+      await savePreferences(userId, { security: { ...security, method: "hold" } });
+      return OK;
+    }
+    if (pin === undefined && security.hash) {
+      await savePreferences(userId, { security: { ...security, method: "pin" } });
+      return OK;
+    }
+    if (!pin || !PIN_PATTERN.test(pin)) return { ok: false, error: "Use 4 to 8 digits." };
+    await savePreferences(userId, { security: { method: "pin", ...hashPin(pin) } });
     return OK;
   });
 }

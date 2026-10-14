@@ -156,9 +156,58 @@ export interface MediaPlayerDevice extends DeviceBase {
   };
 }
 
+export interface PersonDevice extends DeviceBase {
+  kind: "person";
+  home: boolean;
+  /** The zone they are in when away, such as Work; null when the zone is unknown. */
+  place: string | null;
+  /** An address the browser can load their picture from. */
+  picture: string | null;
+  /** When they arrived or left. */
+  since: string | null;
+  /** Their phone's battery, when its tracker reports one. */
+  battery: number | null;
+}
+
+export type VacuumState = "cleaning" | "docked" | "returning" | "paused" | "idle" | "error";
+
+export interface VacuumDevice extends DeviceBase {
+  kind: "vacuum";
+  state: VacuumState;
+  battery: number | null;
+  can: { start: boolean; pause: boolean; stop: boolean; dock: boolean; locate: boolean };
+}
+
+export type AlarmState = "disarmed" | "armed_home" | "armed_away" | "armed_night" | "armed_vacation" | "arming" | "pending" | "triggered" | "disarming";
+export type ArmMode = "home" | "away" | "night" | "vacation";
+
+export interface AlarmDevice extends DeviceBase {
+  kind: "alarm";
+  state: AlarmState;
+  modes: ArmMode[];
+  /** The alarm's own code: digits, any text, or none needed. */
+  codeFormat: "number" | "text" | null;
+  /** Whether arming asks for the code too, not only disarming. */
+  codeToArm: boolean;
+}
+
+export interface TodoDevice extends DeviceBase {
+  kind: "todo";
+  /** Items not checked off yet. */
+  open: number;
+  can: { add: boolean; remove: boolean; check: boolean };
+}
+
+export interface TodoItem {
+  uid: string;
+  summary: string;
+  done: boolean;
+}
+
 export type Device =
   | LightDevice | SwitchDevice | FanDevice | ThermostatDevice
-  | LockDevice | CoverDevice | BinarySensorDevice | SensorDevice | CameraDevice | EventDevice | SceneDevice | MediaPlayerDevice;
+  | LockDevice | CoverDevice | BinarySensorDevice | SensorDevice | CameraDevice | EventDevice | SceneDevice | MediaPlayerDevice
+  | PersonDevice | VacuumDevice | AlarmDevice | TodoDevice;
 export type DeviceKind = Device["kind"];
 
 export type DeviceCommand =
@@ -182,11 +231,18 @@ export type DeviceCommand =
   /** Adds players to this one's group; `members` are device ids. */
   | { type: "join"; members: string[] }
   | { type: "unjoin" }
-  | { type: "playMedia"; id: string; mediaType: string };
+  | { type: "playMedia"; id: string; mediaType: string }
+  | { type: "announce"; message: string }
+  | { type: "vacuum"; action: "start" | "pause" | "stop" | "dock" | "locate" }
+  /** `code` is the alarm's own code, when it has one. */
+  | { type: "alarm"; action: "arm" | "disarm"; mode?: ArmMode; code?: string }
+  /** `item` is the item's uid, or the text of a new one. */
+  | { type: "todo"; action: "add" | "check" | "uncheck" | "remove"; item: string };
 
 /** Changes that open the home up. The UI confirms them, and the assistant leaves them to a person. */
 export function isSensitive(device: Device, command: DeviceCommand) {
   if (command.type === "lock") return !command.locked;
+  if (command.type === "alarm") return command.action === "disarm";
   if (device.kind !== "cover" || !["garage", "door", "gate"].includes(device.coverClass)) return false;
   return (command.type === "cover" && command.action === "open") || (command.type === "coverPosition" && command.value > 0);
 }
@@ -270,6 +326,17 @@ export function applyCommand<T extends Device>(device: T, command: DeviceCommand
       return device.kind === "media_player" ? { ...device, group: [] } : device;
     case "playMedia":
       return device.kind === "media_player" ? { ...device, state: "playing" } : device;
+    case "announce":
+      return device;
+    case "vacuum":
+      if (device.kind !== "vacuum") return device;
+      return { ...device, state: ({ start: "cleaning", pause: "paused", stop: "idle", dock: "returning", locate: device.state } as const)[command.action] };
+    case "alarm":
+      if (device.kind !== "alarm") return device;
+      return { ...device, state: command.action === "disarm" ? "disarmed" : command.mode === "away" || command.mode === "vacation" ? "arming" : `armed_${command.mode ?? "home"}` };
+    case "todo":
+      if (device.kind !== "todo") return device;
+      return { ...device, open: Math.max(0, device.open + (command.action === "add" || command.action === "uncheck" ? 1 : command.action === "check" ? -1 : 0)) };
   }
 }
 

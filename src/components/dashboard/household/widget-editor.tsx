@@ -1,6 +1,7 @@
 "use client";
 
-import { Package as PackageIcon, Pencil, Plus, Trash2 } from "lucide-react";
+import { Package as PackageIcon, Pencil, Plus, Trash2, WashingMachine } from "lucide-react";
+import { useHome } from "../use-home";
 import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
@@ -21,7 +22,7 @@ import { ColorChoice, EmojiChoice, Field, weekdayName, WeekdayChoice } from "./c
 import styles from "./widget-editor.module.css";
 
 /** Which item kind each household tile keeps. */
-export const ITEM_KIND_FOR = { bins: "bin", medications: "medication", countdown: "countdown", notes: "note", wifi: "wifi", timers: "timer", plants: "plant", packages: "package" } as const satisfies Record<string, ItemKind>;
+export const ITEM_KIND_FOR = { bins: "bin", medications: "medication", countdown: "countdown", notes: "note", wifi: "wifi", timers: "timer", plants: "plant", packages: "package", appliances: "appliance" } as const satisfies Record<string, ItemKind>;
 export type HouseholdKind = keyof typeof ITEM_KIND_FOR;
 export const isHousehold = (kind: string): kind is HouseholdKind => kind in ITEM_KIND_FOR;
 
@@ -48,6 +49,7 @@ const TITLES: Record<HouseholdKind, [string, string]> = {
   timers: ["New timer", "Every open screen counts down together."],
   plants: ["Plants", "How often each one needs water."],
   packages: ["Packages", "What is on the way. Paste a tracking number and Hearth links to it."],
+  appliances: ["Laundry and dishes", "Pick the power plug or monitor each one runs on. Hearth spots a cycle from the power it draws."],
 };
 
 export function WidgetEditor({ state, items, onOpenChange, onLink }: WidgetEditorProps) {
@@ -66,6 +68,7 @@ function Body({ state, items, close, onLink }: { state: WidgetEditorState; items
     case "bins": return <Collection kind="bin" items={itemsOf(items, "bin")} start={state.itemId} describe={describeBin} form={BinForm} addLabel="Add a bin" />;
     case "medications": return <Collection kind="medication" items={itemsOf(items, "medication")} start={state.itemId} describe={describeMedication} form={MedicationForm} addLabel="Add a medication" />;
     case "plants": return <Collection kind="plant" items={itemsOf(items, "plant")} start={state.itemId} describe={describePlant} form={PlantForm} addLabel="Add a plant" />;
+    case "appliances": return <Collection kind="appliance" items={itemsOf(items, "appliance")} start={state.itemId} describe={describeAppliance} form={ApplianceForm} addLabel="Add an appliance" />;
     case "packages": return <Collection kind="package" items={itemsOf(items, "package")} start={state.itemId} describe={describePackage} form={PackageForm} addLabel="Add a package" />;
     case "countdown": return <Single kind="countdown" item={itemsOf(items, "countdown").find(item => item.id === (state.itemId ?? state.tile.options?.itemId))} form={CountdownForm} onSaved={id => { onLink(state.tile.id, id); close(); }} />;
     case "wifi": return <Single kind="wifi" item={itemsOf(items, "wifi").find(item => item.id === (state.itemId ?? state.tile.options?.itemId))} form={WifiForm} onSaved={id => { onLink(state.tile.id, id); close(); }} />;
@@ -77,7 +80,7 @@ function Body({ state, items, close, onLink }: { state: WidgetEditorState; items
 type FormProps<K extends ItemKind> = { initial?: ItemData<K>; onSubmit: (data: unknown) => Promise<boolean>; onCancel?: () => void; submitLabel: string };
 
 /** A list of items with edit and remove, and a form for a new one or the one being edited. */
-function Collection<K extends "bin" | "medication" | "plant" | "package">({ kind, items, start, describe, form: Form, addLabel }: {
+function Collection<K extends "bin" | "medication" | "plant" | "package" | "appliance">({ kind, items, start, describe, form: Form, addLabel }: {
   kind: K; items: WidgetItem<K>[]; start?: string; describe: (data: ItemData<K>) => { title: string; detail: string; color?: string; icon?: ReactNode }; form: (props: FormProps<K>) => ReactNode; addLabel: string;
 }) {
   const [editing, setEditing] = useState<string | "new" | null>(start ?? (items.length ? null : "new"));
@@ -266,6 +269,33 @@ function PlantForm({ initial, onSubmit, onCancel, submitLabel }: FormProps<"plan
         </div>
       </Field>
       <SegmentedControl label="Last watered" value={String(ago)} onValueChange={value => setAgo(Number(value))} options={[...(initial ? [{ value: "-1", label: "Keep" }] : []), ...AGO.map(option => ({ value: String(option.days), label: option.label }))]} />
+      <Actions submitLabel={submitLabel} onCancel={onCancel} pending={pending} />
+    </form>
+  );
+}
+
+const APPLIANCE_TYPES = [{ value: "washer", label: "Washer" }, { value: "dryer", label: "Dryer" }, { value: "dishwasher", label: "Dishwasher" }, { value: "other", label: "Something else" }];
+
+function describeAppliance(item: ItemData<"appliance">) {
+  return { title: item.name, detail: `${APPLIANCE_TYPES.find(type => type.value === item.type)?.label ?? "Appliance"} · runs above ${item.threshold} W`, icon: <WashingMachine size={18} strokeWidth={1.75} /> };
+}
+
+function ApplianceForm({ initial, onSubmit, onCancel, submitLabel }: FormProps<"appliance">) {
+  const { home } = useHome();
+  const sensors = (home?.devices ?? []).filter(device => device.kind === "sensor" && device.sensorClass === "power");
+  const [item, setItem] = useState<ItemData<"appliance">>(() => initial ?? { name: "Washer", type: "washer", sensorId: sensors.find(sensor => /wash|dry|dish/i.test(sensor.name))?.id ?? sensors[0]?.id ?? "", threshold: 5, emptiedAt: null });
+  const { pending, submit } = useSubmit(onSubmit);
+  const set = (patch: Partial<ItemData<"appliance">>) => setItem(current => ({ ...current, ...patch }));
+  return (
+    <form className={styles.fields} onSubmit={event => submit(event, () => item)}>
+      <div className={styles.pair}>
+        <Input label="Name" value={item.name} onChange={event => set({ name: event.target.value })} maxLength={30} required />
+        <Select label="It is a" value={item.type} onValueChange={value => set({ type: value as ItemData<"appliance">["type"], name: item.name === APPLIANCE_TYPES.find(type => type.value === item.type)?.label ? APPLIANCE_TYPES.find(type => type.value === value)?.label ?? item.name : item.name })} options={APPLIANCE_TYPES} />
+      </div>
+      {sensors.length ? (
+        <Select label="Power sensor" value={item.sensorId} onValueChange={sensorId => set({ sensorId })} options={sensors.map(sensor => ({ value: sensor.id, label: sensor.room ? `${sensor.name} · ${sensor.room}` : sensor.name }))} />
+      ) : <p className={styles.note}>No power sensors yet. Plug it into a smart plug that measures power, and it shows up here.</p>}
+      <Input label="Running above (watts)" type="number" min={1} max={500} value={item.threshold} onChange={event => set({ threshold: Math.min(500, Math.max(1, Number(event.target.value) || 5)) })} description="Most machines idle under 5 W." />
       <Actions submitLabel={submitLabel} onCancel={onCancel} pending={pending} />
     </form>
   );

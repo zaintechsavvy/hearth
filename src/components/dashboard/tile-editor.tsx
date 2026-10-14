@@ -86,7 +86,7 @@ const SIZE_NOTES: Partial<Record<TileSize, string>> = {
 };
 
 const MANAGE_LABELS: Partial<Record<TileKind, string>> = {
-  bins: "Edit bins", medications: "Edit medications", countdown: "Edit countdown", notes: "Manage notes", wifi: "Edit network", timers: "New timer", plants: "Edit plants",
+  appliances: "Edit appliances", bins: "Edit bins", medications: "Edit medications", countdown: "Edit countdown", notes: "Manage notes", wifi: "Edit network", timers: "New timer", plants: "Edit plants",
 };
 
 const capitalize = (value: string) => value[0].toUpperCase() + value.slice(1);
@@ -95,7 +95,8 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
   const [preview, setPreview] = useState<Preview>({});
   const styled = tile && tile.icon !== null;
   const options = tile ? SIZE_OPTIONS[tile.kind] : [];
-  const blocked = (size: TileSize) => (size === "1x2" || size === "2x2") && SIZE_OPTIONS[tile?.kind ?? "light"].length > 2 && !tile?.adjustable;
+  // Sliders need a level; a cover without one still gets the tall card, so only its large slider template is blocked.
+  const blocked = (size: TileSize) => !tile?.adjustable && (tile?.kind === "light" || tile?.kind === "fan" ? size === "1x2" || size === "2x2" : tile?.kind === "cover" && size === "2x2");
   const shown: TileConfig | null = tile && {
     ...tile.config,
     size: preview.size ?? tile.config.size,
@@ -168,6 +169,20 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
                   </div>
                 </section>
               </>
+            )}
+            {tile.kind === "energy" && (
+              <section aria-labelledby="tile-energy" className={styles.section}>
+                <h3 id="tile-energy" className={styles.heading}>Cost</h3>
+                <Input label="Price per kWh" type="number" min={0} max={10} step={0.01} defaultValue={tile.config.options?.price ?? ""} placeholder="0.13"
+                  description="From your electricity bill, for today's cost. Leave it empty to hide the cost."
+                  onBlur={event => { const price = Number(event.target.value); onChange({ options: { ...tile.config.options, price: price > 0 ? price : undefined } }); }} />
+              </section>
+            )}
+            {tile.kind === "room" && rooms.length > 0 && (
+              <section aria-labelledby="tile-room" className={styles.section}>
+                <h3 id="tile-room" className={styles.heading}>Room</h3>
+                <Select label="Room" value={tile.config.options?.room ?? rooms[0]} onValueChange={room => onChange({ options: { ...tile.config.options, room } })} options={rooms.map(room => ({ value: room, label: room }))} />
+              </section>
             )}
             {tile.tuning && <TuningSection tile={tile} tuning={tile.tuning} onChange={onChange} />}
             <div className={styles.actions}>

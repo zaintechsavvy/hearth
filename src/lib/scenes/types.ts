@@ -87,6 +87,14 @@ export function describeAction(device: Device, command: DeviceCommand) {
       return "Play alone";
     case "playMedia":
       return "Play a favourite";
+    case "announce":
+      return `Say "${command.message}"`;
+    case "vacuum":
+      return { start: "Start cleaning", pause: "Pause", stop: "Stop", dock: "Send home", locate: "Find it" }[command.action];
+    case "alarm":
+      return command.action === "disarm" ? "Disarm" : `Arm ${command.mode ?? "home"}`;
+    case "todo":
+      return command.action === "add" ? `Add ${command.item}` : command.action === "check" ? "Check off" : command.action === "uncheck" ? "Uncheck" : "Remove";
   }
 }
 

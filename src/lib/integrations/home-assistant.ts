@@ -1,5 +1,5 @@
 import {
-  clamp, deviceId, type BinarySensorClass, type CoverClass, type CoverState, type Device, type DeviceCommand, type EventClass, type LockState, type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode, type MediaPlayerDevice, type MediaState, type RepeatMode, parseDeviceId,
+  clamp, deviceId, type BinarySensorClass, type CoverClass, type CoverState, type Device, type DeviceCommand, type EventClass, type LockState, type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode, type MediaPlayerDevice, type MediaState, type RepeatMode, parseDeviceId, type AlarmState, type ArmMode, type TodoItem, type VacuumState,
 } from "@/lib/devices/types";
 import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
 import { unreachableMessage } from "./reach";
@@ -9,6 +9,7 @@ export interface HassState {
   entity_id: string;
   state: string;
   attributes: Record<string, unknown>;
+  last_changed?: string;
 }
 
 interface HassConfig {
@@ -144,6 +145,36 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
       return { ...base, kind: "camera", streamable: true };
     case "media_player":
       return mapMediaPlayer(base, entity, features);
+    case "person": {
+      const picture = str(attributes.entity_picture);
+      const home = entity.state === "home";
+      return {
+        ...base, kind: "person", available: entity.state !== "unavailable", home,
+        place: home || entity.state === "not_home" || entity.state === "unknown" ? null : entity.state,
+        picture: picture ? `/api/devices/${encodeURIComponent(base.id)}/artwork?v=${artworkKey(picture)}` : null,
+        since: entity.last_changed ?? null, battery: null,
+      };
+    }
+    case "vacuum": {
+      const has = (bit: number) => (features & bit) === bit;
+      const state = VACUUM_STATES[entity.state] ?? "idle";
+      return {
+        ...base, kind: "vacuum", state, battery: num(attributes.battery_level),
+        can: { start: has(VACUUM.start), pause: has(VACUUM.pause), stop: has(VACUUM.stop), dock: has(VACUUM.dock), locate: has(VACUUM.locate) },
+      };
+    }
+    case "alarm_control_panel": {
+      const modes = (Object.entries(ALARM_MODES) as [ArmMode, number][]).filter(([, bit]) => (features & bit) === bit).map(([mode]) => mode);
+      const format = str(attributes.code_format);
+      return {
+        ...base, kind: "alarm", state: ALARM_STATES[entity.state] ?? "disarmed", modes: modes.length ? modes : ["home", "away"],
+        codeFormat: format === "number" ? "number" : format === "text" ? "text" : null, codeToArm: attributes.code_arm_required === true && format !== null,
+      };
+    }
+    case "todo": {
+      const open = Number.parseInt(entity.state, 10);
+      return { ...base, kind: "todo", open: Number.isFinite(open) ? open : 0, can: { add: (features & 1) === 1, remove: (features & 2) === 2, check: (features & 4) === 4 } };
+    }
     case "event":
       return { ...base, kind: "event", eventClass: EVENT_CLASSES[deviceClass ?? ""] ?? "other", last: timestamp(entity.state) };
     default: {
@@ -199,6 +230,14 @@ function mapMediaPlayer(base: Pick<MediaPlayerDevice, "id" | "integrationId" | "
     },
   };
 }
+
+const VACUUM = { pause: 4, stop: 8, dock: 16, locate: 512, start: 8192 } as const;
+const VACUUM_STATES: Record<string, VacuumState> = { cleaning: "cleaning", docked: "docked", returning: "returning", paused: "paused", idle: "idle", error: "error" };
+const ALARM_MODES: Record<ArmMode, number> = { home: 1, away: 2, night: 4, vacation: 32 };
+const ALARM_STATES: Record<string, AlarmState> = {
+  disarmed: "disarmed", armed_home: "armed_home", armed_away: "armed_away", armed_night: "armed_night", armed_vacation: "armed_vacation",
+  armed_custom_bypass: "armed_home", arming: "arming", pending: "pending", triggered: "triggered", disarming: "disarming",
+};
 
 function roundTo(value: number, step: number) {
   return Math.round(value / step) * step;
@@ -305,8 +344,11 @@ export class HomeAssistantProvider implements Provider {
       ]);
     const devices: Device[] = [];
     const skipped: string[] = [];
+    const byId = new Map(states.map(state => [state.entity_id, state]));
     for (const state of states) {
-      const device = mapHassState(this.integrationId, state, unit, areas.get(state.entity_id) ?? null);
+      let device = mapHassState(this.integrationId, state, unit, areas.get(state.entity_id) ?? null);
+      // A person's phone battery lives on the tracker that follows them.
+      if (device?.kind === "person") device = { ...device, battery: num(byId.get(str(state.attributes.source) ?? "")?.attributes.battery_level) };
       if (!device) skipped.push(state.entity_id.split(".")[0]);
       else devices.push(this.live.auxiliary.has(state.entity_id) ? { ...device, auxiliary: true } : device);
     }
@@ -411,7 +453,7 @@ export class HomeAssistantProvider implements Provider {
 
   /** The cover of what a media player is playing. Home Assistant proxies it, and remote covers are fetched as they are. */
   async artwork(entityId: string, signal: AbortSignal) {
-    if (!entityId.startsWith("media_player.")) throw new IntegrationError("That device is not a media player.");
+    if (!entityId.startsWith("media_player.") && !entityId.startsWith("person.")) throw new IntegrationError("That device has no picture.");
     const picture = str((await this.request<HassState>(`api/states/${entityId}`)).attributes.entity_picture);
     if (!picture) throw new IntegrationError("Nothing is playing.");
     const remote = /^https?:\/\//i.test(picture);
@@ -440,6 +482,22 @@ export class HomeAssistantProvider implements Provider {
         : Promise.resolve(null),
     ]);
     return { recent: recentTracks(history[0] ?? [], current), next: queuedTrack(queue?.service_response?.[entityId]?.next_item ?? null) };
+  }
+
+  /** A shopping or to-do list's items. The action only answers with data, so it needs `return_response`. */
+  async todoItems(entityId: string): Promise<TodoItem[]> {
+    if (!entityId.startsWith("todo.")) throw new IntegrationError("That device is not a list.");
+    const result = await this.request<{ service_response?: Record<string, { items?: Record<string, unknown>[] }> }>("api/services/todo/get_items?return_response", { method: "POST", body: JSON.stringify({ entity_id: entityId }) });
+    return (result.service_response?.[entityId]?.items ?? []).flatMap(item => {
+      const summary = str(item.summary);
+      return summary ? [{ uid: str(item.uid) ?? summary, summary, done: item.status === "completed" }] : [];
+    });
+  }
+
+  /** The first text-to-speech service Home Assistant has, for announcements. */
+  private async speechService() {
+    const template = "{% set found = states.tts | map(attribute='entity_id') | list %}{{ found[0] if found else '' }}";
+    return (await this.request<string>("api/template", { method: "POST", body: JSON.stringify({ template }) }, "text").catch(() => "")).trim() || null;
   }
 
   /** The 17TRACK integration's config entry, when Home Assistant has one set up. */
@@ -532,6 +590,21 @@ export class HomeAssistantProvider implements Provider {
         return void await this.call("media_player", "unjoin", target);
       case "playMedia":
         return void await this.call("media_player", "play_media", { ...target, media_content_id: command.id, media_content_type: command.mediaType });
+      case "announce": {
+        const speech = await this.speechService();
+        if (!speech) throw new IntegrationError("Home Assistant has no text-to-speech service yet. Add one, such as Google Translate text-to-speech, under Settings, Devices and services.");
+        return void await this.call("tts", "speak", { entity_id: speech, media_player_entity_id: entityId, message: command.message });
+      }
+      case "vacuum":
+        return void await this.call("vacuum", { start: "start", pause: "pause", stop: "stop", dock: "return_to_base", locate: "locate" }[command.action], target);
+      case "alarm": {
+        const service = command.action === "disarm" ? "alarm_disarm" : `alarm_arm_${command.mode ?? "home"}`;
+        return void await this.call("alarm_control_panel", service, { ...target, ...(command.code ? { code: command.code } : {}) });
+      }
+      case "todo":
+        if (command.action === "add") return void await this.call("todo", "add_item", { ...target, item: command.item });
+        if (command.action === "remove") return void await this.call("todo", "remove_item", { ...target, item: command.item });
+        return void await this.call("todo", "update_item", { ...target, item: command.item, status: command.action === "check" ? "completed" : "needs_action" });
     }
   }
 

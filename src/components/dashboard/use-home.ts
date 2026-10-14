@@ -44,13 +44,13 @@ export function useHome() {
     return () => source.close();
   }, [mutate]);
 
-  const send = useCallback(async (device: Device, command: DeviceCommand) => {
+  const send = useCallback(async (device: Device, command: DeviceCommand, pin?: string) => {
     inFlight.current++;
     try {
       await mutate(async current => {
         const response = await fetch(`/api/devices/${encodeURIComponent(device.id)}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(pin ? { "X-Hearth-Pin": pin } : {}) },
           body: JSON.stringify(command),
         });
         if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? "The device did not respond.");

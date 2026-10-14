@@ -1,0 +1,1 @@
+ALTER TABLE "preference" ADD COLUMN "security" jsonb DEFAULT '{"method":"hold"}'::jsonb NOT NULL;

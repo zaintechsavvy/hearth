@@ -85,6 +85,13 @@
       "when": 1791846482070,
       "tag": "0011_household",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791993905577,
+      "tag": "0012_security",
+      "breakpoints": true
     }
   ]
 }

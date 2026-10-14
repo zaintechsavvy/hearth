@@ -93,3 +93,17 @@ describe("media players", () => {
     expect(device).toMatchObject({ state: "off", title: null, artwork: null, volume: null, can: { volume: false, output: false, next: false } });
   });
 });
+
+describe("new device kinds", () => {
+  it("maps people, vacuums, alarms, and lists", () => {
+    expect(mapHassState("ha", { entity_id: "person.sam", state: "Work", attributes: { friendly_name: "Sam" }, last_changed: "2026-10-14T08:00:00Z" }, "C"))
+      .toMatchObject({ kind: "person", home: false, place: "Work", since: "2026-10-14T08:00:00Z" });
+    expect(mapHassState("ha", { entity_id: "person.zain", state: "not_home", attributes: {} }, "C")).toMatchObject({ home: false, place: null });
+    expect(mapHassState("ha", { entity_id: "vacuum.roomba", state: "cleaning", attributes: { battery_level: 80, supported_features: 8192 | 4 | 16 } }, "C"))
+      .toMatchObject({ kind: "vacuum", state: "cleaning", battery: 80, can: { start: true, pause: true, dock: true, locate: false } });
+    expect(mapHassState("ha", { entity_id: "alarm_control_panel.home", state: "armed_away", attributes: { supported_features: 3, code_format: "number", code_arm_required: false } }, "C"))
+      .toMatchObject({ kind: "alarm", state: "armed_away", modes: ["home", "away"], codeFormat: "number", codeToArm: false });
+    expect(mapHassState("ha", { entity_id: "todo.shopping_list", state: "3", attributes: { supported_features: 7 } }, "C"))
+      .toMatchObject({ kind: "todo", open: 3, can: { add: true, remove: true, check: true } });
+  });
+});

@@ -288,3 +288,61 @@ div.reading {
   position: relative;
   overflow: hidden;
 }
+
+/* The tall card for locks and doors: the state on top, the name below it, and one clear button at the foot. */
+.tall {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--space-2);
+  padding: 14%;
+}
+
+.tallBadge {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: oklch(50% 0 0 / .1);
+}
+
+.tile[data-on] .tallBadge {
+  background: color-mix(in oklch, var(--tile-color) 18%, transparent);
+}
+
+.tallText {
+  align-self: end;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tallState {
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-base), 20cqi, var(--text-xl));
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+}
+
+.tallAction {
+  height: 36px;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .1);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-spring) var(--ease-spring);
+}
+
+.tile[data-on] .tallAction {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.tallAction:active:not(:disabled) {
+  transform: scale(.96);
+}
+
+.tallAction:disabled {
+  opacity: .5;
+}

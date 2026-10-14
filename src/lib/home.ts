@@ -12,6 +12,7 @@ import { integrationTopic, publish } from "@/lib/live/bus";
 import { IntegrationError, type IntegrationKind } from "@/lib/integrations/types";
 import { noteCommand } from "@/lib/monitor/attribution";
 import { DEFAULT_ALERTS } from "@/lib/activity-types";
+import { DEFAULT_SECURITY, type OpenMethod } from "@/lib/security-types";
 
 export interface IntegrationStatus {
   id: string;
@@ -42,6 +43,8 @@ export interface HomeSnapshot {
   rooms: string[];
   /** Bins, medications, countdowns, notes, Wi-Fi, timers, and plants, so every screen updates live. */
   widgets: WidgetItem[];
+  /** How opening the home is confirmed here; the PIN itself never leaves the server. */
+  openMethod: OpenMethod;
 }
 
 type Override = { name: string | null; room: string | null };
@@ -91,7 +94,7 @@ export async function getPreferences(userId: string) {
   const row = await db.query.preference.findFirst({ where: eq(preference.userId, userId) });
   const layout = row?.layout ?? [];
   const pages: DashboardPage[] = row?.pages.length ? row.pages : [{ id: HOME_PAGE_ID, name: "Home", layout }];
-  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [], alerts: { ...DEFAULT_ALERTS, ...row?.alerts }, location: row?.location ?? null };
+  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [], alerts: { ...DEFAULT_ALERTS, ...row?.alerts }, location: row?.location ?? null, security: row?.security ?? DEFAULT_SECURITY };
 }
 
 export async function loadHome(userId: string): Promise<HomeSnapshot> {
@@ -124,7 +127,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
   const widgets = itemRows.map(row => ({ id: row.id, kind: row.kind, position: row.position, data: row.kind === "wifi" ? openWifi(row.data) : row.data }) as WidgetItem);
   const connected = new Set(rows.map(row => row.id));
   const pages = preferences.pages.map(page => ({ ...page, layout: withoutOrphanTiles(page.layout, connected) }));
-  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets };
+  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method };
 }
 
 /** Sends a device a command. `by` says who, for the activity log: a person, the assistant, a scene, or an automation. */

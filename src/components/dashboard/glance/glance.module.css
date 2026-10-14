@@ -1,0 +1,368 @@
+/* Shared by the energy, people, room, appliance, announce, and battery tiles. */
+.tile {
+  container-type: size;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: clamp(12px, 8cqh, 18px) clamp(12px, 6cqi, 18px);
+}
+
+.center {
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.title {
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.meta {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.center .meta {
+  white-space: normal;
+}
+
+.label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.big {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-lg), 13cqi, var(--text-2xl));
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.manage {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -6px -6px 0 0;
+  border-radius: 50%;
+  color: var(--text-secondary);
+}
+
+.manage:hover {
+  background: oklch(50% 0 0 / .08);
+  color: var(--foreground);
+}
+
+.rows {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+
+.rows[data-wide] {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.rowName {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.warn,
+.row[data-warn] .meta {
+  color: var(--warning);
+}
+
+/* Energy */
+.energy {
+  grid-template-rows: auto auto 1fr;
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.plot {
+  min-height: 0;
+}
+
+.bars {
+  display: grid;
+  align-content: end;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.barName {
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barTrack {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .1);
+}
+
+.barTrack span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--warning);
+}
+
+.barValue {
+  font-variant-numeric: tabular-nums;
+}
+
+/* People */
+.peopleRow {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  align-content: center;
+}
+
+.peopleRow[data-size="4x1"] {
+  grid-template-columns: 1fr;
+}
+
+.faces {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.peopleRow[data-size="2x1"] .face + .face {
+  margin-left: -14px;
+}
+
+.face {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.faceName {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Room */
+.room {
+  grid-template-rows: auto 1fr;
+}
+
+.roomHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-2);
+  text-align: start;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  height: 28px;
+  padding-inline: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .08);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+button.chip:hover:not(:disabled) {
+  background: oklch(50% 0 0 / .14);
+  color: var(--foreground);
+}
+
+.chip[data-on] {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.chip[data-warn] {
+  background: color-mix(in oklab, var(--warning) 16%, transparent);
+  color: var(--warning);
+}
+
+/* Appliances */
+.applianceIcon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: oklch(50% 0 0 / .08);
+  color: var(--text-secondary);
+}
+
+.row[data-running] .applianceIcon svg {
+  animation: tumble 2.4s linear infinite;
+}
+
+@keyframes tumble {
+  to { rotate: 360deg; }
+}
+
+.row[data-done] .applianceIcon {
+  background: color-mix(in oklab, var(--success) 18%, transparent);
+  color: var(--success);
+}
+
+.row[data-done] .meta {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.emptied {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding-inline: 10px;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+/* Announce */
+.announce {
+  align-content: start;
+}
+
+.say {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+}
+
+.input {
+  min-width: 0;
+  height: 36px;
+  padding-inline: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .08);
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 1px;
+}
+
+/* Batteries: a little cell that drains. */
+.cell {
+  position: relative;
+  width: 12px;
+  height: 22px;
+  overflow: hidden;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1.5px var(--border-strong);
+}
+
+.cell span {
+  position: absolute;
+  inset: auto 2px 2px;
+  border-radius: 1px;
+  background: var(--success);
+}
+
+.row[data-warn] .cell span {
+  background: var(--warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row[data-running] .applianceIcon svg { animation: none; }
+}
+
+/* Narrow tiles, such as a phone's two-column grid: drop the extras before the words. */
+@container (max-width: 230px) {
+  .peopleRow .title { display: none; }
+  .emptied { width: 30px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
+  .applianceIcon { display: none; }
+  .row { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); }
+  .row:has(.cell) { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .row:has(> :first-child[class*="avatar"]) { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .say { grid-template-columns: 1fr; }
+}

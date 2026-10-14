@@ -1,0 +1,32 @@
+.avatar {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: oklch(78% .08 var(--hue));
+  color: oklch(28% .06 var(--hue));
+  box-shadow: 0 0 0 2px var(--surface-raised), 0 0 0 3.5px oklch(70% 0 0 / .45);
+}
+
+/* Away dims the face; home keeps it bright with a green ring, so the room reads at a glance. */
+.avatar:not([data-home]) {
+  filter: grayscale(.7);
+  opacity: .62;
+}
+
+.avatar[data-home] {
+  box-shadow: 0 0 0 2px var(--surface-raised), 0 0 0 3.5px var(--success);
+}
+
+.picture {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: center / cover no-repeat;
+}
+
+.initial {
+  font-weight: 600;
+  line-height: 1;
+}

@@ -1,8 +1,8 @@
-import type { Device } from "./types";
+import type { AlarmState, Device, VacuumState } from "./types";
 
 const KIND_LABELS: Record<Device["kind"], string> = {
   light: "Light", switch: "Switch", fan: "Fan", thermostat: "Thermostat", lock: "Lock", cover: "Cover", binary_sensor: "Sensor",
-  sensor: "Reading", camera: "Camera", event: "Button", scene: "Scene", media_player: "Music",
+  sensor: "Reading", camera: "Camera", event: "Button", scene: "Scene", media_player: "Music", person: "Person", vacuum: "Vacuum", alarm: "Alarm", todo: "List",
 };
 
 /** A short type name for lists, such as "Garage door" or "Temperature". */
@@ -22,6 +22,12 @@ export function kindLabel(device: Device) {
       return KIND_LABELS[device.kind];
   }
 }
+
+export const VACUUM_TEXT: Record<VacuumState, string> = { cleaning: "Cleaning", docked: "Docked", returning: "Going home", paused: "Paused", idle: "Idle", error: "Needs help" };
+export const ALARM_TEXT: Record<AlarmState, string> = {
+  disarmed: "Disarmed", armed_home: "Armed, home", armed_away: "Armed, away", armed_night: "Armed, night", armed_vacation: "Armed, vacation",
+  arming: "Arming", pending: "Entry delay", triggered: "Triggered", disarming: "Disarming",
+};
 
 /** The current state in a few words, for lists and summaries. */
 export function statusText(device: Device): string {
@@ -53,5 +59,13 @@ export function statusText(device: Device): string {
       if (device.state === "off") return "Off";
       if (!device.title) return device.state === "idle" ? "Nothing playing" : device.state === "playing" ? "Playing" : "Paused";
       return `${device.state === "playing" ? "Playing" : "Paused"} · ${device.title}`;
+    case "person":
+      return device.home ? "Home" : device.place ?? "Away";
+    case "vacuum":
+      return VACUUM_TEXT[device.state] + (device.battery !== null ? ` · ${device.battery}%` : "");
+    case "alarm":
+      return ALARM_TEXT[device.state];
+    case "todo":
+      return device.open === 0 ? "All done" : `${device.open} to get`;
   }
 }

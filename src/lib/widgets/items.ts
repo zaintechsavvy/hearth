@@ -76,6 +76,17 @@ export const ITEM_SCHEMAS = {
     /** The latest scan from a tracker such as 17TRACK, when one follows this package. */
     track: z.object({ status: z.string(), info: z.string(), location: z.string(), at: z.string().nullable() }).nullable().default(null),
   }),
+  /** A washer, dryer, or dishwasher, watched through the power its plug or monitor reports. */
+  appliance: z.object({
+    name: name("appliance", 30),
+    type: z.enum(["washer", "dryer", "dishwasher", "other"]).default("washer"),
+    /** The power sensor to watch. */
+    sensorId: z.string().min(1, "Pick the power sensor.").max(300),
+    /** Watts above which it counts as running. */
+    threshold: z.number().min(1).max(500).default(5),
+    /** When someone last emptied it, so a finished cycle stops asking. */
+    emptiedAt: z.string().nullable().default(null),
+  }),
   /** A track or playlist saved from a music player, to play again from any player. */
   favorite: z.object({
     title: z.string().trim().min(1).max(200),

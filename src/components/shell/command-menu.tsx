@@ -77,6 +77,10 @@ function deviceCommand(device: Device): { label: string; command: DeviceCommand 
       return device.state === "closed" ? null : { label: `Close ${device.name}`, command: { type: "cover", action: "close" } };
     case "scene":
       return { label: `Run ${device.name}`, command: { type: "activate" } };
+    case "vacuum":
+      return device.state === "cleaning" ? { label: `Send ${device.name} home`, command: { type: "vacuum", action: "dock" } } : { label: `Start ${device.name}`, command: { type: "vacuum", action: "start" } };
+    case "alarm":
+      return device.state === "disarmed" && device.modes.includes("away") && !device.codeToArm ? { label: `Arm ${device.name}, away`, command: { type: "alarm", action: "arm", mode: "away" } } : null;
     case "media_player":
       if (device.state === "off") return null;
       return device.state === "playing" ? { label: `Pause ${device.name}`, command: { type: "media", action: "pause" } } : { label: `Play ${device.name}`, command: { type: "media", action: "play" } };

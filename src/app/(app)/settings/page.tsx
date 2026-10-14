@@ -9,6 +9,7 @@ import { CalendarsSection } from "@/components/connections/calendars-section";
 import { CamerasSection } from "@/components/connections/cameras-section";
 import { IntegrationsSection } from "@/components/connections/integrations-section";
 import { RoomsSection } from "@/components/connections/rooms-section";
+import { SecuritySection } from "@/components/connections/security-section";
 import { SettingsShell } from "@/components/connections/settings-shell";
 import { WallSection } from "@/components/connections/wall-section";
 import styles from "@/components/connections/connections.module.css";
@@ -59,6 +60,7 @@ export default async function ConnectionsPage() {
         { id: "household", label: "Household" },
         { id: "rooms", label: "Rooms" },
         { id: "alerts", label: "Alerts" },
+        { id: "security", label: "Doors and alarm" },
         ...(owner ? [{ id: "assistants", label: "Assistants" }, { id: "cameras", label: "Cameras" }] : []),
         { id: "calendars", label: "Calendars" },
         { id: "appearance", label: "Appearance" },
@@ -69,6 +71,7 @@ export default async function ConnectionsPage() {
       <HouseholdSection role={owner ? "owner" : "member"} ownerName={home.ownerName} members={members} invites={invites.map(item => ({ ...item, expiresAt: item.expiresAt.toISOString() }))} pages={preferences.pages.map(page => ({ id: page.id, name: page.name }))} />
       <RoomsSection />
       <AlertsSection alerts={preferences.alerts} />
+      <SecuritySection method={preferences.security.method} hasPin={Boolean(preferences.security.hash)} owner={owner} />
       {owner && <AssistantsSection assistants={assistants} />}
       {owner && <CamerasSection cameras={cameras.map(row => ({ id: row.id, name: row.name, host: hostOf(unseal<CameraSource>(row.source).url) }))} relayUrl={relayUrl} />}
       <CalendarsSection calendars={calendars.map(row => ({ id: row.id, name: row.name, color: row.color, host: hostOf(unseal<string>(row.url)) }))} />

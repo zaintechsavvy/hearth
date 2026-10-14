@@ -28,7 +28,8 @@ Each thing has one home. Shortcuts may point at it, but they never become a seco
 
 - **Removing something that takes more than a few seconds to make again asks first.** The button turns into its own question ("Remove Kitchen?") and a second press confirms. This covers connections, cameras, calendars, assistants, rooms, people, pages, scenes, automations, and tiles.
 - **Quick list items are removed at once:** a reminder, a note, a timer, a colour. They are faster to retype than to confirm.
-- **Hold to confirm is only for two things:** opening the home (unlocking a door, opening a garage) and deleting your account. Holding is deliberate, so a stray tap can't do either.
+- **Opening the home** (unlocking a door, opening a garage, disarming the alarm) is confirmed the way the owner picked in Settings, Doors and alarm: **hold to confirm**, or the **household PIN**, which the server checks and locks for five minutes after five wrong tries. An alarm with its own code always asks for that code instead.
+- **Hold to confirm is otherwise only for deleting your account.** Holding is deliberate, so a stray tap can't do it.
   - Opening the home is sensitive, not destructive, so its hold button is ink: outlined at rest, filling dark as you hold.
   - Deleting the account destroys data, so its hold button is red.
 - **Red means data is lost.** Nothing else is red except errors.
