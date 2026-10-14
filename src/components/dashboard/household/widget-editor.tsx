@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Package as PackageIcon, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
@@ -13,14 +13,15 @@ import { Switch } from "@/components/arc/switch/switch";
 import { glassSheetClass } from "@/components/glass/glass";
 import type { TileConfig } from "@/lib/dashboard/layout";
 import { clearNotes, deleteWidgetItem, saveWidgetItem } from "@/lib/widget-actions";
-import { BIN_ICONS, itemsOf, type ItemData, type ItemKind, type WidgetItem } from "@/lib/widgets/items";
+import { BIN_ICONS, CARRIERS, itemsOf, type ItemData, type ItemKind, type WidgetItem } from "@/lib/widgets/items";
+import { CARRIER_NAMES, detectCarrier, packageSource, type Carrier } from "@/lib/widgets/packages";
 import { localDay, nextPickup } from "@/lib/widgets/schedules";
 import { BIN_ICON_COMPONENTS } from "./bins-tile";
 import { ColorChoice, EmojiChoice, Field, weekdayName, WeekdayChoice } from "./choices";
 import styles from "./widget-editor.module.css";
 
 /** Which item kind each household tile keeps. */
-export const ITEM_KIND_FOR = { bins: "bin", medications: "medication", countdown: "countdown", notes: "note", wifi: "wifi", timers: "timer", plants: "plant" } as const satisfies Record<string, ItemKind>;
+export const ITEM_KIND_FOR = { bins: "bin", medications: "medication", countdown: "countdown", notes: "note", wifi: "wifi", timers: "timer", plants: "plant", packages: "package" } as const satisfies Record<string, ItemKind>;
 export type HouseholdKind = keyof typeof ITEM_KIND_FOR;
 export const isHousehold = (kind: string): kind is HouseholdKind => kind in ITEM_KIND_FOR;
 
@@ -46,6 +47,7 @@ const TITLES: Record<HouseholdKind, [string, string]> = {
   wifi: ["Guest Wi-Fi", "The password is encrypted, and only shown on your dashboard."],
   timers: ["New timer", "Every open screen counts down together."],
   plants: ["Plants", "How often each one needs water."],
+  packages: ["Packages", "What is on the way. Paste a tracking number and Hearth links to it."],
 };
 
 export function WidgetEditor({ state, items, onOpenChange, onLink }: WidgetEditorProps) {
@@ -64,6 +66,7 @@ function Body({ state, items, close, onLink }: { state: WidgetEditorState; items
     case "bins": return <Collection kind="bin" items={itemsOf(items, "bin")} start={state.itemId} describe={describeBin} form={BinForm} addLabel="Add a bin" />;
     case "medications": return <Collection kind="medication" items={itemsOf(items, "medication")} start={state.itemId} describe={describeMedication} form={MedicationForm} addLabel="Add a medication" />;
     case "plants": return <Collection kind="plant" items={itemsOf(items, "plant")} start={state.itemId} describe={describePlant} form={PlantForm} addLabel="Add a plant" />;
+    case "packages": return <Collection kind="package" items={itemsOf(items, "package")} start={state.itemId} describe={describePackage} form={PackageForm} addLabel="Add a package" />;
     case "countdown": return <Single kind="countdown" item={itemsOf(items, "countdown").find(item => item.id === (state.itemId ?? state.tile.options?.itemId))} form={CountdownForm} onSaved={id => { onLink(state.tile.id, id); close(); }} />;
     case "wifi": return <Single kind="wifi" item={itemsOf(items, "wifi").find(item => item.id === (state.itemId ?? state.tile.options?.itemId))} form={WifiForm} onSaved={id => { onLink(state.tile.id, id); close(); }} />;
     case "timers": return <Single kind="timer" form={TimerForm} onSaved={() => close()} />;
@@ -74,7 +77,7 @@ function Body({ state, items, close, onLink }: { state: WidgetEditorState; items
 type FormProps<K extends ItemKind> = { initial?: ItemData<K>; onSubmit: (data: unknown) => Promise<boolean>; onCancel?: () => void; submitLabel: string };
 
 /** A list of items with edit and remove, and a form for a new one or the one being edited. */
-function Collection<K extends "bin" | "medication" | "plant">({ kind, items, start, describe, form: Form, addLabel }: {
+function Collection<K extends "bin" | "medication" | "plant" | "package">({ kind, items, start, describe, form: Form, addLabel }: {
   kind: K; items: WidgetItem<K>[]; start?: string; describe: (data: ItemData<K>) => { title: string; detail: string; color?: string; icon?: ReactNode }; form: (props: FormProps<K>) => ReactNode; addLabel: string;
 }) {
   const [editing, setEditing] = useState<string | "new" | null>(start ?? (items.length ? null : "new"));
@@ -263,6 +266,40 @@ function PlantForm({ initial, onSubmit, onCancel, submitLabel }: FormProps<"plan
         </div>
       </Field>
       <SegmentedControl label="Last watered" value={String(ago)} onValueChange={value => setAgo(Number(value))} options={[...(initial ? [{ value: "-1", label: "Keep" }] : []), ...AGO.map(option => ({ value: String(option.days), label: option.label }))]} />
+      <Actions submitLabel={submitLabel} onCancel={onCancel} pending={pending} />
+    </form>
+  );
+}
+
+function describePackage(item: ItemData<"package">) {
+  const due = item.expected ? new Date(`${item.expected}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null;
+  const where = packageSource(item);
+  const state = item.status === "collected" ? "Collected" : item.status === "delivered" ? "Delivered" : due ? `Due ${due}` : "On the way";
+  return { title: item.name, detail: [where, state].filter(Boolean).join(" · "), icon: <PackageIcon size={18} strokeWidth={1.75} /> };
+}
+
+function PackageForm({ initial, onSubmit, onCancel, submitLabel }: FormProps<"package">) {
+  const [item, setItem] = useState<ItemData<"package">>(() => initial ?? { name: "", from: "", carrier: "other", tracking: "", expected: localDay(new Date(Date.now() + 2 * 86_400_000)), status: "coming", deliveredAt: null, collectedAt: null, track: null });
+  const [carrierPicked, setCarrierPicked] = useState(Boolean(initial));
+  const { pending, submit } = useSubmit(onSubmit);
+  const set = (patch: Partial<ItemData<"package">>) => setItem(current => ({ ...current, ...patch }));
+  const setTracking = (tracking: string) => {
+    const detected = detectCarrier(tracking);
+    set({ tracking, ...(!carrierPicked && detected ? { carrier: detected } : {}), ...(!item.from && detected === "amazon" ? { from: "Amazon" } : {}) });
+  };
+  return (
+    <form className={styles.fields} onSubmit={event => submit(event, () => item)}>
+      <div className={styles.pair}>
+        <Input label="What is it" value={item.name} onChange={event => set({ name: event.target.value })} placeholder="New headphones" maxLength={50} required />
+        <Input label="From" value={item.from} onChange={event => set({ from: event.target.value })} placeholder="Amazon" maxLength={30} />
+      </div>
+      <Input label="Tracking number" value={item.tracking} onChange={event => setTracking(event.target.value)} placeholder="Optional, such as TBA123456789000" maxLength={60} autoComplete="off" spellCheck={false}
+        description={!item.tracking ? undefined : item.carrier === "amazon" ? "Amazon numbers track on Amazon only, so the tile links there." : "With 17TRACK in Home Assistant, Hearth follows this number and marks it delivered."} />
+      <div className={styles.pair}>
+        <Select label="Carrier" value={item.carrier} onValueChange={value => { setCarrierPicked(true); set({ carrier: value as Carrier }); }} options={CARRIERS.map(value => ({ value, label: CARRIER_NAMES[value] }))} />
+        <Input label="Expected" type="date" value={item.expected ?? ""} onChange={event => set({ expected: event.target.value || null })} />
+      </div>
+      {initial && <SegmentedControl label="Status" value={item.status} onValueChange={value => set({ status: value as ItemData<"package">["status"] })} options={[{ value: "coming", label: "On the way" }, { value: "delivered", label: "Delivered" }, { value: "collected", label: "Collected" }]} />}
       <Actions submitLabel={submitLabel} onCancel={onCancel} pending={pending} />
     </form>
   );

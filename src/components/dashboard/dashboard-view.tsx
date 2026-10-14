@@ -52,6 +52,7 @@ import { HouseholdAlerts } from "./household/household-alerts";
 import { MedicationsTile } from "./household/medications-tile";
 import { NotesTile } from "./household/notes-tile";
 import { PlantsTile } from "./household/plants-tile";
+import { PackagesTile } from "./household/packages-tile";
 import { TimersTile } from "./household/timers-tile";
 import { WidgetEditor, isHousehold, ITEM_KIND_FOR, type WidgetEditorState } from "./household/widget-editor";
 import { WifiTile } from "./household/wifi-tile";
@@ -200,7 +201,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     const source = link ? sourceById.get(link) : undefined;
     const tile = createTile(source?.kind ?? kind, link, source?.adjustable ?? false, options ? { options } : {});
     change([...tiles, tile]);
-    if (isHousehold(kind) && (kind === "countdown" || kind === "wifi" || (["bins", "medications", "plants"].includes(kind) && itemsOf(home.widgets, ITEM_KIND_FOR[kind]).length === 0))) {
+    if (isHousehold(kind) && (kind === "countdown" || kind === "wifi" || (["bins", "medications", "plants", "packages"].includes(kind) && itemsOf(home.widgets, ITEM_KIND_FOR[kind]).length === 0))) {
       setManaging({ kind, tile });
     }
   };
@@ -286,6 +287,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         return <TimersTile tile={tile} items={itemsOf(home.widgets, "timer")} interactive={interactive} onManage={() => setManaging({ kind: "timers", tile })} />;
       case "plants":
         return <PlantsTile tile={tile} items={itemsOf(home.widgets, "plant")} interactive={interactive} onManage={itemId => setManaging({ kind: "plants", tile, itemId })} />;
+      case "packages":
+        return <PackagesTile tile={tile} items={itemsOf(home.widgets, "package")} interactive={interactive} onManage={itemId => setManaging({ kind: "packages", tile, itemId })} />;
     }
     const linked = resolve(tile);
     if (!linked) return <PlaceholderTile tile={tile} missing={tile.link !== null} interactive={interactive} onLink={() => setDialog({ mode: "link", tile })} />;

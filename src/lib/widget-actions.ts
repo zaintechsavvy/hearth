@@ -75,6 +75,24 @@ export async function waterPlant(id: string): Promise<ActionResult> {
   });
 }
 
+/** Moves a package along: delivered when it arrives, collected once someone has it. Going back clears the later times. */
+export async function setPackageStatus(id: string, status: unknown): Promise<ActionResult> {
+  const parsed = ITEM_SCHEMAS.package.shape.status.safeParse(status);
+  if (!parsed.success) return { ok: false, error: "That status is not known." };
+  return authed(async userId => {
+    const item = await owned(userId, id, "package");
+    const now = new Date().toISOString();
+    const next = parsed.data;
+    await write(userId, id, {
+      ...item,
+      status: next,
+      deliveredAt: next === "coming" ? null : item.deliveredAt ?? now,
+      collectedAt: next === "collected" ? item.collectedAt ?? now : null,
+    });
+    return OK;
+  });
+}
+
 const timerControl = z.discriminatedUnion("action", [
   z.object({ action: z.literal("start") }),
   z.object({ action: z.literal("pause") }),

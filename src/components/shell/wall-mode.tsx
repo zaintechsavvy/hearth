@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CalendarDays, Leaf, MoreHorizontal, Pill, Recycle, Thermometer, Timer } from "lucide-react";
+import { CalendarDays, Leaf, MoreHorizontal, Package, Pill, Recycle, Thermometer, Timer } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import useSWR from "swr";
@@ -154,6 +154,8 @@ function Glance({ now, night, dimLevel }: { now: number; night: boolean; dimLeve
   if (next) notes.push({ key: "event", icon: <CalendarDays size={18} strokeWidth={1.75} />, text: `${next.title} · ${next.allDay ? "all day" : new Date(next.start).toLocaleTimeString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}` });
   const thirsty = itemsOf(widgets, "plant").filter(item => now - Date.parse(item.data.lastWatered) >= item.data.everyDays * 86_400_000).length;
   if (thirsty) notes.push({ key: "plants", icon: <Leaf size={18} strokeWidth={1.75} />, text: `${thirsty} ${thirsty === 1 ? "plant needs" : "plants need"} water` });
+  const waiting = itemsOf(widgets, "package").filter(item => item.data.status === "delivered");
+  if (waiting.length) notes.push({ key: "packages", icon: <Package size={18} strokeWidth={1.75} />, text: waiting.length === 1 ? `${waiting[0].data.name} is here, collect it` : `${waiting.length} packages to collect` });
 
   return (
     <span className={styles.glance} style={offset}>

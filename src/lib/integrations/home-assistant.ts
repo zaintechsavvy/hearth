@@ -193,6 +193,14 @@ function roundTo(value: number, step: number) {
   return Math.round(value / step) * step;
 }
 
+export interface TrackedPackage {
+  tracking: string;
+  status: string;
+  info: string;
+  location: string;
+  at: string | null;
+}
+
 export class HomeAssistantProvider implements Provider {
   private readonly base: URL;
   private readonly token: string;
@@ -369,6 +377,26 @@ export class HomeAssistantProvider implements Provider {
     } catch {
       throw new IntegrationError(unreachableMessage("Home Assistant", this.base));
     }
+  }
+
+  /** The 17TRACK integration's config entry, when Home Assistant has one set up. */
+  async packageTracker() {
+    const template = "{% set found = integration_entities('seventeentrack') %}{{ config_entry_id(found[0]) if found else '' }}";
+    const rendered = await this.request<string>("api/template", { method: "POST", body: JSON.stringify({ template }) }, "text").catch(() => "");
+    return rendered.trim() || null;
+  }
+
+  async trackPackage(entryId: string, tracking: string, name: string) {
+    await this.call("seventeentrack", "add_package", { config_entry_id: entryId, package_tracking_number: tracking, package_friendly_name: name });
+  }
+
+  /** Every package 17TRACK follows. The action only answers with data, so it needs `return_response`. */
+  async trackedPackages(entryId: string): Promise<TrackedPackage[]> {
+    const result = await this.request<{ service_response?: { packages?: Record<string, unknown>[] } }>("api/services/seventeentrack/get_packages?return_response", { method: "POST", body: JSON.stringify({ config_entry_id: entryId }) });
+    return (result.service_response?.packages ?? []).flatMap(item => {
+      const tracking = str(item.tracking_number);
+      return tracking ? [{ tracking, status: str(item.status) ?? "", info: str(item.info_text) ?? "", location: str(item.location) ?? "", at: str(item.timestamp) }] : [];
+    });
   }
 
   async cameraHlsFetch(path: string, search: string, signal: AbortSignal) {

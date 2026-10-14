@@ -7,6 +7,8 @@ const name = (label: string, max = 40) => z.string().trim().min(1, `Give the ${l
 
 export const BIN_ICONS = ["trash", "recycle", "leaf", "package", "wine", "tree"] as const;
 export const NOTE_COLORS = ["yellow", "pink", "blue", "green", "purple"] as const;
+export const CARRIERS = ["amazon", "canada-post", "purolator", "ups", "fedex", "usps", "dhl", "other"] as const;
+export const PACKAGE_STATES = ["coming", "delivered", "collected"] as const;
 
 export const ITEM_SCHEMAS = {
   bin: z.object({
@@ -59,6 +61,20 @@ export const ITEM_SCHEMAS = {
     endsAt: z.string().nullable().default(null),
     /** What was left when paused, or the full duration before it starts. */
     remainingMs: z.number().int().min(0).max(24 * 3_600_000),
+  }),
+  package: z.object({
+    name: name("package", 50),
+    /** The shop it came from, such as Amazon. */
+    from: z.string().trim().max(30).default(""),
+    carrier: z.enum(CARRIERS).default("other"),
+    tracking: z.string().trim().max(60).default(""),
+    /** The day it is due, when known. */
+    expected: day.nullable().default(null),
+    status: z.enum(PACKAGE_STATES).default("coming"),
+    deliveredAt: z.string().nullable().default(null),
+    collectedAt: z.string().nullable().default(null),
+    /** The latest scan from a tracker such as 17TRACK, when one follows this package. */
+    track: z.object({ status: z.string(), info: z.string(), location: z.string(), at: z.string().nullable() }).nullable().default(null),
   }),
   plant: z.object({
     name: name("plant"),

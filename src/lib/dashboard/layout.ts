@@ -1,6 +1,6 @@
 import { parseDeviceId, type Device } from "@/lib/devices/types";
 
-export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants"] as const;
+export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages"] as const;
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
 export type TileKind = Device["kind"] | WidgetKind;
 export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x1" | "4x2" | "4x3";
@@ -19,7 +19,7 @@ export const TILE_ICONS = [
   "shower", "door", "lock", "blinds", "heater", "flame", "snowflake", "droplets", "leaf", "flower", "router",
   "car", "baby", "dog", "cat", "bell", "house", "lock-open", "door-closed", "garage", "activity", "thermometer",
   "battery", "gauge", "clapperboard", "play", "shield", "bell-ring", "camera", "calendar", "list-checks", "clock",
-  "trash", "recycle", "pill", "hourglass", "sticky-note", "wifi", "timer", "sprout",
+  "trash", "recycle", "pill", "hourglass", "sticky-note", "wifi", "timer", "sprout", "package",
 ] as const;
 export type TileIcon = (typeof TILE_ICONS)[number];
 
@@ -99,6 +99,7 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   wifi: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "With QR code" }],
   timers: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x2", label: "Wide" }],
   plants: [{ size: "2x2", label: "Small" }, { size: "2x3", label: "Tall" }, { size: "4x2", label: "Wide" }],
+  packages: [{ size: "2x2", label: "Small" }, { size: "2x3", label: "Tall" }, { size: "4x2", label: "Wide" }],
 };
 
 /** Kinds whose tiles take an icon and a colour. */
@@ -140,6 +141,7 @@ export function defaultSize(kind: TileKind, adjustable = false): TileSize {
     case "notes":
     case "wifi":
     case "plants":
+    case "packages":
       return "2x2";
     case "cover":
       return adjustable ? "1x2" : "2x1";

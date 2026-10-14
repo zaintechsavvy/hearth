@@ -32,16 +32,17 @@ export const KIND_INFO: Record<TileKind, KindInfo> = {
   wifi: { label: "Guest Wi-Fi", description: "Network name, password, and a QR code to join", icon: "wifi", color: "blue" },
   timers: { label: "Timers", description: "Kitchen timers every screen hears", icon: "timer", color: "orange" },
   plants: { label: "Plants", description: "Who needs water, and when", icon: "sprout", color: "green" },
+  packages: { label: "Packages", description: "Deliveries on the way, and a nudge to collect them", icon: "package", color: "amber" },
 };
 
 export const ADDABLE_KINDS: TileKind[] = [
   "light", "switch", "fan", "thermostat", "lock", "cover", "camera", "media_player", "event", "binary_sensor", "sensor", "scene",
-  "weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants",
+  "weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages",
 ];
 
 /** Widgets grouped for the gallery, under the devices. */
 export const GALLERY_SECTIONS: { title: string; kinds: TileKind[] }[] = [
   { title: "Devices", kinds: ["light", "switch", "fan", "thermostat", "lock", "cover", "camera", "media_player", "event", "binary_sensor", "sensor", "scene"] },
   { title: "Everyday", kinds: ["weather", "calendar", "clock", "countdown", "timers"] },
-  { title: "Household", kinds: ["bins", "medications", "reminders", "notes", "plants", "wifi"] },
+  { title: "Household", kinds: ["bins", "packages", "medications", "reminders", "notes", "plants", "wifi"] },
 ];
