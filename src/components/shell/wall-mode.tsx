@@ -147,7 +147,7 @@ function Glance({ now, night, dimLevel }: { now: number; night: boolean; dimLeve
   }
   const pickup = groupPickups(itemsOf(widgets, "bin"), date)[0];
   if (pickup && pickup.days <= 1) notes.push({ key: "bins", icon: <Recycle size={18} strokeWidth={1.75} />, text: `${pickup.bins.map(bin => bin.data.name).join(" and ")} · ${pickupWords(pickup.days, date)}` });
-  const dose = itemsOf(widgets, "medication").flatMap(item => doseSlots(item.data, date).filter(slot => slot.state === "due" || slot.state === "upcoming").map(slot => ({ item, slot })))
+  const dose = itemsOf(widgets, "medication").flatMap(item => doseSlots(item.data, date, item.createdAt).filter(slot => slot.state === "due" || slot.state === "upcoming").map(slot => ({ item, slot })))
     .sort((a, b) => a.slot.at.getTime() - b.slot.at.getTime())[0];
   if (dose) notes.push({ key: "dose", icon: <Pill size={18} strokeWidth={1.75} />, text: `${dose.item.data.name}${dose.item.data.person ? ` for ${dose.item.data.person}` : ""} at ${dose.slot.at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}` });
   const next = agenda?.events.find(event => event.allDay ? event.start >= date.toISOString().slice(0, 10) : Date.parse(event.end) > now);

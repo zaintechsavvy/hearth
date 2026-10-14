@@ -34,6 +34,10 @@ describe("medication", () => {
     expect(doseSlots(med, new Date("2026-10-12T12:00:00"))[1].state).toBe("upcoming");
   });
 
+  it("leaves out doses that were over before the medication was added", () => {
+    expect(doseSlots({ ...med, taken: {} }, new Date("2026-10-12T15:00:00"), new Date("2026-10-12T14:00:00").toISOString()).map(slot => slot.time)).toEqual(["20:00"]);
+  });
+
   it("skips days it is not taken", () => {
     expect(doseSlots({ ...med, weekdays: [2] }, new Date("2026-10-12T12:00:00"))).toEqual([]);
   });

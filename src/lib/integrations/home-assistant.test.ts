@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapHassState, recentTracks } from "./home-assistant";
+import { logbookEntries, mapHassState, recentTracks } from "./home-assistant";
 
 describe("mapHassState", () => {
   it("maps a dimmable light to a 0 to 100 brightness", () => {
@@ -105,5 +105,25 @@ describe("new device kinds", () => {
       .toMatchObject({ kind: "alarm", state: "armed_away", modes: ["home", "away"], codeFormat: "number", codeToArm: false });
     expect(mapHassState("ha", { entity_id: "todo.shopping_list", state: "3", attributes: { supported_features: 7 } }, "C"))
       .toMatchObject({ kind: "todo", open: 3, can: { add: true, remove: true, check: true } });
+  });
+});
+
+describe("logbookEntries", () => {
+  const people = new Map([["user-1", "Sam"]]);
+  it("words changes like Hearth and credits who made them", () => {
+    const entries = logbookEntries([
+      { when: "2026-10-14T08:00:00+00:00", name: "Front door", entity_id: "lock.front", domain: "lock", state: "unlocked", message: "changed to unlocked", context_user_id: "user-1" },
+      { when: 1791964800.5, name: "Porch", entity_id: "light.porch", domain: "light", message: "turned on", context_domain: "automation", context_name: "Sunset" },
+      { when: "2026-10-14T09:00:00+00:00", name: "Bedtime", entity_id: "automation.bedtime", domain: "automation", message: "triggered by time" },
+      { when: "2026-10-14T09:30:00+00:00", name: "Back door", entity_id: "binary_sensor.back_door", domain: "binary_sensor", message: "was opened" },
+      { when: "not a time", name: "Broken", message: "turned on" },
+    ], people);
+    expect(entries.map(entry => [entry.nativeId, entry.what, entry.by])).toEqual([
+      ["lock.front", "unlocked", "Sam"],
+      ["light.porch", "turned on", "the Sunset automation"],
+      ["automation.bedtime", "ran", null],
+      ["binary_sensor.back_door", "opened", null],
+    ]);
+    expect(entries[1].at.getTime()).toBe(1791964800500);
   });
 });

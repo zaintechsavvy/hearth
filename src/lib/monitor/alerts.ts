@@ -77,7 +77,7 @@ export async function alertOnTick(now: Date) {
     }
     if (settings.medications) {
       for (const medication of itemsOf(home.widgets, "medication")) {
-        for (const slot of doseSlots(medication.data, now)) {
+        for (const slot of doseSlots(medication.data, now, medication.createdAt)) {
           const due = slot.at.getTime();
           if (slot.state !== "taken" && due <= time && time - due < WINDOW_MS * 2) {
             await once(userId, `dose:${medication.id}:${slot.key}`, { title: `Time for ${medication.data.name}`, body: [medication.data.dose, medication.data.person && `for ${medication.data.person}`].filter(Boolean).join(" "), tag: `dose-${medication.id}` });

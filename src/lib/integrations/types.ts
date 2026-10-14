@@ -36,8 +36,21 @@ export interface Provider {
   artwork?(nativeId: string, signal: AbortSignal): Promise<Response>;
   /** A device's readings between two times, from the integration's own history, or null when it keeps none. */
   history?(nativeId: string, from: Date, to: Date): Promise<HistoryPoint[] | null>;
+  /** Everything the integration itself recorded happening between two times, oldest first, including changes made outside Hearth. */
+  logbook?(from: Date, to: Date): Promise<LogbookEntry[]>;
   /** Fetches a playlist or segment of a stream `cameraHls` started. */
   cameraHlsFetch?(path: string, search: string, signal: AbortSignal): Promise<Response>;
+}
+
+export interface LogbookEntry {
+  at: Date;
+  /** The device's id within the integration, or null for an event about the integration itself. */
+  nativeId: string | null;
+  name: string;
+  /** Lower case, after the name: "turned on", "unlocked". */
+  what: string;
+  /** Who or what made the change, such as a person or "the Bedtime automation", when the integration knows. */
+  by: string | null;
 }
 
 export interface HistoryPoint {

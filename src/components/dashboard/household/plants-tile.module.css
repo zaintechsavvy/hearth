@@ -1,8 +1,31 @@
+/* Columns of at least 130px, never more than there are plants, so a few plants share a wide tile instead of hugging its left edge. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(130px, calc((100% - (var(--count) - 1) * var(--space-2)) / var(--count)))), 1fr));
+  align-content: start;
+  gap: var(--space-2);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.cell {
+  container-type: inline-size;
+  min-width: 0;
+}
+
 .plant {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
+  min-width: 0;
+  padding: 6px var(--space-2) 6px var(--space-3);
+  border-radius: var(--radius-control);
+  background: oklch(50% 0 0 / .05);
 }
 
 .emoji {
@@ -12,7 +35,7 @@
 
 .text {
   display: grid;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -47,7 +70,7 @@
 }
 
 .plant[data-thirsty] .meter span {
-  background: oklch(68% .17 50);
+  background: var(--warning);
 }
 
 .words {
@@ -56,15 +79,15 @@
 }
 
 .plant[data-thirsty] .words {
-  color: oklch(58% .17 45);
+  color: var(--warning);
   font-weight: 500;
 }
 
 .water {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: oklch(68% .14 225 / .14);
   color: oklch(52% .14 230);
@@ -77,6 +100,19 @@
 
 .water:active {
   transform: scale(.9);
+}
+
+/* A narrow column stacks the plant into a little card: the pot and the water button over its name. */
+@container (max-width: 200px) {
+  .plant {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "emoji water" "text text";
+    row-gap: var(--space-2);
+    padding: var(--space-3);
+  }
+  .emoji { grid-area: emoji; }
+  .water { grid-area: water; }
+  .text { grid-area: text; }
 }
 
 @media (prefers-reduced-motion: reduce) {

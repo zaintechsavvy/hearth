@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Device } from "@/lib/devices/types";
-import { describeChange } from "./activity-diff";
+import { describeChange, logbookChange } from "./activity-diff";
 
 const base = { integrationId: "a", room: "Entry", available: true };
 const lock = (state: "locked" | "unlocked" | "jammed"): Device => ({ ...base, id: "a:lock", name: "Front door", kind: "lock", state });
@@ -27,5 +27,18 @@ describe("describeChange", () => {
 
   it("notes devices going offline", () => {
     expect(describeChange(door(false), { ...door(false), available: false })).toEqual({ what: "went offline", category: "system", tone: "warning" });
+  });
+});
+
+describe("logbookChange", () => {
+  it("files an integration's entry by the device Hearth shows", () => {
+    expect(logbookChange(door(true), "binary_sensor.back_door", "opened")).toEqual({ what: "opened", category: "doors", tone: "warning" });
+    expect(logbookChange(motion(true), "binary_sensor.hall", "detected motion").category).toBe("sensors");
+  });
+
+  it("falls back to the kind of thing it is for entities Hearth does not show", () => {
+    expect(logbookChange(undefined, "automation.bedtime", "ran").category).toBe("automations");
+    expect(logbookChange(undefined, "light.porch", "turned on").category).toBe("lights");
+    expect(logbookChange(undefined, null, "started")).toEqual({ what: "started", category: "system", tone: "info" });
   });
 });

@@ -226,6 +226,8 @@ export const automation = pgTable("automation", {
   conditions: jsonb("conditions").$type<Condition[]>().notNull().default([]),
   actions: jsonb("actions").$type<Action[]>().notNull(),
   lastRun: timestamp("last_run"),
+  /** Skipped by the monitor until then; it resumes by itself once the time passes. */
+  snoozedUntil: timestamp("snoozed_until"),
   createdAt: createdAt(),
 }, t => [index("automation_user_idx").on(t.userId)]);
 

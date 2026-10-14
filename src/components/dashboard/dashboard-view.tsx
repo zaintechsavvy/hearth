@@ -41,10 +41,8 @@ import { DeviceTile } from "./tiles/device-tile";
 import { AlarmTile } from "./devices/alarm-tile";
 import { AnnounceTile } from "./glance/announce-tile";
 import { AppliancesTile } from "./glance/appliances-tile";
-import { BatteriesTile } from "./glance/batteries-tile";
 import { EnergyTile } from "./glance/energy-tile";
 import { PeopleTile } from "./glance/people-tile";
-import { RoomTile } from "./glance/room-tile";
 import { ChartTile } from "./devices/chart-tile";
 import { PersonTile } from "./devices/person-tile";
 import { TodoTile } from "./devices/todo-tile";
@@ -320,10 +318,6 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         return <EnergyTile tile={tile} devices={home.devices} />;
       case "people":
         return <PeopleTile tile={tile} devices={home.devices} now={minuteNow} />;
-      case "batteries":
-        return <BatteriesTile tile={tile} devices={home.devices} />;
-      case "room":
-        return <RoomTile tile={tile} devices={home.devices} rooms={home.rooms} interactive={interactive} onPick={room => change(updateTile(tiles, tile.id, { options: { ...tile.options, room } }))} onOpen={setRoom} onCommand={send} />;
       case "announce":
         return <AnnounceTile tile={tile} devices={home.devices} interactive={interactive} onOptions={patch => change(updateTile(tiles, tile.id, { options: { ...tile.options, ...patch } }))} onCommand={send} />;
       case "appliances":

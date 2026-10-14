@@ -6,10 +6,10 @@ import { glassClass } from "@/components/glass/glass";
 import type { TileConfig } from "@/lib/dashboard/layout";
 import type { Device } from "@/lib/devices/types";
 import { lastRun } from "@/lib/energy";
-import { saveWidgetItem } from "@/lib/widget-actions";
 import type { WidgetItem } from "@/lib/widgets/items";
 import { SetupTile } from "../household/choices";
 import { useHistory } from "../use-history";
+import { useHome } from "../use-home";
 import styles from "./glance.module.css";
 
 /** How long a finished cycle keeps asking to be emptied. */
@@ -43,6 +43,7 @@ function Appliance({ item, devices, now, interactive }: { item: WidgetItem<"appl
   const sensor = devices.find(device => device.id === item.data.sensorId);
   const { data } = useHistory(item.data.sensorId, "24h");
   const [emptied, setEmptied] = useState<string | null>(null);
+  const { saveItem } = useHome();
   const reading = sensor?.kind === "sensor" ? sensor.value : null;
   const run = lastRun([...(data?.points ?? []), ...(reading !== null && now ? [{ t: now, v: reading }] : [])], item.data.threshold);
   const running = reading !== null && reading > item.data.threshold;
@@ -62,7 +63,7 @@ function Appliance({ item, devices, now, interactive }: { item: WidgetItem<"appl
         <button type="button" className={styles.emptied} disabled={!interactive} onClick={() => {
           const at = new Date().toISOString();
           setEmptied(at);
-          void saveWidgetItem("appliance", { ...item.data, emptiedAt: at }, item.id);
+          void saveItem("appliance", { ...item.data, emptiedAt: at }, item.id);
         }} aria-label={`Emptied the ${NOUN[item.data.type]}`}><Check size={14} strokeWidth={1.75} aria-hidden="true" />Emptied</button>
       )}
     </li>

@@ -13,7 +13,7 @@ import { Select } from "@/components/arc/select/select";
 import { Switch } from "@/components/arc/switch/switch";
 import { glassSheetClass } from "@/components/glass/glass";
 import type { TileConfig } from "@/lib/dashboard/layout";
-import { clearNotes, deleteWidgetItem, saveWidgetItem } from "@/lib/widget-actions";
+import { clearNotes } from "@/lib/widget-actions";
 import { BIN_ICONS, CARRIERS, itemsOf, type ItemData, type ItemKind, type WidgetItem } from "@/lib/widgets/items";
 import { CARRIER_NAMES, detectCarrier, packageSource, type Carrier } from "@/lib/widgets/packages";
 import { localDay, nextPickup } from "@/lib/widgets/schedules";
@@ -84,9 +84,10 @@ function Collection<K extends "bin" | "medication" | "plant" | "package" | "appl
   kind: K; items: WidgetItem<K>[]; start?: string; describe: (data: ItemData<K>) => { title: string; detail: string; color?: string; icon?: ReactNode }; form: (props: FormProps<K>) => ReactNode; addLabel: string;
 }) {
   const [editing, setEditing] = useState<string | "new" | null>(start ?? (items.length ? null : "new"));
+  const { saveItem, removeItem } = useHome();
   const [error, setError] = useState<string | null>(null);
   const submit = (id?: string) => async (data: unknown) => {
-    const result = await saveWidgetItem(kind, data, id);
+    const result = await saveItem(kind, data, id);
     setError(result.ok ? null : result.error);
     if (result.ok) setEditing(null);
     return result.ok;
@@ -106,7 +107,7 @@ function Collection<K extends "bin" | "medication" | "plant" | "package" | "appl
                   <span className={styles.itemDetail}>{shown.detail}</span>
                 </span>
                 <Button variant="ghost" size="sm" aria-label={`Edit ${shown.title}`} onClick={() => setEditing(item.id)}><Pencil size={16} strokeWidth={1.75} aria-hidden="true" /></Button>
-                <Button variant="ghost" size="sm" aria-label={`Remove ${shown.title}`} onClick={() => { void deleteWidgetItem(item.id); if (editing === item.id) setEditing(null); }}><Trash2 size={16} strokeWidth={1.75} aria-hidden="true" /></Button>
+                <Button variant="ghost" size="sm" aria-label={`Remove ${shown.title}`} onClick={() => { void removeItem(item.id); if (editing === item.id) setEditing(null); }}><Trash2 size={16} strokeWidth={1.75} aria-hidden="true" /></Button>
               </li>
             );
           })}
@@ -126,10 +127,11 @@ function Collection<K extends "bin" | "medication" | "plant" | "package" | "appl
 
 function Single<K extends "countdown" | "wifi" | "timer">({ kind, item, form: Form, onSaved }: { kind: K; item?: WidgetItem<K>; form: (props: FormProps<K>) => ReactNode; onSaved: (id: string) => void }) {
   const [error, setError] = useState<string | null>(null);
+  const { saveItem } = useHome();
   return (
     <div className={styles.body}>
       <Form initial={item?.data} submitLabel={item ? "Save" : kind === "timer" ? "Start timer" : "Save"} onSubmit={async data => {
-        const result = await saveWidgetItem(kind, data, item?.id);
+        const result = await saveItem(kind, data, item?.id);
         setError(result.ok ? null : result.error);
         if (result.ok) onSaved(result.id);
         return result.ok;
@@ -394,10 +396,11 @@ function TimerForm({ onSubmit, submitLabel }: FormProps<"timer">) {
 }
 
 function NotesManager({ notes, close }: { notes: WidgetItem<"note">[]; close: () => void }) {
+  const { refresh } = useHome();
   return (
     <div className={styles.body}>
       <p className={styles.itemDetail}>{notes.length ? `${notes.length} ${notes.length === 1 ? "note is" : "notes are"} on the board. Tear one off with its ×.` : "The board is empty. Write on it from the tile."}</p>
-      {notes.length > 0 && <Button variant="secondary" onClick={async () => { await clearNotes(notes.map(note => note.id)); close(); }}>Clear the board</Button>}
+      {notes.length > 0 && <Button variant="secondary" onClick={async () => { close(); await refresh(current => current && { ...current, widgets: current.widgets.filter(item => item.kind !== "note") }, { revalidate: false }); await clearNotes(notes.map(note => note.id)); }}>Clear the board</Button>}
     </div>
   );
 }

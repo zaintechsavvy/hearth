@@ -3,7 +3,8 @@
 import { Pause, Play, Plus, RotateCcw, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import { glassClass } from "@/components/glass/glass";
-import { controlTimer, deleteWidgetItem, saveWidgetItem } from "@/lib/widget-actions";
+import { controlTimer, saveWidgetItem } from "@/lib/widget-actions";
+import { useHome } from "../use-home";
 import { formatDuration, timerRemaining } from "@/lib/widgets/schedules";
 import type { HouseholdTileProps } from "./types";
 import { useTick } from "./use-tick";
@@ -20,6 +21,7 @@ export async function startQuickTimer(minutes: number) {
 /** Named timers that run on the server, so every screen counts down together. Quick starts for the usual lengths. */
 export function TimersTile({ tile, items, interactive, onManage }: HouseholdTileProps<"timer">) {
   const now = useTick(250) ?? 0;
+  const { removeItem } = useHome();
   const sorted = [...items].sort((a, b) => timerRemaining(a.data, now) - timerRemaining(b.data, now));
   const shown = sorted.slice(0, tile.size === "2x1" ? 1 : tile.size === "2x2" ? 3 : 6);
   return (
@@ -64,7 +66,7 @@ export function TimersTile({ tile, items, interactive, onManage }: HouseholdTile
                     {(done || !running) && left !== item.data.durationMs && (
                       <button type="button" className={own.control} aria-label={`Reset ${item.data.label}`} onClick={() => void controlTimer(item.id, { action: "reset" })}><RotateCcw size={14} strokeWidth={2} aria-hidden="true" /></button>
                     )}
-                    <button type="button" className={own.control} aria-label={`Remove ${item.data.label}`} onClick={() => void deleteWidgetItem(item.id)}><X size={14} strokeWidth={2} aria-hidden="true" /></button>
+                    <button type="button" className={own.control} aria-label={`Remove ${item.data.label}`} onClick={() => void removeItem(item.id)}><X size={14} strokeWidth={2} aria-hidden="true" /></button>
                   </span>
                 )}
               </li>

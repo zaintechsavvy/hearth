@@ -124,7 +124,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
     const name = overrides.get(`camera:${row.id}`)?.name;
     return name ? { ...row, name, sourceName: row.name } : row;
   });
-  const widgets = itemRows.map(row => ({ id: row.id, kind: row.kind, position: row.position, data: row.kind === "wifi" ? openWifi(row.data) : row.data }) as WidgetItem);
+  const widgets = itemRows.map(row => ({ id: row.id, kind: row.kind, position: row.position, createdAt: row.createdAt.toISOString(), data: row.kind === "wifi" ? openWifi(row.data) : row.data }) as WidgetItem);
   const connected = new Set(rows.map(row => row.id));
   const pages = preferences.pages.map(page => ({ ...page, layout: withoutOrphanTiles(page.layout, connected) }));
   return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method };

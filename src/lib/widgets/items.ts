@@ -112,6 +112,8 @@ export interface WidgetItem<K extends ItemKind = ItemKind> {
   kind: K;
   data: ItemData<K>;
   position: number;
+  /** When it was added, as an ISO string; missing on an item that is still being saved. */
+  createdAt?: string;
 }
 
 export const itemsOf = <K extends ItemKind>(items: WidgetItem[], kind: K) => items.filter((item): item is WidgetItem<K> => item.kind === kind).sort((a, b) => a.position - b.position);

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, lte, or } from "drizzle-orm";
 import { conditionHolds, fireTime, matches, pressed } from "@/lib/automations/logic";
 import type { Automation, HomeLocation } from "@/lib/automations/types";
 import { db } from "@/lib/db";
@@ -18,7 +18,8 @@ type Row = typeof automation.$inferSelect;
 const registry = globalThis as unknown as { hearthAutomations?: { waiting: Map<string, number>; done: Set<string> } };
 const state = registry.hearthAutomations ??= { waiting: new Map(), done: new Set() };
 
-const enabledFor = (userId: string) => db.select().from(automation).where(and(eq(automation.userId, userId), eq(automation.enabled, true)));
+const enabledFor = (userId: string) => db.select().from(automation)
+  .where(and(eq(automation.userId, userId), eq(automation.enabled, true), or(isNull(automation.snoozedUntil), lte(automation.snoozedUntil, new Date()))));
 
 async function locationFor(userId: string): Promise<HomeLocation | null> {
   const row = await db.query.preference.findFirst({ where: eq(preference.userId, userId), columns: { location: true } });
@@ -98,13 +99,13 @@ export async function runTimedAutomations(now: Date) {
       }
       const due = fireTime(row.trigger, now, location);
       if (!due || time < due.getTime() || time - due.getTime() > CATCH_UP_MS) continue;
-      if (due < row.createdAt || (row.lastRun && row.lastRun >= due)) continue;
+      if (due < row.createdAt || (row.lastRun && row.lastRun >= due) || (row.snoozedUntil && due < row.snoozedUntil)) continue;
       await run(row, devices, now, location);
     }
   }
 }
 
-export const toAutomation = (row: Row): Automation => ({ id: row.id, name: row.name, enabled: row.enabled, trigger: row.trigger, conditions: row.conditions, actions: row.actions, lastRun: row.lastRun?.toISOString() ?? null });
+export const toAutomation = (row: Row): Automation => ({ id: row.id, name: row.name, enabled: row.enabled, trigger: row.trigger, conditions: row.conditions, actions: row.actions, lastRun: row.lastRun?.toISOString() ?? null, snoozedUntil: row.snoozedUntil && row.snoozedUntil > new Date() ? row.snoozedUntil.toISOString() : null });
 
 /** Runs one rule now, ignoring its trigger, for the Run now button. Its conditions still apply. */
 export async function runAutomationNow(userId: string, id: string) {

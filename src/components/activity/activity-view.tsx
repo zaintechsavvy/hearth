@@ -13,7 +13,7 @@ import { Glass } from "@/components/glass/glass";
 import type { ActivityCategory, ActivityEntry } from "@/lib/activity-types";
 import styles from "./activity-view.module.css";
 
-type Page = { entries: ActivityEntry[]; more: boolean };
+type Page = { entries: ActivityEntry[]; more: boolean; next?: string };
 const ALL = "all";
 const ANY_ROOM = "__any";
 const FILTERS: { value: ActivityCategory | typeof ALL; label: string }[] = [
@@ -58,7 +58,7 @@ export function ActivityView() {
     return `/api/activity?${params}`;
   };
   const { data, error, size, setSize, isLoading } = useSWRInfinite<Page>(
-    (index, previous: Page | null) => index === 0 ? query() : previous?.more ? query(previous.entries.at(-1)?.at) : null,
+    (index, previous: Page | null) => index === 0 ? query() : previous?.more ? query(previous.next ?? previous.entries.at(-1)?.at) : null,
     fetchPage,
     { refreshInterval: 10_000, revalidateFirstPage: true },
   );
@@ -75,7 +75,7 @@ export function ActivityView() {
       <header className={styles.header} data-on-wall>
         <div>
           <h1 className={styles.title}>Activity</h1>
-          <p className={styles.lede}>What happened at home, and who did it. Kept for 60 days.</p>
+          <p className={styles.lede}>What happened at home and who did it, in Hearth or anywhere else.</p>
         </div>
         {home && home.rooms.length > 0 && (
           <Select label="Room" className={styles.room} value={room} onValueChange={setRoom} options={[{ value: ANY_ROOM, label: "Every room" }, ...home.rooms.map(value => ({ value, label: value }))]} />

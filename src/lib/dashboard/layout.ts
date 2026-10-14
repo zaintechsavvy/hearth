@@ -1,6 +1,6 @@
 import { parseDeviceId, type Device } from "@/lib/devices/types";
 
-export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "room", "appliances", "announce", "batteries"] as const;
+export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "appliances", "announce"] as const;
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
 export type TileKind = Device["kind"] | WidgetKind;
 export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x1" | "4x2" | "4x3";
@@ -49,8 +49,6 @@ export interface TileOptions {
   hold?: TileHold;
   /** Energy: price per kWh, for today's cost. */
   price?: number;
-  /** Room card: which room. */
-  room?: string;
   /** Announcements: the speakers it last spoke on. */
   speakers?: string[];
 }
@@ -123,10 +121,8 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   packages: [{ size: "2x2", label: "Small" }, { size: "2x3", label: "Tall" }, { size: "4x2", label: "Wide" }],
   energy: [{ size: "2x2", label: "Today" }, { size: "4x2", label: "With chart" }],
   people: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x1", label: "Wide" }],
-  room: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }],
   appliances: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x1", label: "Wide" }],
   announce: [{ size: "2x2", label: "Card" }, { size: "4x2", label: "Wide" }],
-  batteries: [{ size: "2x2", label: "Card" }, { size: "2x3", label: "Tall" }],
 };
 
 /** Kinds whose tiles take an icon and a colour. */
@@ -165,14 +161,12 @@ export function defaultSize(kind: TileKind, adjustable = false): TileSize {
     case "vacuum":
     case "alarm":
     case "people":
-    case "room":
     case "appliances":
       return "2x1";
     case "todo":
       return "2x3";
     case "energy":
     case "announce":
-    case "batteries":
       return "2x2";
     case "countdown":
     case "timers":
@@ -231,7 +225,7 @@ export function resolveLayout(saved: SavedTile[], sources: TileSource[]): TileCo
   const seen = new Set<string>();
   const tiles: TileConfig[] = [];
   for (const entry of saved) {
-    if (seen.has(entry.id)) continue;
+    if (seen.has(entry.id) || (entry.kind !== undefined && !SIZE_OPTIONS[entry.kind])) continue;
     seen.add(entry.id);
     let tile: TileConfig;
     if (entry.kind === undefined) {

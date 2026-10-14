@@ -9,6 +9,21 @@ export interface Change {
 
 const ENTRY_CLASSES = new Set(["door", "window", "garage", "opening"]);
 
+const DOMAIN_CATEGORIES: Record<string, ActivityCategory> = { light: "lights", switch: "lights", fan: "lights", input_boolean: "lights", lock: "doors", cover: "doors", climate: "climate", binary_sensor: "sensors", automation: "automations", script: "automations", scene: "automations" };
+
+/** Where an integration's own log entry belongs, from the device when Hearth shows it, otherwise the kind of thing it is. */
+export function logbookChange(device: Device | undefined, nativeId: string | null, what: string): Change {
+  const category: ActivityCategory = !device ? DOMAIN_CATEGORIES[nativeId?.split(".")[0] ?? ""] ?? "system"
+    : device.kind === "light" || device.kind === "switch" || device.kind === "fan" ? "lights"
+      : device.kind === "lock" || device.kind === "cover" || (device.kind === "binary_sensor" && ENTRY_CLASSES.has(device.sensorClass)) ? "doors"
+        : device.kind === "thermostat" ? "climate"
+          : device.kind === "binary_sensor" || device.kind === "sensor" || device.kind === "event" ? "sensors"
+            : device.kind === "scene" ? "automations" : "system";
+  const tone = what === "jammed" || what.startsWith("detected a leak") || what.startsWith("detected smoke") ? "alert"
+    : what === "unlocked" || what === "went offline" || (category === "doors" && what === "opened") ? "warning" : "info";
+  return { what, category, tone };
+}
+
 /**
  * What changed between two looks at one device, in words for the activity log, or null when nothing worth
  * noting did. Readings are charted rather than logged, and motion clearing is left out as noise.

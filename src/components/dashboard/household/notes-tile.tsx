@@ -3,8 +3,8 @@
 import { X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { glassClass } from "@/components/glass/glass";
-import { deleteWidgetItem, saveWidgetItem } from "@/lib/widget-actions";
 import { NOTE_COLORS, type ItemData } from "@/lib/widgets/items";
+import { useHome } from "../use-home";
 import type { HouseholdTileProps } from "./types";
 import styles from "./household.module.css";
 import own from "./notes-tile.module.css";
@@ -17,11 +17,14 @@ export function NotesTile({ items, interactive, author }: HouseholdTileProps<"no
   const [text, setText] = useState("");
   const [color, setColor] = useState<NoteColor>("yellow");
   const [error, setError] = useState<string | null>(null);
+  const { saveItem, removeItem } = useHome();
   const add = async (event: FormEvent) => {
     event.preventDefault();
     if (!text.trim()) return;
-    const result = await saveWidgetItem("note", { text, color, author });
-    if (result.ok) setText("");
+    const note = { text: text.trim(), color, author };
+    setText("");
+    const result = await saveItem("note", note);
+    if (!result.ok) setText(note.text);
     setError(result.ok ? null : result.error);
   };
   return (
@@ -36,7 +39,7 @@ export function NotesTile({ items, interactive, author }: HouseholdTileProps<"no
             <p className={own.text}>{note.data.text}</p>
             {note.data.author && <span className={own.author}>{note.data.author}</span>}
             {interactive && (
-              <button type="button" className={own.remove} aria-label="Remove note" onClick={() => void deleteWidgetItem(note.id)}><X size={12} strokeWidth={1.75} aria-hidden="true" /></button>
+              <button type="button" className={own.remove} aria-label="Remove note" onClick={() => void removeItem(note.id)}><X size={12} strokeWidth={1.75} aria-hidden="true" /></button>
             )}
           </li>
         ))}

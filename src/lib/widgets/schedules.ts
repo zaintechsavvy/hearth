@@ -61,10 +61,12 @@ export const DOSE_GRACE_MS = 60 * 60_000;
 /** How early a dose can be marked due. */
 export const DOSE_EARLY_MS = 30 * 60_000;
 
-export function doseSlots(medication: ItemData<"medication">, now: Date): DoseSlot[] {
+/** Today's doses. Ones already past their grace when the medication was added (`since`) are left out rather than missed. */
+export function doseSlots(medication: ItemData<"medication">, now: Date, since?: string): DoseSlot[] {
   if (medication.weekdays.length && !medication.weekdays.includes(now.getDay())) return [];
   const today = localDay(now);
-  return [...medication.times].sort().map(time => {
+  const added = since ? Date.parse(since) : -Infinity;
+  return [...medication.times].sort().filter(time => new Date(`${today}T${time}:00`).getTime() + DOSE_GRACE_MS >= added || medication.taken[`${today} ${time}`]).map(time => {
     const key = `${today} ${time}`;
     const at = new Date(`${today}T${time}:00`);
     const takenAt = medication.taken[key] ?? null;

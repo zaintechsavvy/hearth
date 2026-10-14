@@ -45,7 +45,7 @@ export function HouseholdAlerts({ items }: { items: WidgetItem[] }) {
   const audio = useRef<AudioContext | null>(null);
 
   const done = itemsOf(items, "timer").filter(timer => timer.data.endsAt && timerRemaining(timer.data, now) === 0 && now - Date.parse(timer.data.endsAt) < RING_WINDOW_MS);
-  const due = now ? itemsOf(items, "medication").flatMap(item => doseSlots(item.data, new Date(now)).filter(slot => slot.state === "due" && slot.at.getTime() <= now && !later.has(`${item.id} ${slot.key}`)).map(slot => ({ item, slot }))) : [];
+  const due = now ? itemsOf(items, "medication").flatMap(item => doseSlots(item.data, new Date(now), item.createdAt).filter(slot => slot.state === "due" && slot.at.getTime() <= now && !later.has(`${item.id} ${slot.key}`)).map(slot => ({ item, slot }))) : [];
   const ringing = done.filter(timer => now - Date.parse(timer.data.endsAt ?? "") < CHIME_FOR_MS).length > 0;
 
   useEffect(() => {

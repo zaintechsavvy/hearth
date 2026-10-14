@@ -179,7 +179,6 @@ const tileSchema = z.object({
     hideStatus: z.boolean().optional(),
     glow: z.boolean().optional(),
     price: z.number().min(0).max(10).optional(),
-    room: z.string().max(60).optional(),
     speakers: z.array(z.string().max(300)).max(20).optional(),
     hold: z.custom<TileHold>(value => typeof value === "string" && /^(controls|history|none|scene:[\w-]{1,100}|device:[\w.:-]{1,300})$/.test(value)).optional(),
   }).optional(),
@@ -508,6 +507,16 @@ export async function saveAutomation(input: unknown, id?: string): Promise<Creat
 export async function setAutomationEnabled(id: string, enabled: boolean): Promise<ActionResult> {
   return authed(async userId => {
     await db.update(automation).set({ enabled }).where(and(eq(automation.id, id), eq(automation.userId, userId)));
+    return OK;
+  });
+}
+
+/** Pauses an automation until the given time, at most a week away, or resumes it with null. */
+export async function snoozeAutomation(id: string, until: string | null): Promise<ActionResult> {
+  const time = until === null ? null : new Date(until);
+  if (time && (Number.isNaN(time.getTime()) || time.getTime() <= Date.now() || time.getTime() - Date.now() > 7 * 86_400_000)) return { ok: false, error: "Pick a time in the next week." };
+  return authed(async userId => {
+    await db.update(automation).set({ snoozedUntil: time }).where(and(eq(automation.id, id), eq(automation.userId, userId)));
     return OK;
   });
 }

@@ -220,3 +220,8 @@
   margin-top: var(--space-1);
   color: var(--text-secondary);
 }
+
+.snoozed {
+  color: var(--foreground);
+  font-weight: 500;
+}

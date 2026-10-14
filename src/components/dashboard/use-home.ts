@@ -1,7 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import useSWR from "swr";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
+import useSWR, { mutate as mutateKey } from "swr";
+import type { ActionResult } from "@/lib/action-helpers";
+import { deleteWidgetItem, saveWidgetItem } from "@/lib/widget-actions";
+import type { ItemData, ItemKind, WidgetItem } from "@/lib/widgets/items";
 import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/types";
 import type { HomeSnapshot, SceneRun } from "@/lib/home";
 import { applyScene, type HearthScene } from "@/lib/scenes/types";
@@ -22,30 +25,101 @@ function patch(snapshot: HomeSnapshot, id: string, command: DeviceCommand): Home
 }
 
 /**
- * The home, kept current by Server-Sent Events, with polling only as a fallback. Commands apply optimistically
- * and roll back if the device refuses; pushed snapshots wait until in-flight commands settle so a toggle never
- * flickers back to its old state.
+ * One live stream for the whole page, however many tiles read the home: each open stream rebuilds the home on the
+ * server for every change, so a stream per tile made every change slow to arrive. Pushed snapshots wait while a
+ * command is in flight, so a toggle never flickers back to its old state.
  */
-export function useHome() {
-  const [live, setLive] = useState(false);
-  const inFlight = useRef(0);
-  const held = useRef<HomeSnapshot | null>(null);
-  const { data, error, isLoading, mutate } = useSWR<HomeSnapshot>(KEY, fetchHome, { refreshInterval: live ? 0 : FALLBACK_POLL_MS, keepPreviousData: true });
+const shared = { source: null as EventSource | null, users: 0, live: false, inFlight: 0, held: null as HomeSnapshot | null, listeners: new Set<() => void>() };
 
-  useEffect(() => {
+const notifyLive = (live: boolean) => {
+  shared.live = live;
+  for (const listener of shared.listeners) listener();
+};
+
+function connect() {
+  shared.users++;
+  if (!shared.source) {
     const source = new EventSource(STREAM);
     source.addEventListener("snapshot", event => {
-      setLive(true);
+      notifyLive(true);
       const snapshot = JSON.parse((event as MessageEvent<string>).data) as HomeSnapshot;
-      if (inFlight.current > 0) held.current = snapshot;
-      else void mutate(snapshot, { revalidate: false });
+      if (shared.inFlight > 0) shared.held = snapshot;
+      else void mutateKey(KEY, snapshot, { revalidate: false });
     });
-    source.addEventListener("error", () => setLive(false));
-    return () => source.close();
+    source.addEventListener("error", () => notifyLive(false));
+    shared.source = source;
+  }
+  return () => {
+    shared.users--;
+    if (shared.users > 0 || !shared.source) return;
+    shared.source.close();
+    shared.source = null;
+    notifyLive(false);
+  };
+}
+
+function settle() {
+  shared.inFlight--;
+  if (shared.inFlight === 0 && shared.held) {
+    const snapshot = shared.held;
+    shared.held = null;
+    void mutateKey(KEY, snapshot, { revalidate: false });
+  }
+}
+
+/** The home, kept current by Server-Sent Events, with polling only as a fallback. Commands and widget edits apply at once and roll back if they fail. */
+export function useHome() {
+  const live = useSyncExternalStore(listener => { shared.listeners.add(listener); return () => shared.listeners.delete(listener); }, () => shared.live, () => false);
+  const { data, error, isLoading, mutate } = useSWR<HomeSnapshot>(KEY, fetchHome, { refreshInterval: live ? 0 : FALLBACK_POLL_MS, keepPreviousData: true });
+
+  useEffect(() => connect(), []);
+
+  /** Adds or edits a widget item, showing it straight away; the saved id replaces the stand-in once the server has it. */
+  const saveItem = useCallback(async (kind: ItemKind, data: unknown, id?: string) => {
+    const standIn = id ?? `pending-${crypto.randomUUID()}`;
+    shared.inFlight++;
+    try {
+      await mutate(current => current && {
+        ...current,
+        widgets: id ? current.widgets.map(item => item.id === id ? { ...item, data: data as WidgetItem["data"] } : item)
+          : [...current.widgets, { id: standIn, kind, data: data as WidgetItem["data"], position: Number.MAX_SAFE_INTEGER } as WidgetItem],
+      }, { revalidate: false });
+      const result = await saveWidgetItem(kind, data, id);
+      if (result.ok) await mutate(current => current && { ...current, widgets: current.widgets.map(item => item.id === standIn ? { ...item, id: result.id } : item) }, { revalidate: false });
+      else await mutate();
+      return result;
+    } finally {
+      settle();
+    }
+  }, [mutate]);
+
+  const removeItem = useCallback(async (id: string) => {
+    shared.inFlight++;
+    try {
+      await mutate(current => current && { ...current, widgets: current.widgets.filter(item => item.id !== id) }, { revalidate: false });
+      const result = await deleteWidgetItem(id);
+      if (!result.ok) await mutate();
+      return result;
+    } finally {
+      settle();
+    }
+  }, [mutate]);
+
+  /** Runs a widget action, showing its effect on the item straight away and rolling back if the server refuses it. */
+  const changeItem = useCallback(async <K extends ItemKind>(item: WidgetItem<K>, change: (data: ItemData<K>) => ItemData<K>, action: () => Promise<ActionResult>) => {
+    shared.inFlight++;
+    try {
+      await mutate(current => current && { ...current, widgets: current.widgets.map(entry => entry.id === item.id ? { ...entry, data: change(entry.data as ItemData<K>) } : entry) }, { revalidate: false });
+      const result = await action();
+      if (!result.ok) await mutate();
+      return result;
+    } finally {
+      settle();
+    }
   }, [mutate]);
 
   const send = useCallback(async (device: Device, command: DeviceCommand, pin?: string) => {
-    inFlight.current++;
+    shared.inFlight++;
     try {
       await mutate(async current => {
         const response = await fetch(`/api/devices/${encodeURIComponent(device.id)}`, {
@@ -61,17 +135,12 @@ export function useHome() {
         revalidate: false,
       });
     } finally {
-      inFlight.current--;
-      if (inFlight.current === 0 && held.current) {
-        const snapshot = held.current;
-        held.current = null;
-        void mutate(snapshot, { revalidate: false });
-      }
+      settle();
     }
   }, [mutate]);
 
   const runScene = useCallback(async (scene: HearthScene): Promise<SceneRun> => {
-    inFlight.current++;
+    shared.inFlight++;
     try {
       let outcome: SceneRun = { ran: 0, failed: [] };
       await mutate(async current => {
@@ -87,14 +156,9 @@ export function useHome() {
       });
       return outcome;
     } finally {
-      inFlight.current--;
-      if (inFlight.current === 0 && held.current) {
-        const snapshot = held.current;
-        held.current = null;
-        void mutate(snapshot, { revalidate: false });
-      }
+      settle();
     }
   }, [mutate]);
 
-  return { home: data, error, isLoading, live, refresh: mutate, send, runScene };
+  return { home: data, error, isLoading, live, refresh: mutate, send, runScene, saveItem, removeItem, changeItem };
 }

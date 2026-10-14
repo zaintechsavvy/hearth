@@ -26,10 +26,8 @@ export const KIND_INFO: Record<TileKind, KindInfo> = {
   todo: { label: "Shopping list", description: "A Home Assistant list everyone can add to", icon: "shopping-cart", color: "green" },
   energy: { label: "Energy", description: "Power now, today's use and cost, and what is drawing it", icon: "zap", color: "amber" },
   people: { label: "Who's home", description: "Everyone, home or away", icon: "users", color: "blue" },
-  room: { label: "Room", description: "A room at a glance: warmth, lights, and open doors", icon: "house", color: "graphite" },
   appliances: { label: "Laundry and dishes", description: "Washer, dryer, or dishwasher running, and when it is done", icon: "washing-machine", color: "blue" },
   announce: { label: "Announce", description: "Type a message and your speakers say it", icon: "megaphone", color: "violet" },
-  batteries: { label: "Batteries", description: "Low batteries and devices that went offline", icon: "battery", color: "green" },
   media_player: { label: "Music", description: "What is playing, and the speaker or Bluetooth device it plays on", icon: "music", color: "rose" },
   weather: { label: "Weather", description: "Now and the days ahead for any city", icon: "sun", color: "blue" },
   calendar: { label: "Calendar", description: "What is coming up, from Google Calendar or any iCal feed", icon: "calendar", color: "rose" },
@@ -47,13 +45,13 @@ export const KIND_INFO: Record<TileKind, KindInfo> = {
 
 export const ADDABLE_KINDS: TileKind[] = [
   "light", "switch", "fan", "thermostat", "lock", "cover", "camera", "media_player", "alarm", "vacuum", "todo", "person", "event", "binary_sensor", "sensor", "scene",
-  "weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "room", "appliances", "announce", "batteries",
+  "weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "appliances", "announce",
 ];
 
 /** Widgets grouped for the gallery, under the devices. */
 export const GALLERY_SECTIONS: { title: string; kinds: TileKind[] }[] = [
   { title: "Devices", kinds: ["light", "switch", "fan", "thermostat", "lock", "cover", "camera", "media_player", "alarm", "vacuum", "todo", "person", "event", "binary_sensor", "sensor", "scene"] },
-  { title: "At a glance", kinds: ["energy", "people", "room", "batteries"] },
+  { title: "At a glance", kinds: ["energy", "people"] },
   { title: "Everyday", kinds: ["weather", "calendar", "clock", "countdown", "timers"] },
   { title: "Household", kinds: ["appliances", "announce", "bins", "packages", "medications", "reminders", "notes", "plants", "wifi"] },
 ];

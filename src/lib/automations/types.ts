@@ -45,6 +45,7 @@ export type AutomationInput = z.infer<typeof automationInput>;
 export interface Automation extends AutomationInput {
   id: string;
   lastRun: string | null;
+  snoozedUntil: string | null;
 }
 
 export interface HomeLocation {

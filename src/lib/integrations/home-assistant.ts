@@ -3,7 +3,7 @@ import {
 } from "@/lib/devices/types";
 import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
 import { unreachableMessage } from "./reach";
-import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type HistoryPoint, type IceCandidate, type IceServer, type Provider, type WebRtcAnswer } from "./types";
+import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type HistoryPoint, type IceCandidate, type LogbookEntry, type IceServer, type Provider, type WebRtcAnswer } from "./types";
 
 export interface HassState {
   entity_id: string;
@@ -287,6 +287,44 @@ export interface TrackedPackage {
   at: string | null;
 }
 
+export interface HassLogbookRow {
+  when: string | number;
+  name?: string;
+  message?: string;
+  state?: string;
+  entity_id?: string;
+  domain?: string;
+  context_user_id?: string;
+  context_domain?: string;
+  context_name?: string;
+}
+
+const PEOPLE_TEMPLATE = "{% for person in states.person %}{{ person.attributes.user_id }}|{{ person.name }}\n{% endfor %}";
+
+/** Logbook rows as entries, crediting the automation or script that made a change, or the person whose Home Assistant user did. */
+export function logbookEntries(rows: HassLogbookRow[], people: Map<string, string>): LogbookEntry[] {
+  return rows.flatMap(row => {
+    const at = typeof row.when === "number" ? new Date(row.when * 1000) : new Date(row.when);
+    const what = logbookWords(row);
+    if (Number.isNaN(at.getTime()) || !row.name || !what) return [];
+    const by = row.context_domain === "automation" && row.context_name ? `the ${row.context_name} automation`
+      : row.context_domain === "script" && row.context_name ? `the ${row.context_name} script`
+        : row.context_user_id ? people.get(row.context_user_id) ?? null : null;
+    return [{ at, nativeId: row.entity_id ?? null, name: row.name, what, by }];
+  });
+}
+
+/** The logbook's message, worded like Hearth's own entries; null for chatter not worth listing. */
+function logbookWords(row: HassLogbookRow) {
+  const message = (row.message ?? (row.state ? `changed to ${row.state}` : "")).trim().replace(/^(was|is) /, "");
+  if (!message) return null;
+  if (row.domain === "automation" && message.startsWith("triggered")) return "ran";
+  if (row.domain === "script" && message.startsWith("started")) return "ran";
+  if (message === "became unavailable") return "went offline";
+  const changed = /^changed to (.+)$/.exec(message);
+  return changed ? (["locked", "unlocked", "jammed", "open", "opened", "closed", "home", "away"].includes(changed[1]) ? changed[1].replace(/^open$/, "opened").replace(/^away$/, "left home").replace(/^home$/, "came home") : `changed to ${changed[1]}`) : message;
+}
+
 export class HomeAssistantProvider implements Provider {
   private readonly base: URL;
   private readonly token: string;
@@ -439,6 +477,16 @@ export class HomeAssistantProvider implements Provider {
       const t = Date.parse(entry.last_changed ?? entry.last_updated ?? "");
       return Number.isFinite(value) && value !== null && Number.isFinite(t) ? [{ t, v: value }] : [];
     });
+  }
+
+  /** Home Assistant's logbook, with who did each change: a person from the user behind it, or the automation or script that ran it. */
+  async logbook(from: Date, to: Date): Promise<LogbookEntry[]> {
+    const [rows, people] = await Promise.all([
+      this.request<HassLogbookRow[]>(`api/logbook/${from.toISOString()}?${new URLSearchParams({ end_time: to.toISOString() })}`),
+      this.request<string>("api/template", { method: "POST", body: JSON.stringify({ template: PEOPLE_TEMPLATE }) }, "text")
+        .then(text => new Map(text.split("\n").map(line => line.split("|")).filter(([id, name]) => id && name).map(([id, name]) => [id.trim(), name.trim()])), () => new Map<string, string>()),
+    ]);
+    return logbookEntries(rows, people);
   }
 
   /** HLS through Home Assistant's stream integration: slower to start than WebRTC, but it only needs plain HTTP, which Hearth relays. */

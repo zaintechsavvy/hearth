@@ -178,12 +178,6 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
                   onBlur={event => { const price = Number(event.target.value); onChange({ options: { ...tile.config.options, price: price > 0 ? price : undefined } }); }} />
               </section>
             )}
-            {tile.kind === "room" && rooms.length > 0 && (
-              <section aria-labelledby="tile-room" className={styles.section}>
-                <h3 id="tile-room" className={styles.heading}>Room</h3>
-                <Select label="Room" value={tile.config.options?.room ?? rooms[0]} onValueChange={room => onChange({ options: { ...tile.config.options, room } })} options={rooms.map(room => ({ value: room, label: room }))} />
-              </section>
-            )}
             {tile.tuning && <TuningSection tile={tile} tuning={tile.tuning} onChange={onChange} />}
             <div className={styles.actions}>
               <div className={styles.extra}>

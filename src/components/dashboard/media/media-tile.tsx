@@ -15,7 +15,6 @@ import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import { paletteFromImage } from "@/components/shell/image-tools";
 import { hexToHsl, hslToHex } from "@/lib/backgrounds/palette";
 import { clamp, livePosition, type DeviceCommand, type MediaPlayerDevice, type RepeatMode } from "@/lib/devices/types";
-import { deleteWidgetItem, saveWidgetItem } from "@/lib/widget-actions";
 import { itemsOf } from "@/lib/widgets/items";
 import styles from "./media-tile.module.css";
 
@@ -189,7 +188,7 @@ function Text({ device, id }: { device: MediaPlayerDevice; id?: string }) {
 
 /** The heart saves what is playing, so it can be played again later from any player. */
 function Favourite({ device, disabled }: { device: MediaPlayerDevice; disabled: boolean }) {
-  const { home } = useHome();
+  const { home, saveItem, removeItem } = useHome();
   const [pending, setPending] = useState<boolean | null>(null);
   const media = device.media;
   if (!media || !device.can.play || !device.title) return null;
@@ -197,8 +196,8 @@ function Favourite({ device, disabled }: { device: MediaPlayerDevice; disabled: 
   const on = pending ?? Boolean(saved);
   const toggle = async () => {
     setPending(!on);
-    if (saved) await deleteWidgetItem(saved.id);
-    else await saveWidgetItem("favorite", { title: device.title, artist: device.artist ?? "", contentId: media.id, contentType: media.type });
+    if (saved) await removeItem(saved.id);
+    else await saveItem("favorite", { title: device.title, artist: device.artist ?? "", contentId: media.id, contentType: media.type });
     setPending(null);
   };
   return (
@@ -356,7 +355,7 @@ const fetchJson = <T,>(url: string): Promise<T> => fetch(url).then(response => {
 
 /** Up next and recently played, from the player, and favourites, saved in Hearth. Any of them with a known source plays again on tap. */
 function Queue({ device, send, disabled, onDone }: { device: MediaPlayerDevice; send: Send; disabled: boolean; onDone: () => void }) {
-  const { home } = useHome();
+  const { home, removeItem } = useHome();
   const { data } = useSWR<{ recent: Track[]; next: Track | null }>(`/api/devices/${encodeURIComponent(device.id)}/media?title=${encodeURIComponent(device.title ?? "")}&queue=${device.can.queue ? 1 : 0}`, fetchJson, { refreshInterval: 30_000 });
   const favourites = itemsOf(home?.widgets ?? [], "favorite");
   const play = (track: Track) => { if (track.media && device.can.play) { void send({ type: "playMedia", id: track.media.id, mediaType: track.media.type }); onDone(); } };
@@ -381,7 +380,7 @@ function Queue({ device, send, disabled, onDone }: { device: MediaPlayerDevice; 
         {favourites.length === 0 ? <p className={styles.note}>Tap the heart while something plays to keep it here.</p>
           : favourites.map(item => {
             const track = { title: item.data.title, artist: item.data.artist || null, media: { id: item.data.contentId, type: item.data.contentType } };
-            return <TrackRow key={item.id} track={track} onPlay={playable(track) ? () => play(track) : undefined} onRemove={disabled ? undefined : () => void deleteWidgetItem(item.id)} />;
+            return <TrackRow key={item.id} track={track} onPlay={playable(track) ? () => play(track) : undefined} onRemove={disabled ? undefined : () => void removeItem(item.id)} />;
           })}
       </div>
     </div>

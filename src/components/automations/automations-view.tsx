@@ -5,6 +5,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/arc/button/button";
 import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
+import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
@@ -12,7 +13,7 @@ import { Switch } from "@/components/arc/switch/switch";
 import { PlaceSearch } from "@/components/dashboard/place-search";
 import { useHome } from "@/components/dashboard/use-home";
 import { Glass, glassSheetClass } from "@/components/glass/glass";
-import { deleteAutomation, runAutomation, saveHomeLocation, setAutomationEnabled } from "@/lib/actions";
+import { deleteAutomation, runAutomation, saveHomeLocation, setAutomationEnabled, snoozeAutomation } from "@/lib/actions";
 import { summarize } from "@/lib/automations/logic";
 import type { Automation, AutomationInput, HomeLocation } from "@/lib/automations/types";
 import { AutomationEditor } from "./automation-editor";
@@ -31,6 +32,12 @@ const fetchListing = async (url: string): Promise<Listing> => {
   return response.json();
 };
 const clock = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+const HOUR_MS = 3_600_000;
+const tomorrow = () => { const date = new Date(); date.setHours(24, 0, 0, 0); return date; };
+const snoozeWords = (iso: string) => {
+  const until = new Date(iso);
+  return `Snoozed until ${until.toDateString() === new Date().toDateString() ? clock(iso) : until.toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
+};
 
 /** Rules that run the home by themselves, ready-made or built from scratch. */
 export function AutomationsView() {
@@ -42,6 +49,13 @@ export function AutomationsView() {
   const byId = new Map(devices.map(device => [device.id, device]));
   const scenes = new Map((home?.scenes ?? []).map(scene => [scene.id, scene]));
   const templates = TEMPLATES.map(template => ({ template, rule: template.build(devices) })).filter(entry => entry.rule && !data?.automations.some(rule => rule.name === entry.rule?.name));
+
+  const snooze = async (id: string, until: Date | null) => {
+    const snoozedUntil = until?.toISOString() ?? null;
+    await mutate(current => current && { ...current, automations: current.automations.map(rule => rule.id === id ? { ...rule, snoozedUntil } : rule) }, { revalidate: false });
+    await snoozeAutomation(id, snoozedUntil);
+    await mutate();
+  };
 
   const blank = (): AutomationInput => ({ name: "New automation", enabled: true, trigger: { type: "time", at: "07:00", days: [] }, conditions: [], actions: [{ type: "notify", title: "Good morning", body: "" }] });
 
@@ -95,15 +109,22 @@ export function AutomationsView() {
               <EmptyState icon={<Workflow size={24} strokeWidth={1.75} />} title="No automations yet" description="Start from an idea above, or build one from scratch." />
             </Glass>
           ) : data.automations.map(rule => (
-            <Glass key={rule.id} shape="panel" className={styles.card} data-off={!rule.enabled || undefined}>
+            <Glass key={rule.id} shape="panel" className={styles.card} data-off={!rule.enabled || Boolean(rule.snoozedUntil) || undefined}>
               <div className={styles.cardText}>
                 <span className={styles.cardTitle}>{rule.name}</span>
                 <span className={styles.cardSentence}>{summarize(rule.trigger, rule.actions, byId, scenes)}</span>
-                <span className={styles.cardMeta}>{rule.lastRun ? `Last ran ${new Date(rule.lastRun).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}` : "Has not run yet"}{rule.conditions.length ? ` · ${rule.conditions.length} ${rule.conditions.length === 1 ? "condition" : "conditions"}` : ""}</span>
+                <span className={styles.cardMeta}>{rule.enabled && rule.snoozedUntil && <><span className={styles.snoozed}>{snoozeWords(rule.snoozedUntil)}</span> · </>}{rule.lastRun ? `Last ran ${new Date(rule.lastRun).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}` : "Has not run yet"}{rule.conditions.length ? ` · ${rule.conditions.length} ${rule.conditions.length === 1 ? "condition" : "conditions"}` : ""}</span>
               </div>
               <div className={styles.cardActions}>
                 <Button variant="ghost" size="sm" aria-label={`Run ${rule.name} now`} title="Run now" onClick={async () => { await runAutomation(rule.id); await mutate(); }}><Play size={16} strokeWidth={1.75} aria-hidden="true" /></Button>
                 <Button variant="ghost" size="sm" onClick={() => setDraft({ ...rule })}>Edit</Button>
+                {rule.enabled && (
+                  <DropdownMenu label={rule.snoozedUntil ? "Snoozed" : "Snooze"} items={[
+                    ...[1, 4].map(hours => ({ label: `For ${hours} ${hours === 1 ? "hour" : "hours"}`, onSelect: () => void snooze(rule.id, new Date(Date.now() + hours * HOUR_MS)) })),
+                    { label: "Until tomorrow", onSelect: () => void snooze(rule.id, tomorrow()) },
+                    ...(rule.snoozedUntil ? [{ label: "Resume now", separatorBefore: true, onSelect: () => void snooze(rule.id, null) }] : []),
+                  ]} />
+                )}
                 <ConfirmMorph label="Delete" prompt={`Delete ${rule.name}?`} pendingLabel="Deleting" doneLabel="Deleted" onConfirm={async () => { await deleteAutomation(rule.id); await mutate(); }} />
                 <Switch aria-label={`${rule.name} is ${rule.enabled ? "on" : "paused"}`} checked={rule.enabled} onCheckedChange={async enabled => { await setAutomationEnabled(rule.id, enabled); await mutate(); }} />
               </div>
