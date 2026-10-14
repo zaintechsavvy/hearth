@@ -10,7 +10,6 @@
   align-items: end;
   justify-content: space-between;
   gap: var(--space-4);
-  flex-wrap: wrap;
 }
 
 .title {
@@ -21,43 +20,85 @@
   line-height: var(--leading-display);
 }
 
-.hint,
-.cardMeta,
-.templateText {
+.hint {
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 
-.location {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+.panel {
+  padding: var(--space-1) var(--space-2);
 }
 
-.locationText {
+.rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
   display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline-end: var(--space-2);
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.row + .row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.row[data-off] .rowMain {
+  opacity: .55;
+}
+
+.rowMain {
+  display: grid;
   flex: 1;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-  font-size: var(--text-sm);
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  font: inherit;
+  text-align: start;
+  transition: background-color var(--duration-fast) var(--ease-standard);
 }
 
-.locationText b {
+.rowMain:hover {
+  background: oklch(50% 0 0 / .05);
+}
+
+.rowMain:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: -2px;
+}
+
+.rowTitle {
+  font-size: var(--text-base);
   font-weight: 500;
 }
 
-.sun {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
+.rowDetail {
+  font-size: var(--text-sm);
 }
 
-.placePopover.placePopover {
-  width: min(calc(100vw - 24px), 360px);
+.rowMeta {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.rowIcon {
+  flex: none;
+  color: var(--text-secondary);
+}
+
+.ideas {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.moreIdeas {
+  justify-self: start;
 }
 
 .groupTitle {
@@ -66,70 +107,31 @@
   font-weight: 500;
 }
 
-.templates,
-.list {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.templateGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: var(--space-3);
-}
-
-.template {
-  display: grid;
-  gap: var(--space-1);
-  padding: var(--space-4);
-  border-radius: var(--radius-panel);
-  background: color-mix(in oklab, var(--surface-raised) 70%, transparent);
-  box-shadow: inset 0 0 0 1px var(--border-subtle);
-  text-align: start;
-  transition: transform var(--duration-spring) var(--ease-spring), box-shadow var(--duration-fast) var(--ease-standard);
-}
-
-.template:hover {
-  box-shadow: inset 0 0 0 1px var(--border-strong, var(--foreground));
-}
-
-.template:active {
-  transform: scale(.98);
-}
-
-.templateTitle,
-.cardTitle {
-  font-size: var(--text-base);
-  font-weight: 500;
-}
-
-.card {
+.location {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
-  transition: opacity var(--duration-fast) var(--ease-standard);
-}
-
-.card[data-off] {
-  opacity: .6;
-}
-
-.cardText {
-  display: grid;
-  flex: 1;
-  gap: 2px;
-  min-width: 0;
-}
-
-.cardSentence {
+  gap: var(--space-2);
+  color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 
-.cardActions {
+.locationText {
   display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sun {
+  display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.placePopover.placePopover {
+  width: min(calc(100vw - 24px), 360px);
 }
 
 .empty {
@@ -207,13 +209,16 @@
   gap: var(--space-2);
 }
 
+.actionsStart {
+  margin-inline-end: auto;
+}
+
 @media (max-width: 640px) {
-  .card { flex-direction: column; align-items: stretch; }
-  .cardActions { justify-content: flex-end; }
+  .newLabel { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .template, .card { transition: none; }
+  .row, .rowMain { transition: none; }
 }
 
 .lede {

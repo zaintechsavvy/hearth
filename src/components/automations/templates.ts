@@ -55,7 +55,7 @@ export const TEMPLATES: Template[] = [
   {
     id: "welcome",
     title: "Welcome home after dark",
-    description: "Unlock the door at night and the entry light comes on.",
+    description: "The entry light comes on when the door is unlocked after dark.",
     build: devices => {
       const lock = devices.find(device => device.kind === "lock");
       const light = lock && (lights(devices).find(device => device.room && device.room === lock.room) ?? named(lights(devices), /hall|entry|porch|front/i) ?? lights(devices)[0]);

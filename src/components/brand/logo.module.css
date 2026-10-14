@@ -9,12 +9,8 @@
   flex: none;
 }
 
-.door {
+.house {
   stroke: var(--background);
-}
-
-.knob {
-  fill: var(--background);
 }
 
 .word {

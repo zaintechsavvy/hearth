@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { widgetItem } from "@/lib/db/schema";
 import { IntegrationError } from "@/lib/integrations/types";
 import { ITEM_KINDS, ITEM_SCHEMAS, type ItemData, type ItemKind } from "@/lib/widgets/items";
-import { timerRemaining } from "@/lib/widgets/schedules";
+import { applyTimerControl } from "@/lib/widgets/schedules";
 
 const TAKEN_KEEP_DAYS = 14;
 
@@ -97,6 +97,7 @@ const timerControl = z.discriminatedUnion("action", [
   z.object({ action: z.literal("start") }),
   z.object({ action: z.literal("pause") }),
   z.object({ action: z.literal("reset") }),
+  z.object({ action: z.literal("restart") }),
   z.object({ action: z.literal("add"), ms: z.number().int().min(-3_600_000).max(3_600_000) }),
 ]);
 
@@ -106,29 +107,7 @@ export async function controlTimer(id: string, control: unknown): Promise<Action
   if (!parsed.success) return { ok: false, error: "That timer action is not valid." };
   return authed(async userId => {
     const timer = await owned(userId, id, "timer");
-    const now = Date.now();
-    const left = timerRemaining(timer, now);
-    const next = { ...timer };
-    switch (parsed.data.action) {
-      case "start":
-        next.endsAt = new Date(now + (left > 0 ? left : timer.durationMs)).toISOString();
-        break;
-      case "pause":
-        next.endsAt = null;
-        next.remainingMs = left;
-        break;
-      case "reset":
-        next.endsAt = null;
-        next.remainingMs = timer.durationMs;
-        break;
-      case "add": {
-        const remaining = Math.max(1000, left + parsed.data.ms);
-        if (timer.endsAt) next.endsAt = new Date(now + remaining).toISOString();
-        else next.remainingMs = remaining;
-        break;
-      }
-    }
-    await write(userId, id, next);
+    await write(userId, id, applyTimerControl(timer, parsed.data));
     return OK;
   });
 }

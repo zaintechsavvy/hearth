@@ -5,8 +5,7 @@ import { useState } from "react";
 import useSWRInfinite from "swr/infinite";
 import { Button } from "@/components/arc/button/button";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
-import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
-import { Select } from "@/components/arc/select/select";
+import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { useHome } from "@/components/dashboard/use-home";
 import { Glass } from "@/components/glass/glass";
@@ -17,7 +16,7 @@ type Page = { entries: ActivityEntry[]; more: boolean; next?: string };
 const ALL = "all";
 const ANY_ROOM = "__any";
 const FILTERS: { value: ActivityCategory | typeof ALL; label: string }[] = [
-  { value: ALL, label: "All" }, { value: "doors", label: "Doors and locks" }, { value: "lights", label: "Lights" },
+  { value: ALL, label: "Everything" }, { value: "doors", label: "Doors and locks" }, { value: "lights", label: "Lights" },
   { value: "sensors", label: "Sensors" }, { value: "climate", label: "Climate" }, { value: "automations", label: "Automations" }, { value: "system", label: "System" },
 ];
 const CATEGORY_ICONS: Record<ActivityCategory, LucideIcon> = { doors: DoorOpen, lights: Lightbulb, sensors: BellRing, climate: Thermometer, household: History, automations: Workflow, system: Cpu };
@@ -73,15 +72,15 @@ export function ActivityView() {
   return (
     <div className={styles.page}>
       <header className={styles.header} data-on-wall>
-        <div>
-          <h1 className={styles.title}>Activity</h1>
-          <p className={styles.lede}>What happened at home and who did it, in Hearth or anywhere else.</p>
-        </div>
-        {home && home.rooms.length > 0 && (
-          <Select label="Room" className={styles.room} value={room} onValueChange={setRoom} options={[{ value: ANY_ROOM, label: "Every room" }, ...home.rooms.map(value => ({ value, label: value }))]} />
-        )}
+        <h1 className={styles.title}>Activity</h1>
+        <p className={styles.lede}>What happened at home, and who did it.</p>
       </header>
-      <SegmentedControl label="Show" className={styles.filters} value={category} onValueChange={setCategory} options={FILTERS} />
+      <div className={styles.filters} role="group" aria-label="Show">
+        <DropdownMenu label={FILTERS.find(filter => filter.value === category)?.label ?? "Everything"} items={FILTERS.map(filter => ({ label: filter.label, onSelect: () => setCategory(filter.value) }))} />
+        {home && home.rooms.length > 0 && (
+          <DropdownMenu label={room === ANY_ROOM ? "Every room" : room} items={[{ label: "Every room", onSelect: () => setRoom(ANY_ROOM) }, ...home.rooms.map(value => ({ label: value, onSelect: () => setRoom(value) }))]} />
+        )}
+      </div>
       {isLoading && !data ? (
         <Glass shape="panel" className={styles.group}><Skeleton lines={5} label="Loading activity" /></Glass>
       ) : error ? (
@@ -100,10 +99,10 @@ export function ActivityView() {
                   const Icon = iconFor(entry);
                   return (
                     <li key={entry.id} className={styles.entry} data-tone={entry.tone}>
-                      <span className={styles.icon} aria-hidden="true"><Icon size={16} strokeWidth={1.75} /></span>
+                      <Icon className={styles.icon} size={16} strokeWidth={1.75} aria-hidden="true" />
                       <span className={styles.text}>
-                        <span><b>{entry.name}</b> {entry.what}{entry.by && <span className={styles.by}> · by {entry.by}</span>}</span>
-                        {entry.room && <span className={styles.meta}>{entry.room}</span>}
+                        <span><b>{entry.name}</b> {entry.what}</span>
+                        {(entry.room || entry.by) && <span className={styles.meta}>{[entry.room, entry.by && `by ${entry.by}`].filter(Boolean).join(" · ")}</span>}
                       </span>
                       <time className={styles.time} dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>
                     </li>

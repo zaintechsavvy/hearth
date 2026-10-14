@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { MARK } from "@/lib/brand";
 
 const FILE = /^icon-(180|192|512)(-maskable)?\.png$/;
 
@@ -11,11 +12,11 @@ export async function GET(_request: Request, { params }: RouteContext<"/icons/[f
   const mark = maskable ? size * 0.56 : size;
   return new ImageResponse(
     (
-      <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", background: maskable ? "#111111" : "transparent" }}>
+      <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", background: maskable ? MARK.ink : "transparent" }}>
         <svg width={mark} height={mark} viewBox="0 0 32 32">
-          {!maskable && <rect width="32" height="32" rx="9" fill="#111111" />}
-          <path d="M10 23v-6.5a6 6 0 0 1 12 0V23" fill="none" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" />
-          <circle cx="16" cy="18.2" r="1.9" fill="#ffffff" />
+          {!maskable && <rect width="32" height="32" rx="9" fill={MARK.ink} />}
+          <path d={MARK.house} fill="none" stroke="#ffffff" strokeWidth="2.1" strokeLinejoin="round" />
+          <path d={MARK.flame} fill={MARK.flameColor} />
         </svg>
       </div>
     ),

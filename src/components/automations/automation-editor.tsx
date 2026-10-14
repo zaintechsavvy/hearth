@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
+import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
 import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { Input } from "@/components/arc/input/input";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
@@ -26,6 +27,7 @@ interface EditorProps {
   hasLocation: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
+  onDelete: (id: string) => Promise<void>;
 }
 
 const label = (device: Device) => `${device.name}${device.room ? ` · ${device.room}` : ""}`;
@@ -34,11 +36,11 @@ const CONTROLLABLE = (device: Device) => commandOptions(device).length > 0;
 const WATCHABLE = (device: Device) => device.kind !== "camera" && device.kind !== "scene";
 
 /** The when, only if, and then of one rule, with the sentence it makes shown as it is built. */
-export function AutomationEditor({ draft, devices, scenes, hasLocation, onOpenChange, onSaved }: EditorProps) {
+export function AutomationEditor({ draft, devices, scenes, hasLocation, onOpenChange, onSaved, onDelete }: EditorProps) {
   return (
     <Dialog open={Boolean(draft)} onOpenChange={onOpenChange}>
       <DialogContent className={`${glassSheetClass} ${styles.dialog}`} title={draft?.id ? "Edit automation" : "New automation"} description="When something happens, Hearth does the rest. Unlocking and opening are left to people.">
-        {draft && <Body key={draft.id ?? draft.name} draft={draft} devices={devices} scenes={scenes} hasLocation={hasLocation} onSaved={onSaved} />}
+        {draft && <Body key={draft.id ?? draft.name} draft={draft} devices={devices} scenes={scenes} hasLocation={hasLocation} onSaved={onSaved} onDelete={onDelete} />}
       </DialogContent>
     </Dialog>
   );
@@ -56,8 +58,9 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   );
 }
 
-function Body({ draft, devices, scenes, hasLocation, onSaved }: Omit<EditorProps, "draft" | "onOpenChange"> & { draft: AutomationInput & { id?: string } }) {
+function Body({ draft, devices, scenes, hasLocation, onSaved, onDelete }: Omit<EditorProps, "draft" | "onOpenChange"> & { draft: AutomationInput & { id?: string } }) {
   const [rule, setRule] = useState<AutomationInput>(draft);
+  const id = draft.id;
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const byId = new Map(devices.map(device => [device.id, device]));
@@ -113,6 +116,7 @@ function Body({ draft, devices, scenes, hasLocation, onSaved }: Omit<EditorProps
 
       <Alert tone="danger" title="Could not save" open={Boolean(error)}>{error ?? ""}</Alert>
       <div className={styles.actions}>
+        {id && <span className={styles.actionsStart}><ConfirmMorph label="Delete" prompt={`Delete ${draft.name}?`} pendingLabel="Deleting" doneLabel="Deleted" onConfirm={() => onDelete(id)} /></span>}
         <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
         <Button type="submit" loading={pending}>{draft.id ? "Save" : "Create automation"}</Button>
       </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countdownDays, doseSlots, formatDuration, groupPickups, nextPickup, pickupWords, plantThirst, wifiQrText } from "./schedules";
+import { applyTimerControl, countdownDays, doseSlots, formatDuration, groupPickups, nextPickup, pickupWords, plantThirst, wifiQrText } from "./schedules";
 
 const bin = (weekday: number, every: 1 | 2 | 4, start: string) => ({ name: "Bin", color: "#000000", icon: "trash" as const, weekday, every, start });
 
@@ -82,5 +82,24 @@ describe("history downsampling", async () => {
     const shown = downsample(points, 0, 1000, 10);
     expect(shown).toHaveLength(10);
     expect(shown.every(point => point.v === 0.5)).toBe(true);
+  });
+});
+
+describe("applyTimerControl", () => {
+  const now = Date.parse("2026-10-14T12:00:00Z");
+  const timer = { label: "Pasta", durationMs: 600_000, remainingMs: 600_000, endsAt: null };
+  it("starts, pauses with what is left, and resumes from there", () => {
+    const running = applyTimerControl(timer, { action: "start" }, now);
+    expect(running.endsAt).toBe(new Date(now + 600_000).toISOString());
+    const paused = applyTimerControl(running, { action: "pause" }, now + 60_000);
+    expect(paused).toMatchObject({ endsAt: null, remainingMs: 540_000 });
+    expect(applyTimerControl(paused, { action: "start" }, now + 120_000).endsAt).toBe(new Date(now + 660_000).toISOString());
+  });
+
+  it("adds a minute, resets, and restarts a finished timer", () => {
+    const running = applyTimerControl(timer, { action: "start" }, now);
+    expect(applyTimerControl(running, { action: "add", ms: 60_000 }, now).endsAt).toBe(new Date(now + 660_000).toISOString());
+    expect(applyTimerControl(running, { action: "reset" }, now)).toMatchObject({ endsAt: null, remainingMs: 600_000 });
+    expect(applyTimerControl(running, { action: "restart" }, now + 700_000).endsAt).toBe(new Date(now + 1_300_000).toISOString());
   });
 });

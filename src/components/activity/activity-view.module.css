@@ -6,11 +6,7 @@
 }
 
 .header {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: var(--space-4);
-  flex-wrap: wrap;
+  display: grid;
 }
 
 .title {
@@ -26,14 +22,10 @@
   color: var(--text-secondary);
 }
 
-.room {
-  min-width: 200px;
-}
-
 .filters {
-  justify-self: start;
-  max-width: 100%;
-  overflow-x: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .day {
@@ -76,12 +68,6 @@
 }
 
 .icon {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: color-mix(in oklab, var(--tone) 14%, transparent);
   color: var(--tone);
 }
 
@@ -99,7 +85,6 @@
   font-weight: 500;
 }
 
-.by,
 .meta,
 .time {
   color: var(--text-secondary);

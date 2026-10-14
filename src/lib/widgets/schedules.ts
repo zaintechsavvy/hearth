@@ -101,6 +101,33 @@ export function timerRemaining(timer: ItemData<"timer">, now: number) {
   return timer.endsAt ? Math.max(0, Date.parse(timer.endsAt) - now) : timer.remainingMs;
 }
 
+export type TimerControl = { action: "start" | "pause" | "reset" | "restart" } | { action: "add"; ms: number };
+
+/** A timer after one press, worked out the same way on the server and, to show it at once, in the browser. */
+export function applyTimerControl(timer: ItemData<"timer">, control: TimerControl, now = Date.now()): ItemData<"timer"> {
+  const left = timerRemaining(timer, now);
+  switch (control.action) {
+    case "start":
+      return { ...timer, endsAt: new Date(now + (left > 0 ? left : timer.durationMs)).toISOString() };
+    case "pause":
+      return { ...timer, endsAt: null, remainingMs: left };
+    case "reset":
+      return { ...timer, endsAt: null, remainingMs: timer.durationMs };
+    case "restart":
+      return { ...timer, endsAt: new Date(now + timer.durationMs).toISOString(), remainingMs: timer.durationMs };
+    case "add": {
+      const remaining = Math.max(1000, left + control.ms);
+      return timer.endsAt ? { ...timer, endsAt: new Date(now + remaining).toISOString() } : { ...timer, remainingMs: remaining };
+    }
+  }
+}
+
+/** A running timer of the usual kind, named by its length. */
+export function quickTimer(minutes: number, now = Date.now()): ItemData<"timer"> {
+  const durationMs = minutes * 60_000;
+  return { label: `${minutes} min`, durationMs, remainingMs: durationMs, endsAt: new Date(now + durationMs).toISOString() };
+}
+
 export function formatDuration(ms: number) {
   const total = Math.ceil(ms / 1000);
   const hours = Math.floor(total / 3600), minutes = Math.floor((total % 3600) / 60), seconds = total % 60;
