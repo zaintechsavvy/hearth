@@ -288,3 +288,19 @@
   align-self: flex-end;
   justify-self: end;
 }
+
+.pageTime {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.pageTimeRemove {
+  margin-bottom: 4px;
+}
+
+@media (max-width: 560px) {
+  .pageTime { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .pageTime > :first-child { grid-column: 1 / -1; }
+}

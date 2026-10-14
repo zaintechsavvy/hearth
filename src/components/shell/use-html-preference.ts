@@ -14,7 +14,7 @@ function subscribe(onChange: () => void) {
 }
 
 /** A device-local preference mirrored onto a `data-*` attribute of `<html>`, which the bootstrap script restores before paint. */
-export function useHtmlPreference<T extends string>(storageKey: string, attribute: "accent" | "wallpaper", fallback: T) {
+export function useHtmlPreference<T extends string>(storageKey: string, attribute: "accent" | "wallpaper" | "glass", fallback: T) {
   const value = useSyncExternalStore(subscribe, () => (localStorage.getItem(storageKey) as T | null) ?? fallback, () => fallback);
   const set = useCallback((next: T) => {
     localStorage.setItem(storageKey, next);

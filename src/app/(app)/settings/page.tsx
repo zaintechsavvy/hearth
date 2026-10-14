@@ -72,7 +72,7 @@ export default async function ConnectionsPage() {
       {owner && <AssistantsSection assistants={assistants} />}
       {owner && <CamerasSection cameras={cameras.map(row => ({ id: row.id, name: row.name, host: hostOf(unseal<CameraSource>(row.source).url) }))} relayUrl={relayUrl} />}
       <CalendarsSection calendars={calendars.map(row => ({ id: row.id, name: row.name, color: row.color, host: hostOf(unseal<string>(row.url)) }))} />
-      <AppearanceSection />
+      <AppearanceSection pages={preferences.pages.map(page => ({ id: page.id, name: page.name }))} />
       <WallSection />
       <AccountSection user={{ name: user.name, email: user.email }} />
       </SettingsShell>

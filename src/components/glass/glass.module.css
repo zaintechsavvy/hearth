@@ -23,6 +23,27 @@
     0 24px 60px -16px oklch(0% 0 0 / .55);
 }
 
+/* Tile glass, chosen in Settings: clear lets more of the background through, solid is easiest to read. */
+:root[data-glass="clear"] .glass {
+  background: linear-gradient(180deg, oklch(100% 0 0 / .34), oklch(100% 0 0 / .16));
+  -webkit-backdrop-filter: blur(12px) saturate(170%);
+  backdrop-filter: blur(12px) saturate(170%);
+}
+
+:root[data-glass="solid"] .glass {
+  background: oklch(97.5% .002 260);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root[data-theme="dark"][data-glass="clear"] .glass {
+  background: linear-gradient(180deg, oklch(34% .006 260 / .3), oklch(22% .006 260 / .2));
+}
+
+:root[data-theme="dark"][data-glass="solid"] .glass {
+  background: oklch(25% .006 260);
+}
+
 .surface { border-radius: var(--radius-surface); }
 .panel { border-radius: var(--radius-panel); }
 .pill { border-radius: var(--radius-pill); }

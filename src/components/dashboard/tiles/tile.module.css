@@ -34,6 +34,24 @@
   box-shadow: inset 0 1px 0 oklch(100% 0 0 / .1);
 }
 
+:global(:root[data-glass="clear"]) .tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
+  background: linear-gradient(180deg, oklch(93% .003 260 / .3), oklch(89% .003 260 / .2));
+}
+
+/* Solid tiles stay opaque but keep off quieter than on, so the state still reads at a glance. */
+:global(:root[data-glass="solid"]) .tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
+  background: oklch(93.5% .003 260);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .7);
+}
+
+:global(:root[data-theme="dark"][data-glass="clear"]) .tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
+  background: linear-gradient(180deg, oklch(30% .004 260 / .28), oklch(22% .004 260 / .2));
+}
+
+:global(:root[data-theme="dark"][data-glass="solid"]) .tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
+  background: oklch(25% .006 260);
+}
+
 .tile.tile[data-on] {
   background: linear-gradient(180deg, oklch(100% 0 0 / .97), oklch(97% 0 0 / .92));
   color: oklch(20% 0 0);

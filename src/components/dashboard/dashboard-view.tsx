@@ -39,6 +39,8 @@ import { TileDialog, type TileDialogMode } from "./tile-dialog";
 import { TileEditor, type EditableTile } from "./tile-editor";
 import { DeviceTile } from "./tiles/device-tile";
 import { MediaTile } from "./media/media-tile";
+import { useMinute } from "./widgets/use-minute";
+import { activeRule, NO_PAGE_RULES, PAGE_SCHEDULE_KEY, type PageRule } from "@/lib/page-schedule";
 import { PlaceholderTile } from "./tiles/placeholder-tile";
 import { SceneTile } from "./tiles/scene-tile";
 import { useHome } from "./use-home";
@@ -115,6 +117,19 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const sources = useMemo<TileSource[]>(() => home ? tileSources(home) : [], [home]);
   const sourceById = useMemo(() => new Map(sources.map(source => [source.id, source])), [sources]);
   const [storedPage, setStoredPage] = useStoredJson<string>(PAGE_KEY, HOME_PAGE_ID);
+  const [pageRules] = useStoredJson<PageRule[]>(PAGE_SCHEDULE_KEY, NO_PAGE_RULES);
+  const minuteNow = useMinute();
+  const autoRule = useRef<string | null>(null);
+  // A time-of-day page takes over when its window starts and hands back to Home when it ends, so a page picked by hand in between stays put.
+  const ruleNow = minuteNow === null || !home ? null : activeRule(pageRules, home.pages.map(item => item.id), new Date(minuteNow));
+  const ruleId = ruleNow?.id ?? null, rulePage = ruleNow?.pageId ?? null;
+  useEffect(() => {
+    if (ruleId === autoRule.current) return;
+    const leaving = autoRule.current !== null;
+    autoRule.current = ruleId;
+    if (rulePage) setStoredPage(rulePage);
+    else if (leaving) setStoredPage(HOME_PAGE_ID);
+  }, [ruleId, rulePage, setStoredPage]);
   const page = home?.pages.find(item => item.id === storedPage) ?? home?.pages[0];
   const pageId = page?.id ?? HOME_PAGE_ID;
   const tiles = useMemo(() => resolveLayout(draft ?? page?.layout ?? [], sources), [draft, page?.layout, sources]);
