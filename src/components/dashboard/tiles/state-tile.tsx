@@ -19,6 +19,7 @@ import { MiniTrend } from "./mini-trend";
 import { TILE_ICON_COMPONENTS } from "./tile-icons";
 import styles from "./tile.module.css";
 import level from "./level-tile.module.css";
+import { LevelOverlay } from "./level-overlay";
 
 export type StateDevice = LockDevice | CoverDevice | BinarySensorDevice | SensorDevice | EventDevice | SceneDevice;
 
@@ -203,13 +204,13 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
     const pill = (className: string) => (
       <LevelPill label={`${device.name} position`} value={device.position ?? 0} on={(device.position ?? 0) > 0} disabled={!device.available || !interactive} onToggle={toggle} onCommit={commit} className={className}>
         {config.size === "1x2" ? shown => (
-          <span className={level.overlay} data-top={shown > 80 || undefined} data-bottom={shown > 26 || undefined}>
+          <LevelOverlay shown={shown}>
             <span className={level.reading}>{shown === 0 ? "Closed" : `${shown}%`}</span>
             <span className={level.foot}>
               <span className={styles.icon} aria-hidden="true"><Icon size={22} strokeWidth={1.75} /></span>
               <span className={styles.name}>{device.name}</span>
             </span>
-          </span>
+          </LevelOverlay>
         ) : undefined}
       </LevelPill>
     );

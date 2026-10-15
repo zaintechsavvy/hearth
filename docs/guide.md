@@ -22,9 +22,9 @@ The dashboard is a grid you build yourself. It starts empty; **Add tile** picks 
 
 ![The dashboard](screenshots/dashboard-full.png)
 
-| Phone | Dark |
-| --- | --- |
-| ![Dashboard on a phone](screenshots/phone.png) | ![Dashboard in dark mode](screenshots/dashboard-dark.png) |
+![Dashboard in dark mode](screenshots/dashboard-dark.png)
+
+<p align="center"><img src="screenshots/phone.png" alt="Dashboard on a phone" width="390"></p>
 
 In **Edit**, each tile has a **Customize** button: its size, icon, colour, what press and hold does, and settings that belong to its kind, such as timer presets or an energy price.
 
@@ -34,9 +34,9 @@ In **Edit**, each tile has a **Customize** button: its size, icon, colour, what 
 
 Widgets keep the things a household juggles: bins, medications, notes, plants, packages, Wi-Fi for guests, and timers. They save the moment you change them, so a note or a plant shows up straight away on every screen.
 
-| Timers | Plants |
-| --- | --- |
-| ![Timers side by side](screenshots/timers.png) | ![Plants in a grid](screenshots/plants.png) |
+![Timers side by side](screenshots/timers.png)
+
+![Plants in a grid](screenshots/plants.png)
 
 - **Timers**: one timer fills its tile as a dial. Two to four sit side by side, each in its own colour, and the dial itself starts and pauses. Presets ("Eggs, 7 min") are set once per tile under Customize and sit before the plain lengths.
 - **Plants**: as many to a row as the tile is wide, thirstiest first. Tap the drop when you water one.
@@ -52,17 +52,17 @@ Everything that happened at home, newest first, with who did it: a person, an au
 
 When, only if, then: a time, sunrise or sunset, or a device changing; only after dark, between times, or while another device is in a state; then control devices, run a scene, or send an alert. Tap a rule to edit it, flip its switch to pause it, or snooze it from **…** for an hour, four hours, or until tomorrow.
 
-| List | Editor |
-| --- | --- |
-| ![Automations](screenshots/automations.png) | ![Editing an automation](screenshots/automation-editor.png) |
+![Automations](screenshots/automations.png)
+
+![Editing an automation](screenshots/automation-editor.png)
 
 ### The assistant and voice
 
 **Ask Hearth** (or Cmd or Ctrl J) opens a chat; the microphone beside it starts listening straight away. "Set a 10 minute timer for the pasta" works on the device itself, with no AI key. Everything else ("dim the kitchen to 30%") goes to the assistant you connect in Settings. While Hearth listens, a glow from [voice-glow](https://libraries.dev) rises with your voice.
 
-| Typing | Listening |
-| --- | --- |
-| ![Assistant](screenshots/assistant.png) | ![Voice glow](screenshots/voice.png) |
+![Assistant](screenshots/assistant.png)
+
+<p align="center"><img src="screenshots/voice.png" alt="The voice glow while Hearth listens" width="440"></p>
 
 ### Settings
 
@@ -72,12 +72,15 @@ Connections, cameras, calendars, assistants, alerts, the household, the wall tab
 
 ### The wall tablet
 
-Turn on **Settings, Wall tablet** on the tablet itself. It keeps the screen on, rests on a clock with running timers big enough to read from the stove, dims and turns red at night, and takes over the whole screen when a timer finishes.
+Turn on **Settings, Wall tablet** on the tablet itself. It keeps the screen on, rests on the date over a large clock with the running timers and what needs doing next as cards, turns a dim red at night, and brings a finished timer up over everything.
 
-| Resting | At night |
-| --- | --- |
-| ![Wall clock](screenshots/wall-clock.png) | ![Wall clock at night](screenshots/wall-clock-night.png) |
-| ![A timer finished](screenshots/wall-timer-done.png) | ![A timer finished at night](screenshots/wall-timer-night.png) |
+![Wall clock](screenshots/wall-clock.png)
+
+![Wall clock at night](screenshots/wall-clock-night.png)
+
+![A timer finished](screenshots/wall-timer-done.png)
+
+![A timer finished at night](screenshots/wall-timer-night.png)
 
 ## The big picture
 

@@ -54,7 +54,7 @@ export function seedDemoDevices(integrationId: string): Device[] {
   return [
     { ...base("thermostat", "Living room", "Living room"), kind: "thermostat", unit: "C", current: 20.5, target: 22, min: 10, max: 30, step: 0.5, mode: "heat", modes: ["off", "heat", "cool", "auto"], action: "heating" },
     { ...base("kitchen-pendants", "Pendants", "Kitchen"), kind: "light", on: true, dimmable: true, brightness: 80, supportsColor: true, color: { hue: 32, saturation: 70 }, colorMode: "color", temperatureRange: { min: 2000, max: 6500 }, temperature: null },
-    { ...base("living-lamp", "Floor lamp", "Living room"), kind: "light", on: true, dimmable: true, brightness: 45, supportsColor: false, color: null, colorMode: "white", temperatureRange: { min: 2200, max: 5000 }, temperature: 2700 },
+    { ...base("living-lamp", "Floor lamp", "Living room"), kind: "light", on: true, dimmable: true, brightness: 45, supportsColor: true, color: { hue: 40, saturation: 50 }, colorMode: "white", temperatureRange: { min: 2200, max: 5000 }, temperature: 2700 },
     { ...base("porch", "Porch light", "Outside"), kind: "light", on: false, dimmable: false, brightness: 0, supportsColor: false, color: null, colorMode: null, temperatureRange: null, temperature: null },
     { ...base("bedroom-fan", "Ceiling fan", "Bedroom"), kind: "fan", on: true, adjustable: true, speed: 40 },
     { ...base("coffee", "Coffee machine", "Kitchen"), kind: "switch", on: false },

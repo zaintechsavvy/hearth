@@ -25,6 +25,6 @@ Settings only reach new deployments. Open **Deployments**, then the latest one's
 
 ## What works differently on Vercel
 
-- **Your devices must be reachable from the internet.** Hearth calls Home Assistant and the Matter Server from Vercel's servers, not from your home, so `http://homeassistant.local:8123` or a `192.168.x.x` address won't connect. Use a public address such as Home Assistant Cloud (Nabu Casa) or a Tailscale Funnel, and the same for the camera relay.
+- **Your devices must be reachable from the internet.** Hearth calls Home Assistant and the Matter Server from Vercel's servers, not from your home, so `http://homeassistant.local:8123` or a `192.168.x.x` address won't connect. Use a public address such as Home Assistant Cloud (Nabu Casa) or a Tailscale Funnel. Add RTSP cameras through Home Assistant (Settings, Cameras, Add): Home Assistant streams them with its own go2rtc, so there is no relay to expose.
 - **No background work.** Alerts, automations, sensor history, and the activity log come from a monitor that runs all the time, and serverless functions stop between requests. The dashboard, controls, and widgets all work. For the rest, run Hearth on an always-on machine with Docker (see the README).
 - **The phone certificate route does nothing.** Vercel serves real HTTPS, so phones can install Hearth and allow notifications directly.

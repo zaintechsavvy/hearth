@@ -73,6 +73,13 @@ interface Preview {
   color?: TileColor;
 }
 
+/** What a size gives this kind of tile: a light's tall tile is a slider, a lock's is one big button. */
+function sizeNote(kind: TileKind, size: TileSize) {
+  if (size === "1x1") return kind === "lock" ? "Tap to lock or unlock" : kind === "cover" ? "Tap to open or close" : kind === "scene" ? "Tap to run" : kind === "sensor" || kind === "binary_sensor" || kind === "event" ? "Just the reading" : SIZE_NOTES["1x1"];
+  if (size === "1x2" && kind !== "light" && kind !== "fan") return kind === "lock" || kind === "cover" ? "One big button" : "A tall card";
+  return SIZE_NOTES[size];
+}
+
 const SIZE_NOTES: Partial<Record<TileSize, string>> = {
   "1x1": "Tap to switch",
   "2x1": "Name and status",
@@ -136,7 +143,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
                     value: option.size,
                     label: option.label,
                     meta: option.size.replace("x", "×"),
-                    description: SIZE_NOTES[option.size],
+                    description: sizeNote(tile.kind, option.size),
                     disabled: blocked(option.size),
                     disabledReason: blocked(option.size) ? "Needs a dimmable light or a fan with speeds" : undefined,
                   }))}
@@ -182,7 +189,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
             {tile.tuning && <TuningSection tile={tile} tuning={tile.tuning} onChange={onChange} />}
             <div className={styles.actions}>
               <div className={styles.extra}>
-                <ConfirmMorph label="Remove tile" prompt="Remove this tile?" pendingLabel="Removing" doneLabel="Removed" onConfirm={() => { onRemove(); close(false); }} />
+                <ConfirmMorph label="Remove tile" prompt="Remove this tile?" confirmLabel="Remove" pendingLabel="Removing" doneLabel="Removed" onConfirm={() => { onRemove(); close(false); }} />
                 {extra}
               </div>
               <DialogClose asChild><Button>Done</Button></DialogClose>

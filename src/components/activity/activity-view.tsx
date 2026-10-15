@@ -9,7 +9,10 @@ import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { useHome } from "@/components/dashboard/use-home";
 import { Glass } from "@/components/glass/glass";
+import { TILE_ICON_COMPONENTS } from "@/components/dashboard/tiles/tile-icons";
 import type { ActivityCategory, ActivityEntry } from "@/lib/activity-types";
+import { defaultStyle } from "@/lib/dashboard/style";
+import type { Device } from "@/lib/devices/types";
 import styles from "./activity-view.module.css";
 
 type Page = { entries: ActivityEntry[]; more: boolean; next?: string };
@@ -21,13 +24,15 @@ const FILTERS: { value: ActivityCategory | typeof ALL; label: string }[] = [
 ];
 const CATEGORY_ICONS: Record<ActivityCategory, LucideIcon> = { doors: DoorOpen, lights: Lightbulb, sensors: BellRing, climate: Thermometer, household: History, automations: Workflow, system: Cpu };
 
-function iconFor(entry: ActivityEntry): LucideIcon {
+/** The device's own icon where Hearth knows the device, so a television reads as one; otherwise one for what happened. */
+function iconFor(entry: ActivityEntry, devices: Map<string, Device>): LucideIcon {
   if (entry.what === "unlocked") return LockOpen;
   if (entry.what === "locked" || entry.what === "jammed") return Lock;
   if (entry.what.includes("leak") || entry.what === "is dry again") return Droplets;
   if (entry.what.includes("smoke")) return Flame;
   if (entry.what === "rang") return BellRing;
-  return CATEGORY_ICONS[entry.category];
+  const device = entry.deviceId ? devices.get(entry.deviceId) : undefined;
+  return device ? TILE_ICON_COMPONENTS[defaultStyle(device).icon] : CATEGORY_ICONS[entry.category];
 }
 
 function dayLabel(date: Date) {
@@ -62,6 +67,7 @@ export function ActivityView() {
     { refreshInterval: 10_000, revalidateFirstPage: true },
   );
   const entries = data?.flatMap(page => page.entries) ?? [];
+  const devices = new Map((home?.devices ?? []).map(device => [device.id, device]));
   const more = data?.at(-1)?.more ?? false;
   const days = new Map<string, ActivityEntry[]>();
   for (const entry of entries) {
@@ -96,7 +102,7 @@ export function ActivityView() {
             <Glass shape="panel" className={styles.group}>
               <ol className={styles.list}>
                 {list.map(entry => {
-                  const Icon = iconFor(entry);
+                  const Icon = iconFor(entry, devices);
                   return (
                     <li key={entry.id} className={styles.entry} data-tone={entry.tone}>
                       <Icon className={styles.icon} size={16} strokeWidth={1.75} aria-hidden="true" />

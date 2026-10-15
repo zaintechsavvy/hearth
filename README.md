@@ -4,31 +4,47 @@ A calm, self-hosted home dashboard. Hearth brings your thermostat, cameras, ligh
 
 **Why "Hearth"?** A hearth is the fireplace at the centre of a home, the spot everyone gathers around. The logo is that: a house with a flame inside.
 
-![Landing page](docs/screenshots/landing.png)
-
-![The dashboard](docs/screenshots/dashboard.png)
-
-| On a phone | Dark |
-| --- | --- |
-| ![Dashboard on a phone](docs/screenshots/phone.png) | ![Dashboard in dark mode](docs/screenshots/dashboard-dark.png) |
-
-| Timers side by side, in their own colours | Customize any tile |
-| --- | --- |
-| ![Timers](docs/screenshots/timers.png) | ![Customize dialog](docs/screenshots/customize.png) |
-
-| Activity, from Hearth and Home Assistant | Automations you can pause or snooze |
-| --- | --- |
-| ![Activity](docs/screenshots/activity.png) | ![Automations](docs/screenshots/automations.png) |
-
-| A wall tablet at rest | When a timer finishes |
-| --- | --- |
-| ![Wall clock with timers](docs/screenshots/wall-clock.png) | ![Full-screen timer alert](docs/screenshots/wall-timer-done.png) |
-
 The thermostat glows warm from the top when you raise it and cool from the bottom when you lower it, and keeps a softer glow while the system is actually heating or cooling.
 
 | Raise | Lower |
 | --- | --- |
 | ![Thermostat warming](docs/screenshots/thermostat-warm.png) | ![Thermostat cooling](docs/screenshots/thermostat-cool.png) |
+
+**The dashboard**, built from tiles you choose and arrange yourself.
+
+![The dashboard](docs/screenshots/dashboard.png)
+
+**In dark mode.**
+
+![The dashboard in dark mode](docs/screenshots/dashboard-dark.png)
+
+**On a phone.**
+
+<p align="center"><img src="docs/screenshots/phone.png" alt="The dashboard on a phone" width="390"></p>
+
+**One tap for the things you reach for most**: lights that dim and glow in their own colour, plugs, the front door, and the garage.
+
+![Quick controls](docs/screenshots/quick-controls.png)
+
+**Customize any tile**: its size, icon, colour, and what press and hold does.
+
+![Customize dialog](docs/screenshots/customize.png)
+
+**Activity**: everything that happened, from Hearth and Home Assistant alike, and who did it.
+
+![Activity](docs/screenshots/activity.png)
+
+**Automations** you can pause or snooze.
+
+![Automations](docs/screenshots/automations.png)
+
+**A wall tablet at rest**: the date, a clock you can read across the room, and the timers that are running.
+
+![Wall clock with timers](docs/screenshots/wall-clock.png)
+
+**When a timer finishes**, it rises over everything until someone answers it.
+
+![Timer finished](docs/screenshots/wall-timer-done.png)
 
 **New here?** [docs/guide.md](docs/guide.md) walks through every screen and shows, with diagrams, how your screens, Hearth, the database, Home Assistant, and your devices talk to each other.
 
@@ -50,7 +66,7 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 - **History**: temperature and other readings as a line on their tile, and day, week, and month charts with the low, average, and high.
 - **Wall tablet mode**: install Hearth as an app, keep the screen awake, dim it at night, rest on a drifting clock with running timers big enough to read across the room, and wake on a touch or a motion sensor. A finished timer takes over the screen with a louder chime until someone dismisses it, in dim red at night.
 - **Household**: invite members, who share everything, and guests, who see only the pages you pick and can never unlock or open anything.
-- **Cameras**: Home Assistant cameras over WebRTC, the way Home Assistant's own app plays them, falling back to HLS relayed through Hearth, then MJPEG, then the last picture, and saying which. "Live" only appears once a frame has actually played. RTSP cameras with a username and password stream through [go2rtc](https://github.com/AlexxIT/go2rtc). Every camera has full screen and a snapshot download.
+- **Cameras**: Home Assistant cameras over WebRTC, the way Home Assistant's own app plays them, falling back to HLS relayed through Hearth, then MJPEG, then the last picture, and saying which. "Live" only appears once a frame has actually played, and a call stays up on serverless hosts too. RTSP cameras with a username and password are added to Home Assistant as Generic Cameras, so its built-in go2rtc streams them, or go through your own [go2rtc](https://github.com/AlexxIT/go2rtc). Every camera has full screen and a snapshot download.
 - **Assistant and voice**: a pill in the corner (or Cmd or Ctrl J) opens a chat, and the microphone beside it starts listening in one tap, with a [voice-glow](https://libraries.dev) beam that rises as you speak. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, or point it at a model you run yourself.
 - **Accounts**: email and password sign up and sign in. Each home has its own connections, cameras, pages, and assistants, shared with the people invited into it.
 - **Look**: liquid glass surfaces over a still backdrop (Studio, Linen, Slate), a slowly moving [Paper Shaders](https://shaders.paper.design) mesh gradient (Aurora, Dusk, Meadow), a gradient of your own, or your own photo, light and dark, and eight accents. The Background studio picks colours with Arc's colour picker, shuffles harmonious palettes, tunes motion, swirl, and grain, blurs and dims photos, and can turn any photo into a moving gradient from its own colours. Moving backgrounds hold still when reduced motion is on.

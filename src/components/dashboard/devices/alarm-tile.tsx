@@ -20,7 +20,10 @@ const MODE_ICONS = { home: House, away: Sun, night: Moon, vacation: Plane };
 const armed = (device: AlarmDevice) => device.state !== "disarmed";
 const errorOf = (cause: unknown) => cause instanceof Error ? cause.message : "The alarm did not answer.";
 
-/** The alarm: its state at a glance, arming in one tap, and disarming behind the alarm's own code or the household's confirm. */
+/**
+ * The alarm: its state at a glance (light red while disarmed, green while armed), the next thing to do on the right,
+ * and disarming behind the alarm's own code or the household's confirm.
+ */
 export function AlarmTile({ device, config, interactive, openMethod, onCommand }: { device: AlarmDevice; config: TileConfig; interactive: boolean; openMethod: OpenMethod; onCommand: Send }) {
   const [open, setOpen] = useState<ArmMode | "disarm" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,16 +35,25 @@ export function AlarmTile({ device, config, interactive, openMethod, onCommand }
     void onCommand({ type: "alarm", action: "arm", mode }).catch(cause => setError(errorOf(cause)));
   };
   const Icon = device.state === "triggered" ? Siren : armed(device) ? ShieldCheck : ShieldOff;
+  const next = () => armed(device) ? setOpen("disarm") : device.modes.length === 1 ? arm(device.modes[0]) : setOpen("home");
   return (
     <>
-      <section className={`${glassClass("panel")} ${styles.card}`} data-size={config.size} data-active={armed(device) || undefined} data-alert={device.state === "triggered" || undefined} aria-label={`${name}, ${ALARM_TEXT[device.state]}`}>
-        <button type="button" className={styles.head} disabled={disabled} onClick={() => armed(device) ? setOpen("disarm") : config.size === "2x1" ? setOpen("home") : undefined}>
-          <span className={styles.badge} aria-hidden="true"><Icon size={20} strokeWidth={1.75} /></span>
-          <span className={styles.text}>
-            <span className={styles.name}>{name}</span>
-            <span className={styles.meta}>{error ?? ALARM_TEXT[device.state]}</span>
-          </span>
-        </button>
+      <section className={`${glassClass("panel")} ${styles.card} ${styles.alarm}`} data-size={config.size} data-armed={(armed(device) && device.state !== "triggered") || undefined} data-open={!armed(device) || undefined}
+        data-alert={device.state === "triggered" || undefined} aria-label={`${name}, ${ALARM_TEXT[device.state]}`}>
+        <div className={styles.alarmRow}>
+          <button type="button" className={styles.head} disabled={disabled} onClick={next}>
+            <span className={styles.badge} aria-hidden="true"><Icon size={20} strokeWidth={1.75} /></span>
+            <span className={styles.text}>
+              <span className={styles.name}>{name}</span>
+              <span className={styles.meta}>{error ?? ALARM_TEXT[device.state]}</span>
+            </span>
+          </button>
+          {config.size === "2x1" && (
+            <button type="button" className={styles.alarmAction} data-lead={armed(device) || undefined} disabled={disabled} onClick={next}>
+              {armed(device) ? "Disarm" : "Arm"}
+            </button>
+          )}
+        </div>
         {config.size === "2x2" && (
           <div className={styles.actions}>
             {armed(device)

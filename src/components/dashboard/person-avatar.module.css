@@ -1,6 +1,8 @@
 .avatar {
   position: relative;
   flex: none;
+  width: var(--avatar-size, var(--avatar));
+  height: var(--avatar-size, var(--avatar));
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -27,6 +29,7 @@
 }
 
 .initial {
+  font-size: calc(var(--avatar-size, var(--avatar)) * .42);
   font-weight: 600;
   line-height: 1;
 }

@@ -36,12 +36,11 @@
   transition: color var(--duration-fast) var(--ease-standard);
 }
 
-.overlay[data-top] .reading,
-.overlay[data-bottom] .foot {
+.overlay[data-filled] {
   color: oklch(22% 0 0);
 }
 
-.overlay[data-bottom] .foot :global(svg) {
+.overlay[data-filled] .foot :global(svg) {
   color: color-mix(in oklch, var(--tile-color) 70%, oklch(25% 0 0));
 }
 

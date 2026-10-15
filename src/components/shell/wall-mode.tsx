@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CalendarDays, Leaf, MoreHorizontal, Package, Pill, Recycle, Thermometer, Timer } from "lucide-react";
+import { CalendarDays, Leaf, MoreHorizontal, Package, Pill, Recycle, Thermometer } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import useSWR from "swr";
@@ -131,7 +131,7 @@ function Wall({ settings }: { settings: WallSettings }) {
   );
 }
 
-/** The resting screen: time, weather, and the next thing that needs doing. It drifts a little each minute so nothing burns in. */
+/** The resting screen: the date over a large clock, the weather, then running timers and what needs doing next as cards. It drifts a little each minute so nothing burns in. */
 function Glance({ now, night, dimLevel }: { now: number; night: boolean; dimLevel: number }) {
   const { home } = useHome();
   const date = new Date(now || 0);
@@ -159,41 +159,52 @@ function Glance({ now, night, dimLevel }: { now: number; night: boolean; dimLeve
   const waiting = itemsOf(widgets, "package").filter(item => item.data.status === "delivered");
   if (waiting.length) notes.push({ key: "packages", icon: <Package size={18} strokeWidth={1.75} />, text: waiting.length === 1 ? `${waiting[0].data.name} is here, collect it` : `${waiting.length} packages to collect` });
 
+  const parts = now ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).formatToParts(date) : [];
+  const clock = {
+    time: parts.filter(part => part.type !== "dayPeriod").map(part => part.value).join("").trim(),
+    period: parts.find(part => part.type === "dayPeriod")?.value ?? null,
+  };
   return (
-    <span className={styles.glance} style={offset}>
-      <span className={styles.time}>{now ? date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : ""}</span>
-      <span className={styles.date}>{now ? date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : ""}</span>
-      {weather && (
-        <span className={styles.weather}>
-          <Thermometer size={18} strokeWidth={1.75} aria-hidden="true" />
-          {Math.round(place?.units === "F" ? weather.current.temperature * 9 / 5 + 32 : weather.current.temperature)}° · {skyWords(weather.current.code, weather.current.day)}
+    <>
+      <span className={styles.glance} style={offset}>
+        <span className={styles.date}>{now ? date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : ""}</span>
+        <span className={styles.clock}>
+          <span className={styles.time}>{clock.time}</span>
+          {clock.period && <span className={styles.period}>{clock.period}</span>}
         </span>
-      )}
-      {timers.length > 0 && (
-        <span className={styles.timers} data-night={night || undefined}>
-          {timers.map(timer => {
-            const left = timerRemaining(timer.data, now);
-            return (
-              <span key={timer.id} className={styles.timer} style={{ "--timer": night ? NIGHT_RED : timers.length > 1 ? colors.get(timer.id) : "currentColor" } as CSSProperties}>
-                <svg className={styles.timerRing} viewBox="0 0 100 100" aria-hidden="true">
-                  <circle cx="50" cy="50" r="44" pathLength={100} className={styles.timerTrack} />
-                  <circle cx="50" cy="50" r="44" pathLength={100} className={styles.timerProgress} strokeDasharray="100" strokeDashoffset={100 - (left / timer.data.durationMs) * 100} />
-                </svg>
-                <span className={styles.timerText}>
-                  <span className={styles.timerTime}>{formatDuration(left)}</span>
-                  <span className={styles.timerLabel}><Timer size={14} strokeWidth={1.75} aria-hidden="true" /> {timer.data.label}</span>
+        {weather && (
+          <span className={styles.weather}>
+            <Thermometer size={20} strokeWidth={1.75} aria-hidden="true" />
+            {Math.round(place?.units === "F" ? weather.current.temperature * 9 / 5 + 32 : weather.current.temperature)}° · {skyWords(weather.current.code, weather.current.day)}
+          </span>
+        )}
+        {(timers.length > 0 || notes.length > 0) && (
+          <span className={styles.cards} data-night={night || undefined}>
+            {timers.map(timer => {
+              const left = timerRemaining(timer.data, now);
+              return (
+                <span key={timer.id} className={`${styles.card} ${styles.timer}`} style={{ "--timer": night ? NIGHT_RED : timers.length > 1 ? colors.get(timer.id) : "currentColor" } as CSSProperties}>
+                  <svg className={styles.timerRing} viewBox="0 0 100 100" aria-hidden="true">
+                    <circle cx="50" cy="50" r="42" pathLength={100} className={styles.timerTrack} />
+                    <circle cx="50" cy="50" r="42" pathLength={100} className={styles.timerProgress} strokeDasharray="100" strokeDashoffset={100 - (left / timer.data.durationMs) * 100} />
+                  </svg>
+                  <span className={styles.timerText}>
+                    <span className={styles.timerTime}>{formatDuration(left)}</span>
+                    <span className={styles.cardLabel}>{timer.data.label}</span>
+                  </span>
                 </span>
+              );
+            })}
+            {notes.slice(0, Math.max(0, 4 - timers.length)).map(note => (
+              <span key={note.key} className={styles.card}>
+                <span className={styles.noteIcon} aria-hidden="true">{note.icon}</span>
+                <span className={styles.noteText}>{note.text}</span>
               </span>
-            );
-          })}
-        </span>
-      )}
-      {notes.length > 0 && (
-        <span className={styles.notes}>
-          {notes.slice(0, 4).map(note => <span key={note.key} className={styles.note}><span className={styles.noteIcon} aria-hidden="true">{note.icon}</span>{note.text}</span>)}
-        </span>
-      )}
+            ))}
+          </span>
+        )}
+      </span>
       <span className={styles.hint}>Touch to wake</span>
-    </span>
+    </>
   );
 }

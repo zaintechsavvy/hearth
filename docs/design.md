@@ -32,7 +32,7 @@ Each thing has one home. Shortcuts may point at it, but they never become a seco
 - **Hold to confirm is otherwise only for deleting your account.** Holding is deliberate, so a stray tap can't do it.
   - Opening the home is sensitive, not destructive, so its hold button is ink: outlined at rest, filling dark as you hold.
   - Deleting the account destroys data, so its hold button is red.
-- **Red means data is lost.** Nothing else is red except errors.
+- **Red means data is lost**, and nothing else is red except errors and one state: a disarmed alarm, shown as a light red tint so an unguarded home is noticed at a glance.
 
 ## Text
 
@@ -66,6 +66,6 @@ Each thing has one home. Shortcuts may point at it, but they never become a seco
 ## Colour
 
 - **Ink** (near black, or near white on dark backgrounds) for text and primary buttons.
-- **Tokens only:** `--danger` for loss and errors, `--warning` for something that needs attention soon (a dose due, a timer ringing), `--success` for live and healthy. No hand-mixed reds or ambers.
+- **Tokens only:** `--danger` for loss, errors, and a disarmed alarm's tint, `--warning` for something that needs attention soon (a dose due, a timer ringing), `--success` for live and healthy. No hand-mixed reds or ambers.
 - **Tile colours** are the device's own colour when it is on: a light's glow, a fan's teal. They carry state, not decoration.
 - Text on a dark background turns light, grey text included.

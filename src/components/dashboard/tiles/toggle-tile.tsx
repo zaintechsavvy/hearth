@@ -10,6 +10,7 @@ import { LevelPill } from "./level-pill";
 import { TILE_ICON_COMPONENTS } from "./tile-icons";
 import styles from "./tile.module.css";
 import level from "./level-tile.module.css";
+import { LevelOverlay } from "./level-overlay";
 import { useLongPress } from "./use-long-press";
 
 export type ToggleDevice = LightDevice | SwitchDevice | FanDevice;
@@ -75,14 +76,14 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
         <div className={`${glassClass("panel")} ${styles.tile} ${level.tall}`} {...shared} {...press} data-template="slider">
           <LevelPill label={label} value={levelOf(device)} on={device.on} disabled={disabled} onToggle={toggle} onCommit={commitLevel} className={level.fullPill}>
             {shown => (
-              <span className={level.overlay} data-top={shown > 80 || undefined} data-bottom={shown > 26 || undefined}>
+              <LevelOverlay shown={shown}>
                 <span className={level.reading}>{shown === 0 ? "Off" : `${shown}%`}</span>
                 <span className={level.foot}>
                   {icon(22)}
                   <span className={styles.name}>{device.name}</span>
                   {error && <span className={`${styles.meta} ${styles.error}`}>{error}</span>}
                 </span>
-              </span>
+              </LevelOverlay>
             )}
           </LevelPill>
         </div>

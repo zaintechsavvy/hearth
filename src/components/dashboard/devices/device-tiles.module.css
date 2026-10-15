@@ -176,11 +176,14 @@
   align-content: center;
 }
 
+/* A small square fits the face and two lines, the face giving way first so its ring never touches the edge. */
 .card.person[data-size="1x1"] {
+  --avatar-size: clamp(28px, calc(100cqh - 76px), 44px);
   grid-template-columns: 1fr;
   justify-items: center;
   text-align: center;
-  gap: var(--space-2);
+  gap: clamp(4px, 6cqh, 8px);
+  padding: clamp(10px, 10cqh, 16px) var(--space-2);
 }
 
 .list {
@@ -334,7 +337,52 @@
   .badge[data-spin] svg, .card[data-alert] .badge { animation: none; }
 }
 
+/* The alarm: light red while the home is open, green while it is guarded, and the next step on the right. */
+.alarmRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.alarm[data-open] .badge {
+  background: color-mix(in oklab, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+
+.alarm[data-open] .meta {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.alarm[data-armed] .badge {
+  background: color-mix(in oklab, var(--success) 16%, transparent);
+  color: var(--success);
+}
+
+.alarmAction {
+  height: 36px;
+  padding-inline: var(--space-4);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--danger) 12%, transparent);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color var(--duration-fast) var(--ease-standard), scale var(--duration-fast) var(--ease-standard);
+}
+
+.alarmAction[data-lead] {
+  background: oklch(50% 0 0 / .1);
+  color: var(--foreground);
+}
+
+.alarmAction:active:not(:disabled) {
+  scale: .96;
+}
+
 @container (max-width: 230px) {
+  .alarmAction { padding-inline: var(--space-3); }
   .card[data-size="2x1"] .badge { display: none; }
   .card[data-size="2x1"] .head { grid-template-columns: minmax(0, 1fr) auto; }
 }

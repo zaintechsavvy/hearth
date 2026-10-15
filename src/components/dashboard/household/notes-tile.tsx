@@ -46,7 +46,7 @@ export function NotesTile({ items, interactive, author }: HouseholdTileProps<"no
       </ul>
       {interactive && (
         <form className={own.form} onSubmit={add}>
-          <input className={own.input} value={text} onChange={event => setText(event.target.value)} placeholder="Leave a note" aria-label="New note" maxLength={280} />
+          <input className={own.input} value={text} onChange={event => setText(event.target.value)} placeholder="Add a note" aria-label="New note" maxLength={280} />
           <button type="button" className={own.color} data-color={color} aria-label={`Note colour: ${color}. Change`} title="Change colour"
             onClick={() => setColor(NOTE_COLORS[(NOTE_COLORS.indexOf(color) + 1) % NOTE_COLORS.length])} />
           {error && <span className={styles.meta} role="alert">{error}</span>}

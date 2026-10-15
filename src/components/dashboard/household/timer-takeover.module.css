@@ -5,25 +5,35 @@
   display: grid;
   place-items: center;
   padding: var(--space-6);
-  background: oklch(14% 0.01 60 / .92);
-  backdrop-filter: blur(24px);
-  color: white;
+  background: oklch(20% 0.01 260 / .28);
+  backdrop-filter: blur(10px) saturate(120%);
 }
 
 .card {
   display: grid;
   justify-items: center;
-  gap: var(--space-4);
-  width: min(92vw, 880px);
-  padding: clamp(32px, 6vw, 72px) clamp(24px, 5vw, 64px);
-  border-radius: 44px;
-  background: oklch(20% 0.01 60);
+  gap: var(--space-3);
+  width: min(92vw, 720px);
+  padding: clamp(32px, 5vw, 56px) clamp(24px, 4vw, 48px);
+  border-radius: 40px;
   text-align: center;
 }
 
-.kicker {
+/* The icon breathes in the attention colour while the timer rings. */
+.icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--warning) 16%, transparent);
   color: var(--warning);
-  font-size: clamp(var(--text-base), 2.4vw, var(--text-xl));
+  animation: ring 1.6s var(--ease-standard) infinite;
+}
+
+.kicker {
+  color: var(--text-secondary);
+  font-size: clamp(var(--text-base), 2vw, var(--text-lg));
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -32,94 +42,69 @@
   max-width: 100%;
   overflow-wrap: anywhere;
   font-family: var(--font-display);
-  font-size: clamp(48px, 11vw, 140px);
+  font-size: clamp(44px, 8vw, 104px);
   font-weight: 500;
   line-height: 1;
   letter-spacing: var(--tracking-display);
-  animation: breathe 1.6s var(--ease-standard) infinite;
 }
 
 .more {
-  color: oklch(100% 0 0 / .65);
-  font-size: var(--text-lg);
+  color: var(--text-secondary);
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin-top: var(--space-4);
 }
 
-.secondary,
-.primary {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 72px;
-  padding: 0 var(--space-8);
-  border-radius: 999px;
-  font-size: var(--text-xl);
-  font-weight: 500;
-  transition: transform var(--duration-spring) var(--ease-spring), background-color var(--duration-fast) var(--ease-standard);
-}
-
-.secondary {
-  background: oklch(100% 0 0 / .1);
-  color: white;
-}
-
-.secondary:hover {
-  background: oklch(100% 0 0 / .16);
-}
-
-.primary {
-  background: white;
-  color: oklch(18% 0 0);
-}
-
-.secondary:active,
-.primary:active {
-  transform: scale(.96);
-}
-
-/* After dark it glows a dim red instead of lighting up the room. */
+/* After dark it glows a dim red over a dark room instead of lighting it up. */
 .takeover[data-night] {
-  background: oklch(6% 0 0 / .96);
+  background: oklch(0% 0 0 / .7);
 }
 
 .takeover[data-night] .card {
-  background: oklch(10% 0.02 25);
-  color: oklch(62% 0.16 25);
+  background: oklch(12% 0.02 25 / .92);
+  box-shadow: inset 0 0 0 1px oklch(58% 0.15 25 / .16);
+  color: oklch(60% 0.16 25);
 }
 
 .takeover[data-night] .kicker,
 .takeover[data-night] .more {
-  color: oklch(52% 0.14 25);
+  color: oklch(46% 0.13 25);
 }
 
-.takeover[data-night] .secondary {
-  background: oklch(62% 0.16 25 / .12);
-  color: oklch(62% 0.16 25);
+.takeover[data-night] .icon {
+  background: oklch(58% 0.15 25 / .14);
+  color: oklch(60% 0.16 25);
 }
 
-.takeover[data-night] .primary {
-  background: oklch(48% 0.16 25);
+.takeover[data-night] .actions button {
+  border-color: transparent;
+  background: oklch(58% 0.15 25 / .12);
+  color: oklch(60% 0.16 25);
+}
+
+.takeover[data-night] .actions button:last-child {
+  background: oklch(46% 0.15 25);
   color: oklch(10% 0.02 25);
 }
 
-@keyframes breathe {
-  50% { opacity: .55; }
+@keyframes ring {
+  0%, 100% { transform: rotate(0); }
+  10% { transform: rotate(-12deg); }
+  20% { transform: rotate(10deg); }
+  30% { transform: rotate(-6deg); }
+  40% { transform: rotate(0); }
 }
 
 @media (max-width: 640px) {
   .actions { display: grid; width: 100%; }
-  .secondary, .primary { justify-content: center; min-height: 60px; }
-  .primary { order: -1; }
+  .actions > :last-child { order: -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .title { animation: none; }
-  .secondary, .primary { transition: none; }
+  .icon { animation: none; }
 }
