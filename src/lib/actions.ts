@@ -19,6 +19,7 @@ import { runAutomationNow } from "@/lib/monitor/automations";
 import { getPreferences, loadHome, orderedRooms, streamRelayUrl } from "@/lib/home";
 import { parseDeviceId } from "@/lib/devices/types";
 import { saveScene } from "@/lib/scenes/service";
+import { isServerless } from "@/lib/setup-check";
 import { hashPin } from "@/lib/security";
 import { PIN_PATTERN } from "@/lib/security-types";
 import { MatterProvider } from "@/lib/integrations/matter/provider";
@@ -43,6 +44,8 @@ const cameraInput = z.object({
   url: z.url({ protocol: /^rtsps?$/, error: "Enter an RTSP address, like rtsp://192.168.1.20:554/stream1" }),
   username: z.string().trim().max(120).optional(),
   password: z.string().max(200).optional(),
+  /** A Home Assistant connection to add it to, or none for the go2rtc relay. */
+  integrationId: z.string().max(100).optional(),
 });
 
 
@@ -121,10 +124,22 @@ export async function addCamera(input: unknown): Promise<ActionResult> {
   const parsed = cameraInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   return authed(async userId => {
-    const { name, ...source } = parsed.data;
+    const { name, integrationId, ...source } = parsed.data;
     const id = crypto.randomUUID();
     const cleanSource: CameraSource = { url: source.url, username: source.username || undefined, password: source.password || undefined };
-    await new StreamRelay(await streamRelayUrl(userId)).upsert(relayStreamName(id), cleanSource);
+    if (integrationId) {
+      const row = await db.query.integration.findFirst({ where: and(eq(integration.id, integrationId), eq(integration.userId, userId)) });
+      const provider = row && createProvider(row);
+      if (!provider?.addRtspCamera) throw new IntegrationError("That connection cannot add cameras.");
+      await provider.addRtspCamera(cleanSource, name);
+      revalidatePath("/", "layout");
+      return OK;
+    }
+    const relayUrl = await streamRelayUrl(userId);
+    await new StreamRelay(relayUrl).upsert(relayStreamName(id), cleanSource).catch(error => {
+      if (isServerless() && new URL(relayUrl).hostname === "localhost") throw new IntegrationError("This Hearth runs in the cloud, so it has no go2rtc beside it. Add the camera through Home Assistant, or set a stream relay address this server can reach.");
+      throw error;
+    });
     await db.insert(camera).values({ id, userId, name, source: seal(cleanSource) });
     revalidatePath("/", "layout");
     return OK;

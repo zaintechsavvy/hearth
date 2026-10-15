@@ -26,6 +26,8 @@ export interface Provider {
   cameraWebRtc?(nativeId: string, offer: string): Promise<WebRtcAnswer>;
   /** Whether this camera offers WebRTC, and the ICE servers the browser should use for it, such as a STUN server. */
   cameraWebRtcConfig?(nativeId: string): Promise<{ supported: boolean; iceServers: IceServer[] }>;
+  /** Adds an RTSP camera to the integration itself, so it streams the way the integration's other cameras do. Returns the new camera's id. */
+  addRtspCamera?(source: { url: string; username?: string; password?: string }, name: string): Promise<string>;
   /** Starts an HLS stream for a camera and returns the playlist's path upstream, for `cameraHlsFetch`. */
   cameraHls?(nativeId: string): Promise<string>;
   /** What a media player played recently, and what it plays next when it knows. */
@@ -76,6 +78,10 @@ export interface WebRtcAnswer {
   candidates: IceCandidate[];
   /** Ends the session upstream; the media stops when it does. */
   close: () => void;
+  /** Hands over the candidates that arrive after the answer, for as long as the session lasts. */
+  onCandidate: (listener: (candidate: IceCandidate) => void) => void;
+  /** Settles when the session ends upstream on its own, such as Home Assistant dropping the connection. */
+  ended: Promise<void>;
 }
 
 export function countBy(values: string[]) {

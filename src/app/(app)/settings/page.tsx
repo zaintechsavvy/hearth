@@ -73,7 +73,8 @@ export default async function ConnectionsPage() {
       <AlertsSection alerts={preferences.alerts} />
       <SecuritySection method={preferences.security.method} hasPin={Boolean(preferences.security.hash)} owner={owner} />
       {owner && <AssistantsSection assistants={assistants} />}
-      {owner && <CamerasSection cameras={cameras.map(row => ({ id: row.id, name: row.name, host: hostOf(unseal<CameraSource>(row.source).url) }))} relayUrl={relayUrl} />}
+      {owner && <CamerasSection cameras={cameras.map(row => ({ id: row.id, name: row.name, host: hostOf(unseal<CameraSource>(row.source).url) }))} relayUrl={relayUrl}
+        homeAssistants={integrations.filter(row => row.kind === "home-assistant").map(row => ({ id: row.id, name: row.name }))} />}
       <CalendarsSection calendars={calendars.map(row => ({ id: row.id, name: row.name, color: row.color, host: hostOf(unseal<string>(row.url)) }))} />
       <AppearanceSection pages={preferences.pages.map(page => ({ id: page.id, name: page.name }))} />
       <WallSection />

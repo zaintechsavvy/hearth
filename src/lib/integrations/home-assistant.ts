@@ -25,6 +25,8 @@ type HassWebRtcEvent =
 const WEBRTC_ANSWER_MS = 10_000;
 const WEBRTC_GATHER_MS = 1500;
 const WEBRTC_QUIET_MS = 250;
+/** Home Assistant tries the stream before it answers a Generic Camera step, and gives up on a bad one after about ten seconds. */
+const FLOW_TIMEOUT_MS = 45_000;
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const FAN_SET_SPEED = 1;
@@ -287,6 +289,29 @@ export interface TrackedPackage {
   at: string | null;
 }
 
+interface HassFlowStep {
+  type: "form" | "create_entry" | "abort";
+  flow_id: string;
+  step_id?: string;
+  data_schema?: { name?: string }[];
+  errors?: Record<string, string> | null;
+  reason?: string;
+  result?: string | { entry_id?: string };
+}
+
+/** Home Assistant's Generic Camera errors, in words. Its stream check reports a wrong password as a timeout. */
+const GENERIC_ERRORS: Record<string, string> = {
+  timeout: "Home Assistant could not open the stream. Check the address, username, and password, and that Home Assistant can reach the camera.",
+  stream_no_route_to_host: "Home Assistant cannot reach that address. Check the camera's IP address and port.",
+  stream_unauthorised: "The camera refused the username or password.",
+  stream_not_permitted: "The camera refused the username or password.",
+  stream_io_error: "The camera closed the stream. Check the stream path, such as /stream1.",
+  stream_not_set_up: "Home Assistant's stream integration is not set up.",
+  malformed_url: "That is not a valid camera address.",
+  relative_url: "Enter the full address, starting with rtsp://.",
+  no_still_image_or_stream_url: "Enter the camera's RTSP address.",
+};
+
 export interface HassLogbookRow {
   when: string | number;
   name?: string;
@@ -356,7 +381,7 @@ export class HomeAssistantProvider implements Provider {
       response = await fetch(new URL(path, this.base), {
         ...init,
         cache: "no-store",
-        signal: AbortSignal.timeout(8000),
+        signal: init?.signal ?? AbortSignal.timeout(8000),
         headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" },
       });
     } catch {
@@ -419,16 +444,23 @@ export class HomeAssistantProvider implements Provider {
 
     const candidates: IceCandidate[] = [];
     let lastCandidateAt = 0;
+    let late: ((candidate: IceCandidate) => void) | null = null;
     let answered: (sdp: string) => void = () => {};
     let failed: (error: Error) => void = () => {};
+    let finish: () => void = () => {};
     const answer = new Promise<string>((resolve, reject) => { answered = resolve; failed = reject; });
+    const ended = new Promise<void>(resolve => { finish = resolve; });
     const onEvent = (raw: unknown) => {
       const event = raw as HassWebRtcEvent;
       if (event.type === "answer") answered(event.answer);
       else if (event.type === "candidate") {
+        if (late) return late(event.candidate);
         candidates.push(event.candidate);
         lastCandidateAt = Date.now();
-      } else if (event.type === "error") failed(new IntegrationError(event.message ?? "Home Assistant could not start the stream."));
+      } else if (event.type === "error") {
+        failed(new IntegrationError(event.message ?? "Home Assistant could not start the stream."));
+        finish();
+      }
     };
 
     let session;
@@ -437,17 +469,58 @@ export class HomeAssistantProvider implements Provider {
     } catch (error) {
       if (!(error instanceof HomeAssistantCommandError) || error.code !== "unknown_command") throw error;
       const legacy = await this.live.request<{ answer: string }>({ type: "camera/web_rtc_offer", entity_id: entityId, offer });
-      return { answer: legacy.result.answer, candidates: [], close: () => {} };
+      return { answer: legacy.result.answer, candidates: [], close: () => {}, onCandidate: () => {}, ended: new Promise<void>(() => {}) };
     }
     try {
       const sdp = await Promise.race([answer, sleep(WEBRTC_ANSWER_MS).then(() => { throw new IntegrationError("The camera did not answer in time."); })]);
       const started = Date.now();
       while (Date.now() - started < WEBRTC_GATHER_MS && !(Date.now() - Math.max(lastCandidateAt, started) > WEBRTC_QUIET_MS && (candidates.length > 0 || sdp.includes("a=candidate")))) await sleep(50);
-      return { answer: sdp, candidates, close: session.close };
+      return {
+        answer: sdp,
+        candidates,
+        close: () => { session.close(); finish(); },
+        onCandidate: listener => { late = listener; },
+        ended,
+      };
     } catch (error) {
       session.close();
       throw error;
     }
+  }
+
+  /**
+   * An RTSP camera added as a Generic Camera in Home Assistant, which then streams it through its own go2rtc. Home
+   * Assistant tries the stream before it saves, and answers with a timeout for a wrong address and a wrong password
+   * alike. Needs an administrator's token.
+   */
+  async addRtspCamera(source: { url: string; username?: string; password?: string }, name: string) {
+    const flow = (path: string, body: Record<string, unknown>) => this.request<HassFlowStep>(path, { method: "POST", body: JSON.stringify(body), signal: AbortSignal.timeout(FLOW_TIMEOUT_MS) }).catch(error => {
+      if (error instanceof IntegrationError && /rejected the access token|403/.test(error.message)) throw new IntegrationError("Adding a camera needs a Home Assistant token from an administrator account.");
+      throw error;
+    });
+    let step = await flow("api/config/config_entries/flow", { handler: "generic", show_advanced_options: false });
+    const nested = step.data_schema?.some(field => field.name === "advanced");
+    const options = { framerate: 2, verify_ssl: false, rtsp_transport: "tcp", authentication: "basic" };
+    step = await flow(`api/config/config_entries/flow/${step.flow_id}`, {
+      stream_source: source.url,
+      ...(source.username ? { username: source.username } : {}),
+      ...(source.password ? { password: source.password } : {}),
+      ...(nested ? { advanced: options } : options),
+    });
+    if (step.type === "form" && step.step_id === "user_confirm") step = await flow(`api/config/config_entries/flow/${step.flow_id}`, { confirmed_ok: true });
+    if (step.type === "abort") throw new IntegrationError(step.reason === "already_configured" ? "Home Assistant already has this camera." : `Home Assistant stopped: ${step.reason ?? "unknown reason"}.`);
+    if (step.type !== "create_entry") throw new IntegrationError(GENERIC_ERRORS[Object.values(step.errors ?? {})[0] ?? ""] ?? "Home Assistant could not add the camera.");
+    const entryId = typeof step.result === "string" ? step.result : step.result?.entry_id;
+    const template = `{% for entity in integration_entities('generic') %}{% if config_entry_id(entity) == '${entryId}' %}{{ entity }}{% endif %}{% endfor %}`;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const entityId = (await this.request<string>("api/template", { method: "POST", body: JSON.stringify({ template }) }, "text").catch(() => "")).trim();
+      if (entityId.startsWith("camera.")) {
+        await this.live.request({ type: "config/entity_registry/update", entity_id: entityId, name }).catch(() => undefined);
+        return entityId;
+      }
+      await sleep(250);
+    }
+    throw new IntegrationError("Home Assistant added the camera, but it has not appeared yet. Try Add tile in a moment.");
   }
 
   /** Whether the camera offers WebRTC, and the STUN and TURN servers Home Assistant hands its own frontend for it. */

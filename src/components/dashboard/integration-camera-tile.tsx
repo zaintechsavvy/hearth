@@ -18,10 +18,9 @@ type View =
   | { kind: "offline" };
 
 const WEBRTC_FRAME_MS = 10_000;
-const HLS_FRAME_MS = 20_000;
+const HLS_FRAME_MS = 30_000;
 const MJPEG_FRAME_MS = 8000;
 const PICTURE_MS = 2000;
-const KEEPALIVE_MS = 20_000;
 /** While only a still is showing, try for live video again this often. */
 const RETRY_LIVE_MS = 120_000;
 const RECONNECTS = 3;
@@ -49,14 +48,48 @@ async function readError(response: Response, fallback: string) {
   return body?.error ?? fallback;
 }
 
-/** A receive-only call through Hearth to the integration, using the ICE servers it recommends. Resolves at the first painted frame. */
-async function playWebRtc(base: string, video: HTMLVideoElement, signal: AbortSignal, cleanups: (() => void)[], onDrop: () => void) {
+interface Line {
+  type: "answer" | "candidate" | "ping" | "end";
+  answer?: string;
+  candidates?: IceCandidate[];
+  candidate?: IceCandidate;
+  reason?: string;
+}
+
+/** Reads newline-delimited JSON as it streams in. */
+async function* lines(response: Response) {
+  const reader = response.body?.getReader();
+  if (!reader) return;
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buffer += decoder.decode(value, { stream: true });
+    let index;
+    while ((index = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, index).trim();
+      buffer = buffer.slice(index + 1);
+      if (line) yield JSON.parse(line) as Line;
+    }
+  }
+}
+
+/**
+ * A receive-only call through Hearth to the integration, using the ICE servers it recommends. The call lives inside
+ * one streaming request; when the server asks to renew it (serverless hosts cap how long a request runs) or the
+ * request ends, `onRenew` starts a fresh call. Resolves at the first painted frame.
+ */
+async function playWebRtc(base: string, video: HTMLVideoElement, signal: AbortSignal, cleanups: (() => void)[], onDrop: () => void, onRenew: () => void) {
   const config = await fetch(`${base}/webrtc`, { signal });
   if (!config.ok) throw new Error(await readError(config, "Home Assistant did not answer"));
   const { supported, iceServers } = await config.json() as { supported: boolean; iceServers: IceServer[] };
   if (!supported) throw new Error("this camera does not offer it in Home Assistant");
   const peer = new RTCPeerConnection({ iceServers });
-  cleanups.push(() => peer.close());
+  const call = new AbortController();
+  const hangUp = () => call.abort();
+  signal.addEventListener("abort", hangUp, { once: true });
+  cleanups.push(() => { hangUp(); peer.close(); });
   peer.addTransceiver("video", { direction: "recvonly" });
   peer.addTransceiver("audio", { direction: "recvonly" });
   peer.addEventListener("track", event => {
@@ -64,22 +97,54 @@ async function playWebRtc(base: string, video: HTMLVideoElement, signal: AbortSi
   });
   await peer.setLocalDescription(await peer.createOffer());
   await iceGathered(peer);
-  const response = await fetch(`${base}/webrtc`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ offer: peer.localDescription?.sdp }), signal });
+  const response = await fetch(`${base}/webrtc`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ offer: peer.localDescription?.sdp }), signal: call.signal });
   if (!response.ok) throw new Error(await readError(response, "the camera refused the call"));
-  const { session, answer, candidates } = await response.json() as { session: string; answer: string; candidates: IceCandidate[] };
-  const hangUp = () => void fetch(`${base}/webrtc?session=${session}`, { method: "DELETE", keepalive: true });
-  const keepalive = setInterval(() => void fetch(`${base}/webrtc?session=${session}`, { method: "PATCH" }), KEEPALIVE_MS);
-  window.addEventListener("pagehide", hangUp, { signal });
-  cleanups.push(() => { clearInterval(keepalive); hangUp(); });
+  const stream = lines(response);
+  const first = await stream.next();
+  if (first.done || first.value.type !== "answer" || !first.value.answer) throw new Error("Hearth did not pass on the camera's answer");
+  const answer = first.value.answer;
+  const candidates = first.value.candidates ?? [];
   await peer.setRemoteDescription({ type: "answer", sdp: answer });
   for (const candidate of candidates) await peer.addIceCandidate(candidate).catch(() => {});
+  let playing = false;
+  void (async () => {
+    try {
+      for await (const line of stream) {
+        if (line.type === "candidate" && line.candidate) await peer.addIceCandidate(line.candidate).catch(() => {});
+        if (line.type === "end") break;
+      }
+    } catch {
+      // The request ended, which the check below handles.
+    }
+    if (!call.signal.aborted && playing) onRenew();
+  })();
+  window.addEventListener("pagehide", hangUp, { signal });
 
   const hosts = candidateHosts(answer, candidates);
   const unreachable = new Promise<never>((_, reject) => peer.addEventListener("iceconnectionstatechange", () => {
     if (peer.iceConnectionState === "failed") reject(new Error(`this browser could not reach the video at ${hosts.join(", ") || "Home Assistant"}`));
   }));
-  await Promise.race([firstFrame(video, signal), unreachable, timeout(WEBRTC_FRAME_MS, signal, "connected, but no picture arrived in 10 seconds")]);
+  const silent = timeout(WEBRTC_FRAME_MS, signal, "no picture arrived").catch(() => {
+    const reached = peer.iceConnectionState === "connected" || peer.iceConnectionState === "completed";
+    throw new Error(reached ? "connected, but no picture arrived in 10 seconds" : `this browser could not reach the video at ${hosts.join(", ") || "Home Assistant"} in 10 seconds`);
+  });
+  await Promise.race([firstFrame(video, signal), unreachable, silent]);
+  playing = true;
   peer.addEventListener("connectionstatechange", () => { if (peer.connectionState === "failed") onDrop(); });
+}
+
+/** The frame on screen as a picture, held up while a renewed call connects so the view does not flash back to an old still. */
+function still(video: HTMLVideoElement) {
+  if (!video.videoWidth) return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d")?.drawImage(video, 0, 0);
+  try {
+    return canvas.toDataURL("image/jpeg", 0.8);
+  } catch {
+    return null;
+  }
 }
 
 /** HLS relayed through Hearth: needs only the HTTP path Hearth already uses, so it works where WebRTC cannot connect. */
@@ -110,7 +175,7 @@ async function playHls(base: string, video: HTMLVideoElement, signal: AbortSigna
     throw new Error("this browser cannot play it");
   }
   void video.play().catch(() => {});
-  await Promise.race([firstFrame(video, signal), fatal, timeout(HLS_FRAME_MS, signal, "no picture arrived in 20 seconds")]);
+  await Promise.race([firstFrame(video, signal), fatal, timeout(HLS_FRAME_MS, signal, "no picture arrived in 30 seconds")]);
 }
 
 /**
@@ -126,6 +191,7 @@ export function IntegrationCameraTile({ camera }: { camera: CameraDevice }) {
   const [attempt, setAttempt] = useState(0);
   const [tick, setTick] = useState(0);
   const [poster, setPoster] = useState(true);
+  const [held, setHeld] = useState<string | null>(null);
   const reconnects = useRef(0);
   const pictureFailures = useRef(0);
   const base = `/api/devices/${encodeURIComponent(camera.id)}/camera`;
@@ -142,17 +208,24 @@ export function IntegrationCameraTile({ camera }: { camera: CameraDevice }) {
     };
     const onDrop = () => {
       if (controller.signal.aborted) return;
+      setHeld(still(element));
       reconnects.current += 1;
       if (reconnects.current > RECONNECTS) setView({ kind: "picture" });
       else setAttempt(value => value + 1);
+    };
+    const onRenew = () => {
+      if (controller.signal.aborted) return;
+      setHeld(still(element));
+      setAttempt(value => value + 1);
     };
     const run = async () => {
       const failures: string[] = [];
       for (const [next, play] of [["webrtc", playWebRtc], ["hls", playHls]] as const) {
         if (next === "hls") setView({ kind: "connecting", stage: "hls" });
         try {
-          await play(base, element, controller.signal, cleanups, onDrop);
+          await play(base, element, controller.signal, cleanups, onDrop, onRenew);
           if (controller.signal.aborted) return;
+          setHeld(null);
           setNotes(failures);
           setView({ kind: "live", stage: next });
           return;
@@ -210,9 +283,9 @@ export function IntegrationCameraTile({ camera }: { camera: CameraDevice }) {
   const videoShown = live && stage !== "mjpeg";
   return (
     <figure ref={frame} className={`${glassClass()} ${styles.tile} ${styles.fill}`} data-state={state}>
-      {poster && view.kind === "connecting" && (
+      {view.kind === "connecting" && (held || poster) && (
         // eslint-disable-next-line @next/next/no-img-element -- an authenticated, live JPEG that must bypass the image optimiser
-        <img className={`${styles.media} ${styles.poster}`} src={`${base}?mode=snapshot&poster=${attempt}`} alt="" aria-hidden="true" onError={() => setPoster(false)} />
+        <img className={`${styles.media} ${held ? "" : styles.poster}`} src={held ?? `${base}?mode=snapshot&poster=${attempt}`} alt="" aria-hidden="true" onError={() => setPoster(false)} />
       )}
       <video ref={video} className={styles.media} autoPlay muted playsInline hidden={!videoShown} aria-label={`Live view from ${camera.name}`} />
       {stage === "mjpeg" && (

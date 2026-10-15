@@ -3,7 +3,8 @@ import { guestCanReach } from "@/lib/household";
 import { getHome } from "@/lib/session";
 
 const SEGMENT = /^[\w.-]+$/;
-const PASSED_HEADERS = ["content-type", "content-length"];
+/** Not the length or encoding: fetch hands over the body already decompressed, so Home Assistant's gzip length would cut it short. */
+const PASSED_HEADERS = ["content-type"];
 
 /** Relays one HLS playlist or segment. Playlists use relative addresses, so everything they name comes back through here. */
 export async function GET(request: Request, { params }: RouteContext<"/api/devices/[id]/camera/hls/[...path]">) {

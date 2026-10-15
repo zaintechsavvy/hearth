@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { closeSession, openSession, touchSession } from "@/lib/cameras/webrtc-sessions";
 import { deviceProvider, readableError } from "@/lib/home";
-import { WebRtcUnsupportedError } from "@/lib/integrations/types";
+import { WebRtcUnsupportedError, type WebRtcAnswer } from "@/lib/integrations/types";
+import { isServerless } from "@/lib/setup-check";
 import { guestCanReach } from "@/lib/household";
 import { getHome } from "@/lib/session";
 
@@ -22,7 +22,17 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/devi
   }
 }
 
-/** Starts a WebRTC session for a camera: the browser sends its offer, and gets the answer and candidates back. */
+/** Long enough to watch for a while; on serverless hosts the player renews the call before the platform ends it. */
+export const maxDuration = 300;
+const RENEW_MS = 270_000;
+const HEARTBEAT_MS = 15_000;
+
+/**
+ * Starts a WebRTC call for a camera and keeps it open for as long as this response is: the browser sends a complete
+ * offer and reads newline-delimited JSON back, the answer first, then late candidates, heartbeats, and an `end` line.
+ * Holding the upstream session inside one request means it never depends on later requests reaching the same server,
+ * which serverless hosts cannot promise. Closing the response hangs up.
+ */
 export async function POST(request: Request, { params }: RouteContext<"/api/devices/[id]/camera/webrtc">) {
   const home = await getHome();
   if (!home) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
@@ -31,29 +41,42 @@ export async function POST(request: Request, { params }: RouteContext<"/api/devi
   if (!parsed.success) return NextResponse.json({ error: "Send a WebRTC offer." }, { status: 400 });
   const target = await deviceProvider(home.homeId, decodeURIComponent((await params).id));
   if (!target?.provider.cameraWebRtc) return NextResponse.json({ error: "This camera has no WebRTC." }, { status: 409 });
+  let call: WebRtcAnswer;
   try {
-    const { answer, candidates, close } = await target.provider.cameraWebRtc(target.nativeId, parsed.data.offer);
-    if (request.signal.aborted) {
-      close();
-      return new Response(null, { status: 499 });
-    }
-    return NextResponse.json({ session: openSession(home.homeId, close), answer, candidates });
+    call = await target.provider.cameraWebRtc(target.nativeId, parsed.data.offer);
   } catch (error) {
     return NextResponse.json({ error: readableError(error) }, { status: error instanceof WebRtcUnsupportedError ? 409 : 502 });
   }
-}
+  if (request.signal.aborted) {
+    call.close();
+    return new Response(null, { status: 499 });
+  }
 
-/** Keeps a session alive while its player is on screen. */
-export async function PATCH(request: Request) {
-  const home = await getHome();
-  const session = new URL(request.url).searchParams.get("session");
-  if (!home || !session) return new Response(null, { status: 401 });
-  return new Response(null, { status: touchSession(home.homeId, session) ? 204 : 404 });
-}
-
-export async function DELETE(request: Request) {
-  const home = await getHome();
-  const session = new URL(request.url).searchParams.get("session");
-  if (home && session) closeSession(home.homeId, session);
-  return new Response(null, { status: 204 });
+  const encoder = new TextEncoder();
+  let finish: (reason: string) => void = () => {};
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      let done = false;
+      const send = (line: Record<string, unknown>) => { if (!done) controller.enqueue(encoder.encode(`${JSON.stringify(line)}\n`)); };
+      const heartbeat = setInterval(() => send({ type: "ping" }), HEARTBEAT_MS);
+      const renew = isServerless() ? setTimeout(() => finish("renew"), RENEW_MS) : undefined;
+      finish = reason => {
+        if (done) return;
+        send({ type: "end", reason });
+        done = true;
+        clearInterval(heartbeat);
+        clearTimeout(renew);
+        call.close();
+        controller.close();
+      };
+      send({ type: "answer", answer: call.answer, candidates: call.candidates });
+      call.onCandidate(candidate => send({ type: "candidate", candidate }));
+      void call.ended.then(() => finish("ended"));
+      request.signal.addEventListener("abort", () => finish("closed"), { once: true });
+    },
+    cancel() {
+      finish("closed");
+    },
+  });
+  return new Response(body, { headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store", "X-Accel-Buffering": "no" } });
 }
