@@ -14,7 +14,7 @@ import { isWidget, type TileConfig } from "@/lib/dashboard/layout";
 import { DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { itemsOf } from "@/lib/widgets/items";
-import { doseSlots, groupPickups, pickupWords, timerRemaining, formatDuration } from "@/lib/widgets/schedules";
+import { doseSlots, groupPickups, pickupWords, timerColors, timerRemaining, formatDuration } from "@/lib/widgets/schedules";
 import { skyWords } from "@/lib/widgets/weather-codes";
 import type { Forecast } from "@/lib/widgets/weather";
 import styles from "./wall-mode.module.css";
@@ -22,6 +22,7 @@ import styles from "./wall-mode.module.css";
 const SHIFT_EVERY_MS = 10 * 60_000;
 const SHIFT_PX = 4;
 const DRIFT_EVERY_MS = 60_000;
+const NIGHT_RED = "oklch(52% 0.16 25)";
 const ACTIVITY = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
 
 const fetchJson = <T,>(url: string): Promise<T> => fetch(url).then(response => { if (!response.ok) throw new Error(); return response.json(); });
@@ -43,6 +44,7 @@ function Wall({ settings }: { settings: WallSettings }) {
   const { home } = useHome();
   const now = useTick(1000) ?? 0;
   const [resting, setResting] = useState(false);
+  const [menu, setMenu] = useState(false);
   const lastActive = useRef(0);
   const sensorState = useRef<Map<string, boolean>>(new Map());
   const night = now > 0 && isNight(settings, new Date(now));
@@ -115,14 +117,14 @@ function Wall({ settings }: { settings: WallSettings }) {
           </motion.button>
         )}
       </AnimatePresence>
-      <Popover>
+      <Popover open={menu} onOpenChange={setMenu}>
         <PopoverTrigger asChild>
           <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><MoreHorizontal size={18} strokeWidth={1.75} aria-hidden="true" /></button>
         </PopoverTrigger>
         <PopoverContent align="end" className={`${glassSheetClass} ${styles.menuContent}`}>
-          <Link href="/settings#wall" className={styles.menuItem}>Wall tablet settings</Link>
-          <button type="button" className={styles.menuItem} onClick={() => setResting(true)}>Rest the screen now</button>
-          <button type="button" className={styles.menuItem} onClick={() => document.documentElement.requestFullscreen?.().catch(() => {})}>Full screen</button>
+          <Link href="/settings#wall" className={styles.menuItem} onClick={() => setMenu(false)}>Wall tablet settings</Link>
+          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); }}>Rest the screen now</button>
+          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.documentElement.requestFullscreen?.().catch(() => {}); }}>Full screen</button>
         </PopoverContent>
       </Popover>
     </>
@@ -142,9 +144,9 @@ function Glance({ now, night, dimLevel }: { now: number; night: boolean; dimLeve
 
   const notes: { icon: ReactNode; text: string; key: string }[] = [];
   const widgets = home?.widgets ?? [];
-  for (const timer of itemsOf(widgets, "timer").filter(item => item.data.endsAt)) {
-    notes.push({ key: timer.id, icon: <Timer size={18} strokeWidth={1.75} />, text: `${timer.data.label} · ${formatDuration(timerRemaining(timer.data, now))}` });
-  }
+  const timers = itemsOf(widgets, "timer").filter(item => item.data.endsAt && timerRemaining(item.data, now) > 0)
+    .sort((a, b) => timerRemaining(a.data, now) - timerRemaining(b.data, now)).slice(0, 3);
+  const colors = timerColors(timers);
   const pickup = groupPickups(itemsOf(widgets, "bin"), date)[0];
   if (pickup && pickup.days <= 1) notes.push({ key: "bins", icon: <Recycle size={18} strokeWidth={1.75} />, text: `${pickup.bins.map(bin => bin.data.name).join(" and ")} · ${pickupWords(pickup.days, date)}` });
   const dose = itemsOf(widgets, "medication").flatMap(item => doseSlots(item.data, date, item.createdAt).filter(slot => slot.state === "due" || slot.state === "upcoming").map(slot => ({ item, slot })))
@@ -165,6 +167,25 @@ function Glance({ now, night, dimLevel }: { now: number; night: boolean; dimLeve
         <span className={styles.weather}>
           <Thermometer size={18} strokeWidth={1.75} aria-hidden="true" />
           {Math.round(place?.units === "F" ? weather.current.temperature * 9 / 5 + 32 : weather.current.temperature)}° · {skyWords(weather.current.code, weather.current.day)}
+        </span>
+      )}
+      {timers.length > 0 && (
+        <span className={styles.timers} data-night={night || undefined}>
+          {timers.map(timer => {
+            const left = timerRemaining(timer.data, now);
+            return (
+              <span key={timer.id} className={styles.timer} style={{ "--timer": night ? NIGHT_RED : timers.length > 1 ? colors.get(timer.id) : "currentColor" } as CSSProperties}>
+                <svg className={styles.timerRing} viewBox="0 0 100 100" aria-hidden="true">
+                  <circle cx="50" cy="50" r="44" pathLength={100} className={styles.timerTrack} />
+                  <circle cx="50" cy="50" r="44" pathLength={100} className={styles.timerProgress} strokeDasharray="100" strokeDashoffset={100 - (left / timer.data.durationMs) * 100} />
+                </svg>
+                <span className={styles.timerText}>
+                  <span className={styles.timerTime}>{formatDuration(left)}</span>
+                  <span className={styles.timerLabel}><Timer size={14} strokeWidth={1.75} aria-hidden="true" /> {timer.data.label}</span>
+                </span>
+              </span>
+            );
+          })}
         </span>
       )}
       {notes.length > 0 && (

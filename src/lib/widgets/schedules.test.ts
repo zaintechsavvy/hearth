@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyTimerControl, countdownDays, doseSlots, formatDuration, groupPickups, nextPickup, pickupWords, plantThirst, wifiQrText } from "./schedules";
+import { applyTimerControl, countdownDays, parseTimerRequest, doseSlots, formatDuration, groupPickups, nextPickup, pickupWords, plantThirst, wifiQrText } from "./schedules";
 
 const bin = (weekday: number, every: 1 | 2 | 4, start: string) => ({ name: "Bin", color: "#000000", icon: "trash" as const, weekday, every, start });
 
@@ -101,5 +101,24 @@ describe("applyTimerControl", () => {
     expect(applyTimerControl(running, { action: "add", ms: 60_000 }, now).endsAt).toBe(new Date(now + 660_000).toISOString());
     expect(applyTimerControl(running, { action: "reset" }, now)).toMatchObject({ endsAt: null, remainingMs: 600_000 });
     expect(applyTimerControl(running, { action: "restart" }, now + 700_000).endsAt).toBe(new Date(now + 1_300_000).toISOString());
+  });
+});
+
+describe("parseTimerRequest", () => {
+  const read = (text: string) => { const timer = parseTimerRequest(text); return timer && [timer.label, timer.durationMs]; };
+  it("understands the usual ways of asking", () => {
+    expect(read("Set a 10 minute timer")).toEqual(["10 min", 600_000]);
+    expect(read("set a timer for 5 minutes")).toEqual(["5 min", 300_000]);
+    expect(read("start a 7 minute egg timer")).toEqual(["Egg", 420_000]);
+    expect(read("Set a timer for 18 minutes for the rice")).toEqual(["Rice", 1_080_000]);
+    expect(read("timer for twenty minutes called pizza")).toEqual(["Pizza", 1_200_000]);
+    expect(read("set a one hour timer")).toEqual(["1 hr", 3_600_000]);
+    expect(read("an hour and a half timer")).toEqual(["1 hr 30 min", 5_400_000]);
+    expect(read("30 second timer")).toEqual(["30 sec", 30_000]);
+  });
+
+  it("leaves other requests alone", () => {
+    expect(read("turn on the kitchen lights")).toBeNull();
+    expect(read("how long is left on the timer")).toBeNull();
   });
 });

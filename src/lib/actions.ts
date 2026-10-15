@@ -180,6 +180,7 @@ const tileSchema = z.object({
     glow: z.boolean().optional(),
     price: z.number().min(0).max(10).optional(),
     speakers: z.array(z.string().max(300)).max(20).optional(),
+    presets: z.array(z.object({ label: z.string().trim().min(1).max(30), minutes: z.number().min(0.25).max(1440) })).max(8).optional(),
     hold: z.custom<TileHold>(value => typeof value === "string" && /^(controls|history|none|scene:[\w-]{1,100}|device:[\w.:-]{1,300})$/.test(value)).optional(),
   }).optional(),
 });

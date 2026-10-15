@@ -59,7 +59,6 @@ import { RemindersTile } from "./widgets/reminders-tile";
 import { WeatherTile } from "./widgets/weather-tile";
 import { BinsTile } from "./household/bins-tile";
 import { CountdownTile } from "./household/countdown-tile";
-import { HouseholdAlerts } from "./household/household-alerts";
 import { MedicationsTile } from "./household/medications-tile";
 import { NotesTile } from "./household/notes-tile";
 import { PlantsTile } from "./household/plants-tile";
@@ -368,7 +367,6 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       />
       <WidgetEditor state={managing} items={home.widgets} onOpenChange={open => !open && setManaging(null)}
         onLink={(tileId, itemId) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, itemId } } : tile))} />
-      <HouseholdAlerts items={home.widgets} />
       <HistorySheet device={chartedDevice} onOpenChange={open => !open && setCharting(null)} />
       <LightControls device={controlledLight} onOpenChange={open => !open && setControlling(null)} onCommand={send} />
       <SceneEditor open={sceneEditing !== null} onOpenChange={open => !open && setSceneEditing(null)} devices={home.devices} scene={sceneEditing === "new" ? null : sceneEditing} onSaved={() => refresh()} />

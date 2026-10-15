@@ -1,6 +1,6 @@
 "use client";
 
-import { Link2, MapPin } from "lucide-react";
+import { Link2, MapPin, Plus, X } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
@@ -17,7 +17,7 @@ import { Switch } from "@/components/arc/switch/switch";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { glassSheetClass } from "@/components/glass/glass";
 import { KIND_INFO } from "@/lib/dashboard/catalog";
-import { isWidget, SIZE_OPTIONS, spanOf, TILE_COLORS, TILE_ICONS, type TileColor, type TileConfig, type TileHold, type TileIcon, type TileKind, type TileOptions, type TileSize } from "@/lib/dashboard/layout";
+import { isWidget, SIZE_OPTIONS, spanOf, TILE_COLORS, TILE_ICONS, type TileColor, type TileConfig, type TileHold, type TileIcon, type TileKind, type TileOptions, type TileSize, type TimerPreset } from "@/lib/dashboard/layout";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { RoomPicker } from "./room-picker";
 import { TILE_ICON_COMPONENTS, iconLabel } from "./tiles/tile-icons";
@@ -178,6 +178,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
                   onBlur={event => { const price = Number(event.target.value); onChange({ options: { ...tile.config.options, price: price > 0 ? price : undefined } }); }} />
               </section>
             )}
+            {tile.kind === "timers" && <PresetsSection presets={tile.config.options?.presets ?? []} onChange={presets => onChange({ options: { ...tile.config.options, presets: presets.length ? presets : undefined } })} />}
             {tile.tuning && <TuningSection tile={tile} tuning={tile.tuning} onChange={onChange} />}
             <div className={styles.actions}>
               <div className={styles.extra}>
@@ -191,6 +192,29 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** One-tap timers the household uses all the time, such as eggs or rice. Saved as they are typed, once each has a name and a length. */
+function PresetsSection({ presets, onChange }: { presets: TimerPreset[]; onChange: (presets: TimerPreset[]) => void }) {
+  const [rows, setRows] = useState(() => presets.map(preset => ({ ...preset, key: crypto.randomUUID() })));
+  const update = (next: typeof rows) => {
+    setRows(next);
+    onChange(next.filter(row => row.label.trim() && row.minutes > 0).map(({ label, minutes }) => ({ label: label.trim(), minutes })));
+  };
+  return (
+    <section aria-labelledby="tile-presets" className={styles.section}>
+      <h3 id="tile-presets" className={styles.heading}>Presets</h3>
+      <p className={styles.hint}>One tap starts these, before the plain lengths.</p>
+      {rows.map((row, index) => (
+        <div key={row.key} className={styles.presetRow}>
+          <Input label="Name" value={row.label} maxLength={30} placeholder="Eggs" onChange={event => update(rows.map((item, position) => position === index ? { ...item, label: event.target.value } : item))} />
+          <Input label="Minutes" type="number" min={0.25} max={1440} step={0.25} value={row.minutes || ""} onChange={event => update(rows.map((item, position) => position === index ? { ...item, minutes: Number(event.target.value) } : item))} />
+          <Button type="button" variant="ghost" size="sm" aria-label={`Remove ${row.label || "preset"}`} onClick={() => update(rows.filter((_, position) => position !== index))}><X size={16} strokeWidth={1.75} aria-hidden="true" /></Button>
+        </div>
+      ))}
+      {rows.length < 8 && <Button type="button" variant="secondary" size="sm" className={styles.presetAdd} onClick={() => setRows([...rows, { label: "", minutes: 0, key: crypto.randomUUID() }])}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /> Add a preset</Button>}
+    </section>
   );
 }
 

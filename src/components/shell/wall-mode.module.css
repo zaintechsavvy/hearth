@@ -53,6 +53,73 @@
   opacity: .85;
 }
 
+/* Running timers sit under the clock, big enough to read from the stove. */
+.timers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4) var(--space-8);
+  margin-top: var(--space-5);
+}
+
+.timer {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.timerRing {
+  width: clamp(48px, 7vw, 84px);
+  height: clamp(48px, 7vw, 84px);
+  rotate: -90deg;
+}
+
+.timerTrack,
+.timerProgress {
+  fill: none;
+  stroke-width: 8;
+}
+
+.timerTrack {
+  stroke: oklch(100% 0 0 / .14);
+}
+
+.timerProgress {
+  stroke: var(--timer);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.timerText {
+  display: grid;
+  text-align: start;
+}
+
+.timerTime {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 7vw, 92px);
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.timerLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-lg);
+  opacity: .7;
+}
+
+/* At night the countdown turns a dim red, so it can be read without lighting the room. */
+.timers[data-night] {
+  color: oklch(60% 0.16 25);
+}
+
+.timers[data-night] .timerTrack {
+  stroke: oklch(52% 0.16 25 / .2);
+}
+
 .notes {
   display: grid;
   justify-items: center;
@@ -126,5 +193,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dim, .glance { transition: none; }
+  .dim, .glance, .timerProgress { transition: none; }
 }

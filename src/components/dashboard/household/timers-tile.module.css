@@ -49,6 +49,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+.quickName {
+  max-width: 100%;
+  overflow: hidden;
+  padding-inline: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .quickUnit {
   color: var(--text-secondary);
   font-size: var(--text-xs);
@@ -80,13 +90,14 @@
 }
 
 .progress {
-  stroke: var(--foreground);
+  stroke: var(--timer, var(--foreground));
   stroke-linecap: round;
   transition: stroke-dashoffset 250ms linear, stroke var(--duration-fast) var(--ease-standard);
 }
 
 .hero:not([data-running]) .progress,
-.row:not([data-running]) .progress {
+.row:not([data-running]) .progress,
+.dialCell:not([data-running]) .progress {
   stroke: var(--text-secondary);
 }
 
@@ -165,6 +176,69 @@
   .heroControls {
     flex-direction: column;
   }
+}
+
+/* A few timers side by side, each a dial in its own colour that starts and pauses at a tap. */
+.dials {
+  display: grid;
+  grid-template-columns: repeat(var(--count), minmax(0, 1fr));
+  gap: var(--space-3);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dialCell {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 0;
+}
+
+.dialSlot {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  container-type: size;
+}
+
+.dialSlot .dial {
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+  max-height: none;
+  border-radius: 50%;
+  --ring-width: 5;
+}
+
+.tile[data-size="2x2"] .dialFoot .control:not(:last-child) {
+  display: none;
+}
+
+.dialSlot .label {
+  max-width: 70cqw;
+}
+
+.dialSlot .dialTime {
+  font-size: clamp(16px, 22cqmin, 40px);
+}
+
+.dialFoot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  min-width: 0;
+}
+
+.dialFoot .control {
+  min-width: 30px;
+  height: 30px;
 }
 
 /* Several timers, or one on the small card: a row each, the ring doubling as play and pause. */

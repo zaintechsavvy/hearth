@@ -5,12 +5,13 @@ import { Check, Mic, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { Button } from "@/components/arc/button/button";
+import { getAudioContext, useMicrophone, VoiceBeam } from "voice-glow";
 import { ChatComposer, type ChatComposerHandle } from "@/components/arc/chat-thread/chat-thread";
-import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
-import { createRecognition, speak, speechSupported, type Recognition } from "./speech";
+import { useHome } from "@/components/dashboard/use-home";
+import { formatSpoken, parseTimerRequest } from "@/lib/widgets/schedules";
+import { createRecognition, sharesMicrophone, speak, speechSupported, type Recognition } from "./speech";
 import styles from "./assistant-dock.module.css";
 
 interface AssistantInfo {
@@ -34,7 +35,8 @@ interface Turn {
   error?: boolean;
 }
 
-const SUGGESTIONS = ["Turn on the bedroom fan", "Dim the kitchen lights to 30%", "Set the thermostat to 21°", "Turn everything off"];
+const SUGGESTIONS = ["Set a 10 minute timer", "Turn on the bedroom fan", "Dim the kitchen lights to 30%", "Turn everything off"];
+const UNCONFIGURED = "Timers work without one, but for anything else, connect an assistant in Settings.";
 const subscribeNever = () => () => {};
 
 const fetchInfo = (url: string) => fetch(url).then(response => response.json() as Promise<AssistantInfo>);
@@ -42,6 +44,11 @@ const fetchInfo = (url: string) => fetch(url).then(response => response.json() a
 /** Opens the assistant from anywhere, such as the command palette, optionally with a request to send. */
 export const ASK_EVENT = "hearth-ask";
 export const askHearth = (text = "") => window.dispatchEvent(new CustomEvent(ASK_EVENT, { detail: text }));
+const subscribeTheme = (onChange: () => void) => {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => observer.disconnect();
+};
 
 export function AssistantDock() {
   const reduce = useReducedMotion();
@@ -56,7 +63,12 @@ export function AssistantDock() {
   const composer = useRef<ChatComposerHandle>(null);
   const log = useRef<HTMLOListElement>(null);
   const canListen = useSyncExternalStore(subscribeNever, speechSupported, () => false);
-  const { data: info } = useSWR<AssistantInfo>(open ? "/api/assistant" : null, fetchInfo);
+  const { data: info } = useSWR<AssistantInfo>("/api/assistant", fetchInfo, { revalidateOnFocus: false });
+  const { saveItem } = useHome();
+  const mic = useMicrophone();
+  const lastHeard = useRef(0);
+  const voiceLevel = useCallback(() => 0.18 + 0.7 * Math.exp(-(performance.now() - lastHeard.current) / 450), []);
+  const dark = useSyncExternalStore(subscribeTheme, () => document.documentElement.dataset.theme === "dark", () => false);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -84,6 +96,17 @@ export function AssistantDock() {
     if (!message || pending) return;
     const next: Turn[] = [...turns, { id: crypto.randomUUID(), role: "user", text: message }];
     setTurns(next);
+    const reply = (answer: string, error = false) => {
+      setTurns(current => [...current, { id: crypto.randomUUID(), role: "assistant", text: answer, error }]);
+      if (spoken) speak(answer);
+    };
+    const timer = parseTimerRequest(message);
+    if (timer) {
+      const result = await saveItem("timer", timer);
+      const words = timer.label === formatSpoken(timer.durationMs) ? `a ${timer.label} timer` : `${timer.label}, ${formatSpoken(timer.durationMs)}`;
+      return reply(result.ok ? `Started ${words}.` : result.error, !result.ok);
+    }
+    if (info && !info.configured) return reply(UNCONFIGURED);
     setPending(true);
     try {
       const response = await fetch("/api/assistant", {
@@ -101,7 +124,7 @@ export function AssistantDock() {
     } finally {
       setPending(false);
     }
-  }, [mutate, pending, turns]);
+  }, [info, mutate, pending, saveItem, turns]);
 
   const latestSend = useRef(send);
   useEffect(() => { latestSend.current = send; }, [send]);
@@ -119,9 +142,13 @@ export function AssistantDock() {
     if (listening) return recognition.current?.stop();
     const instance = createRecognition();
     if (!instance) return;
+    getAudioContext();
+    if (sharesMicrophone()) void mic.start();
+    instance.onspeechstart = () => { lastHeard.current = performance.now(); };
     recognition.current = instance;
     let finalText = "";
     instance.onresult = event => {
+      lastHeard.current = performance.now();
       let interim = "";
       for (let index = event.resultIndex; index < event.results.length; index++) {
         const result = event.results[index];
@@ -133,9 +160,13 @@ export function AssistantDock() {
     instance.onend = () => {
       setListening(false);
       setHeard("");
+      mic.stop();
       if (finalText.trim()) void send(finalText, true);
     };
-    instance.onerror = () => setListening(false);
+    instance.onerror = () => {
+      setListening(false);
+      mic.stop();
+    };
     setListening(true);
     instance.start();
   }
@@ -145,6 +176,11 @@ export function AssistantDock() {
 
   return (
     <div className={styles.anchor} data-wall-assistant>
+      {!open && canListen && (
+        <button type="button" className={styles.quickMic} onClick={() => { setOpen(true); toggleListening(); }} aria-label="Speak to Hearth">
+          <Mic size={18} strokeWidth={1.75} aria-hidden="true" />
+        </button>
+      )}
       <AnimatePresence initial={false} mode="popLayout">
         {open ? (
           <motion.section
@@ -168,54 +204,48 @@ export function AssistantDock() {
                 </button>
               </header>
 
-              {info && !configured ? (
-                <div className={styles.unconfigured}>
-                  <EmptyState
-                    icon={<Sparkles size={24} strokeWidth={1.75} />}
-                    title="Connect an assistant"
-                    description="Add an API key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, and ask for changes in plain words."
-                    action={<Button variant="secondary" onClick={() => { setOpen(false); router.push("/settings#assistants"); }}>Open Settings</Button>}
-                  />
-                </div>
-              ) : (
-                <>
-                  <ol ref={log} className={styles.log} aria-live="polite">
-                    {turns.length === 0 && (
-                      <li className={styles.suggestions}>
-                        <p className={styles.hint}>Try one of these, or say it out loud.</p>
-                        {SUGGESTIONS.map(suggestion => (
-                          <button key={suggestion} type="button" className={styles.suggestion} onClick={() => send(suggestion)}>{suggestion}</button>
-                        ))}
-                      </li>
+              <ol ref={log} className={styles.log} aria-live="polite">
+                {turns.length === 0 && (
+                  <li className={styles.suggestions}>
+                    {info && !configured && (
+                      <p className={styles.notice}>
+                        Timers work now. For lights, heat, and the rest, <button type="button" className={styles.link} onClick={() => { setOpen(false); router.push("/settings#assistants"); }}>connect an assistant</button>.
+                      </p>
                     )}
-                    {turns.map(turn => (
-                      <li key={turn.id} className={styles.turn} data-role={turn.role} data-error={turn.error || undefined}>
-                        <p className={styles.bubble}>{turn.text}</p>
-                        {turn.actions && turn.actions.length > 0 && (
-                          <ul className={styles.actions} aria-label="Changes">
-                            {turn.actions.map((action, index) => (
-                              <li key={`${action.deviceId}-${index}`} className={styles.action} data-ok={action.ok || undefined}>
-                                {action.ok ? <Check size={12} strokeWidth={2} aria-hidden="true" /> : <X size={12} strokeWidth={2} aria-hidden="true" />}
-                                {action.name} · {action.summary}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </li>
+                    <p className={styles.hint}>Try one of these, or say it out loud.</p>
+                    {SUGGESTIONS.map(suggestion => (
+                      <button key={suggestion} type="button" className={styles.suggestion} onClick={() => send(suggestion)}>{suggestion}</button>
                     ))}
-                    {pending && <li className={styles.turn} data-role="assistant"><TextShimmer className={styles.working}>Working on it</TextShimmer></li>}
-                  </ol>
-                  {listening && <p className={styles.listening}><span className={styles.pulse} aria-hidden="true" />{heard || "Listening"}</p>}
-                  <div className={styles.composerRow}>
-                    <ChatComposer ref={composer} className={styles.composer} placeholder="Ask Hearth" allowAttachments={false} disabled={pending} onSend={draft => void send(draft.text)} />
-                    {canListen && (
-                      <button type="button" className={styles.mic} data-active={listening || undefined} onClick={toggleListening} aria-pressed={listening} aria-label={listening ? "Stop listening" : "Speak a request"}>
-                        <Mic size={18} strokeWidth={1.75} aria-hidden="true" />
-                      </button>
+                  </li>
+                )}
+                {turns.map(turn => (
+                  <li key={turn.id} className={styles.turn} data-role={turn.role} data-error={turn.error || undefined}>
+                    <p className={styles.bubble}>{turn.text}</p>
+                    {turn.actions && turn.actions.length > 0 && (
+                      <ul className={styles.actions} aria-label="Changes">
+                        {turn.actions.map((action, index) => (
+                          <li key={`${action.deviceId}-${index}`} className={styles.action} data-ok={action.ok || undefined}>
+                            {action.ok ? <Check size={12} strokeWidth={2} aria-hidden="true" /> : <X size={12} strokeWidth={2} aria-hidden="true" />}
+                            {action.name} · {action.summary}
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  </div>
-                </>
-              )}
+                  </li>
+                ))}
+                {pending && <li className={styles.turn} data-role="assistant"><TextShimmer className={styles.working}>Working on it</TextShimmer></li>}
+              </ol>
+              {listening && <p className={styles.listening}><span className={styles.pulse} aria-hidden="true" />{heard || "Listening"}</p>}
+              <VoiceBeam className={styles.beam} stream={listening ? mic.stream : null} level={voiceLevel} active={listening} theme={dark ? "dark" : "light"} colorVariant="colorful">
+                <div className={styles.composerRow}>
+                  <ChatComposer ref={composer} className={styles.composer} placeholder="Ask Hearth" allowAttachments={false} disabled={pending} onSend={draft => void send(draft.text)} />
+                  {canListen && (
+                    <button type="button" className={styles.mic} data-active={listening || undefined} onClick={toggleListening} aria-pressed={listening} aria-label={listening ? "Stop listening" : "Speak a request"}>
+                      <Mic size={18} strokeWidth={1.75} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              </VoiceBeam>
             </motion.div>
           </motion.section>
         ) : (

@@ -51,6 +51,13 @@ export interface TileOptions {
   price?: number;
   /** Announcements: the speakers it last spoke on. */
   speakers?: string[];
+  /** Timers: the user's own one-tap starts, shown before the plain lengths. */
+  presets?: TimerPreset[];
+}
+
+export interface TimerPreset {
+  label: string;
+  minutes: number;
 }
 
 export type TileHold = "controls" | "history" | "none" | `scene:${string}` | `device:${string}`;

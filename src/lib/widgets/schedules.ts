@@ -128,6 +128,40 @@ export function quickTimer(minutes: number, now = Date.now()): ItemData<"timer">
   return { label: `${minutes} min`, durationMs, remainingMs: durationMs, endsAt: new Date(now + durationMs).toISOString() };
 }
 
+/** One colour each when several timers run side by side, given in the order they were set so a timer keeps its colour while it runs. */
+const TIMER_COLORS = ["#f59e0b", "#3b82f6", "#ec4899", "#10b981", "#8b5cf6", "#ef4444"];
+export function timerColors(timers: { id: string; createdAt?: string }[]) {
+  const order = [...timers].sort((a, b) => (a.createdAt ?? "~").localeCompare(b.createdAt ?? "~") || a.id.localeCompare(b.id));
+  return new Map(order.map((timer, index) => [timer.id, TIMER_COLORS[index % TIMER_COLORS.length]]));
+}
+
+const NUMBER_WORDS: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, forty: 40, "forty five": 45, fifty: 50, sixty: 60, ninety: 90, half: 0.5 };
+const UNIT_MS: Record<string, number> = { second: 1000, sec: 1000, minute: 60_000, min: 60_000, hour: 3_600_000, hr: 3_600_000 };
+const AMOUNT = "(\\d+(?:\\.\\d+)?|forty five|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|ninety|half)";
+const UNIT = "(second|sec|minute|min|hour|hr)s?";
+const TIMER_PATTERN = new RegExp(`(?:set|start|make|create|put on)?\\s*(?:a|an)?\\s*(?:timer\\s+for\\s+)?${AMOUNT}\\s*(?:-|\\s)?\\s*(?:an?\\s+)?${UNIT}(?:\\s+and\\s+(?:a\\s+)?half)?(?:\\s+(?:([a-z][a-z ]{0,24}?)\\s+)?timer)?(?:\\s+(?:for|called|named)\\s+(?:the\\s+)?([a-z][a-z ]{0,24}))?`);
+
+/** A spoken or typed "set a 10 minute timer for the pasta", as a timer to start, or null when the words ask for something else. */
+export function parseTimerRequest(text: string): ItemData<"timer"> & { endsAt: string } | null {
+  const words = text.toLowerCase().replace(/[^a-z0-9.\s-]/g, " ").replace(/\s+/g, " ").trim();
+  if (!/\btimer\b/.test(words)) return null;
+  const match = TIMER_PATTERN.exec(words);
+  if (!match) return null;
+  const [whole, amount, unit, before, after] = match;
+  const count = NUMBER_WORDS[amount] ?? Number(amount);
+  const durationMs = Math.round((count + (/and (a )?half/.test(whole) ? 0.5 : 0)) * UNIT_MS[unit]);
+  if (!Number.isFinite(durationMs) || durationMs < 1000 || durationMs > 24 * 3_600_000) return null;
+  const name = (after ?? before)?.trim();
+  const label = name && name !== "a" ? name.replace(/^\w/, char => char.toUpperCase()) : formatSpoken(durationMs);
+  return { label: label.slice(0, 30), durationMs, remainingMs: durationMs, endsAt: new Date(Date.now() + durationMs).toISOString() };
+}
+
+/** "10 min", "1 hr 30 min", "45 sec". */
+export function formatSpoken(ms: number) {
+  const hours = Math.floor(ms / 3_600_000), minutes = Math.floor((ms % 3_600_000) / 60_000), seconds = Math.round((ms % 60_000) / 1000);
+  return [hours && `${hours} hr`, minutes && `${minutes} min`, !hours && !minutes && `${seconds} sec`].filter(Boolean).join(" ");
+}
+
 export function formatDuration(ms: number) {
   const total = Math.ceil(ms / 1000);
   const hours = Math.floor(total / 3600), minutes = Math.floor((total % 3600) / 60), seconds = total % 60;

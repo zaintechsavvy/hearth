@@ -1,10 +1,11 @@
 "use client";
 
 import { Pause, Play, Plus, RotateCcw, X } from "lucide-react";
+import type { CSSProperties } from "react";
 import { glassClass } from "@/components/glass/glass";
 import { controlTimer } from "@/lib/widget-actions";
 import type { WidgetItem } from "@/lib/widgets/items";
-import { applyTimerControl, formatDuration, quickTimer, timerRemaining, type TimerControl } from "@/lib/widgets/schedules";
+import { applyTimerControl, formatDuration, formatSpoken, quickTimer, timerColors, timerRemaining, type TimerControl } from "@/lib/widgets/schedules";
 import { useHome } from "../use-home";
 import type { HouseholdTileProps } from "./types";
 import { useTick } from "./use-tick";
@@ -23,14 +24,21 @@ function Ring({ left }: { left: number }) {
   );
 }
 
-/** Named timers that run on the server, so every screen counts down together. One timer fills the tile as a dial; quick starts for the usual lengths. */
+/**
+ * Named timers that run on the server, so every screen counts down together. One timer fills the tile as a dial, a few
+ * sit side by side in their own colours, more become rows. Quick starts are the household's presets, then plain lengths.
+ */
 export function TimersTile({ tile, items, interactive, onManage }: HouseholdTileProps<"timer">) {
   const now = useTick(250) ?? 0;
   const { saveItem, removeItem, changeItem } = useHome();
   const sorted = [...items].sort((a, b) => timerRemaining(a.data, now) - timerRemaining(b.data, now));
   const shown = sorted.slice(0, tile.size === "2x1" ? 1 : tile.size === "2x2" ? 3 : 6);
   const control = (item: WidgetItem<"timer">, press: TimerControl) => void changeItem(item, data => applyTimerControl(data, press), () => controlTimer(item.id, press));
-  const start = (minutes: number) => void saveItem("timer", quickTimer(minutes));
+  const start = (minutes: number, label?: string) => void saveItem("timer", { ...quickTimer(minutes), ...(label ? { label } : {}) });
+  const presets = tile.options?.presets ?? [];
+  const dialsFit = tile.size === "4x2" ? 4 : tile.size === "2x2" ? 2 : 0;
+  const colors = timerColors(shown);
+  const tint = (item: WidgetItem<"timer">) => (shown.length > 1 ? { "--timer": colors.get(item.id) } : {}) as CSSProperties;
 
   const state = (item: WidgetItem<"timer">) => {
     const left = timerRemaining(item.data, now);
@@ -51,10 +59,15 @@ export function TimersTile({ tile, items, interactive, onManage }: HouseholdTile
 
   const body = () => {
     if (shown.length === 0) {
-      const quick = QUICK.slice(0, tile.size === "2x1" ? 3 : 5);
+      const quick = [...presets, ...QUICK.map(minutes => ({ label: null, minutes }))].slice(0, tile.size === "2x1" ? 3 : 5);
       return (
         <div className={own.quick} role="group" aria-label="Start a timer">
-          {quick.map(minutes => (
+          {quick.map(({ label, minutes }) => label ? (
+            <button key={`preset-${label}`} type="button" className={own.quickButton} disabled={!interactive} aria-label={`Start ${label}, ${formatSpoken(minutes * 60_000)}`} onClick={() => start(minutes, label)}>
+              <span className={own.quickName}>{label}</span>
+              <span className={own.quickUnit}>{formatSpoken(minutes * 60_000)}</span>
+            </button>
+          ) : (
             <button key={minutes} type="button" className={own.quickButton} disabled={!interactive} aria-label={`Start a ${minutes} minute timer`} onClick={() => start(minutes)}>
               <span className={own.quickNumber}>{minutes}</span>
               <span className={own.quickUnit}>min</span>
@@ -86,13 +99,36 @@ export function TimersTile({ tile, items, interactive, onManage }: HouseholdTile
         </div>
       );
     }
+    if (shown.length <= dialsFit) {
+      return (
+        <ul className={own.dials} style={{ "--count": shown.length } as CSSProperties}>
+          {shown.map(item => {
+            const timer = state(item);
+            return (
+              <li key={item.id} className={own.dialCell} style={tint(item)} data-done={timer.done || undefined} data-running={timer.running || undefined}>
+                <span className={own.dialSlot}>
+                  <button type="button" className={own.dial} disabled={!interactive} aria-label={timer.main.label} onClick={() => control(item, timer.main.press)}>
+                    <Ring left={timer.fraction} />
+                    <span className={own.dialText}>
+                      <span className={own.dialTime} aria-live={timer.done ? "assertive" : "off"}>{timer.done ? "Done" : formatDuration(timer.left)}</span>
+                      <span className={own.label}>{item.data.label}</span>
+                    </span>
+                  </button>
+                </span>
+                {interactive && <span className={own.dialFoot}>{extras(item, timer, true)}</span>}
+              </li>
+            );
+          })}
+        </ul>
+      );
+    }
     return (
       <ul className={own.rows} data-single={shown.length === 1 || undefined}>
         {shown.map(item => {
           const timer = state(item);
           const Main = timer.main.icon;
           return (
-            <li key={item.id} className={own.row} data-done={timer.done || undefined} data-running={timer.running || undefined}>
+            <li key={item.id} className={own.row} style={tint(item)} data-done={timer.done || undefined} data-running={timer.running || undefined}>
               <button type="button" className={own.ringButton} disabled={!interactive} aria-label={timer.main.label} onClick={() => control(item, timer.main.press)}>
                 <Ring left={timer.fraction} />
                 <Main className={own.ringIcon} size={16} strokeWidth={1.75} aria-hidden="true" />

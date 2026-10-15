@@ -17,6 +17,7 @@ export interface Recognition {
   onresult: ((event: RecognitionEvent) => void) | null;
   onend: (() => void) | null;
   onerror: (() => void) | null;
+  onspeechstart: (() => void) | null;
   start(): void;
   stop(): void;
 }
@@ -34,6 +35,12 @@ export function createRecognition(): Recognition | null {
   recognition.continuous = false;
   return recognition;
 }
+
+/**
+ * Android hands the microphone to its own recogniser, and a second capture for the voice glow can make recognition
+ * fail, so there the glow follows the recogniser's own sense of speech instead of the raw audio.
+ */
+export const sharesMicrophone = () => typeof navigator !== "undefined" && !/Android/i.test(navigator.userAgent);
 
 export const speechSupported = () => typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 

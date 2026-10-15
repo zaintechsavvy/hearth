@@ -1,4 +1,5 @@
 import { AssistantDock } from "@/components/assistant/assistant-dock";
+import { HouseholdAlerts } from "@/components/dashboard/household/household-alerts";
 import { Wallpaper } from "@/components/glass/wallpaper";
 import { AppHeader } from "@/components/shell/app-header";
 import { BackgroundStudio } from "@/components/shell/background-studio";
@@ -19,6 +20,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <BackgroundStudio />
       <CommandMenu limited={home.role === "guest"} />
       <WallMode />
+      <HouseholdAlerts />
     </>
   );
 }

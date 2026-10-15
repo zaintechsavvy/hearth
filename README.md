@@ -1,16 +1,28 @@
 # Hearth
 
-A calm, self-hosted home dashboard. Hearth brings your thermostat, cameras, lights, fans, and Matter devices into one grid you arrange yourself, talks to the Home Assistant you already run, and lets you change things by asking in plain words.
+A calm, self-hosted home dashboard. Hearth brings your thermostat, cameras, lights, locks, speakers, and Matter devices into one grid you arrange yourself, talks to the Home Assistant you already run, and lets you change things by tapping, typing, or saying them.
+
+**Why "Hearth"?** A hearth is the fireplace at the centre of a home, the spot everyone gathers around. The logo is that: a house with a flame inside.
 
 ![Landing page](docs/screenshots/landing.png)
 
-| Dashboard | Dark |
-| --- | --- |
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Dashboard in dark mode](docs/screenshots/dashboard-dark.png) |
+![The dashboard](docs/screenshots/dashboard.png)
 
-| Customize a tile | Ask the assistant |
+| On a phone | Dark |
 | --- | --- |
-| ![Customize dialog](docs/screenshots/customize.png) | ![Assistant panel](docs/screenshots/assistant.png) |
+| ![Dashboard on a phone](docs/screenshots/phone.png) | ![Dashboard in dark mode](docs/screenshots/dashboard-dark.png) |
+
+| Timers side by side, in their own colours | Customize any tile |
+| --- | --- |
+| ![Timers](docs/screenshots/timers.png) | ![Customize dialog](docs/screenshots/customize.png) |
+
+| Activity, from Hearth and Home Assistant | Automations you can pause or snooze |
+| --- | --- |
+| ![Activity](docs/screenshots/activity.png) | ![Automations](docs/screenshots/automations.png) |
+
+| A wall tablet at rest | When a timer finishes |
+| --- | --- |
+| ![Wall clock with timers](docs/screenshots/wall-clock.png) | ![Full-screen timer alert](docs/screenshots/wall-timer-done.png) |
 
 The thermostat glows warm from the top when you raise it and cool from the bottom when you lower it, and keeps a softer glow while the system is actually heating or cooling.
 
@@ -18,11 +30,14 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 | --- | --- |
 | ![Thermostat warming](docs/screenshots/thermostat-warm.png) | ![Thermostat cooling](docs/screenshots/thermostat-cool.png) |
 
+**New here?** [docs/guide.md](docs/guide.md) walks through every screen and shows, with diagrams, how your screens, Hearth, the database, Home Assistant, and your devices talk to each other.
+
 ## What it does
 
 - **A dashboard you build.** It starts empty. Choose **Add tile** and pick what the tile is: a light, lock, garage door, camera, thermostat, doorbell, sensor, scene, weather, calendar, reminders, or a clock. Link it to a device straight away, or leave it as a placeholder ("Front door") and tap it later to link it. Tiles sit on square cells in sizes from 1×1 to 4×3; lights and fans have four templates: **Icon** (tap to switch), **Card** (name, room, status), **Slider** (a tall vertical brightness or speed control), and **Large** (details beside a slider). Choose **Edit** to drag, resize, relink, restyle, or remove tiles, or start from **Start with suggestions**. Filter by room.
 - **Pages**: make pages such as Kitchen or Wall tablet, each with its own tiles. Swipe between them on a touch screen.
-- **Everyday widgets**: weather for any city (Open-Meteo, no key needed), Google Calendar or any iCal feed, reminders, a clock, countdowns, and kitchen timers every screen hears.
+- **Everyday widgets**: weather for any city (Open-Meteo, no key needed), Google Calendar or any iCal feed, reminders, a clock, and countdowns.
+- **Kitchen timers**: every screen counts down together. One timer fills its tile as a dial, up to four sit side by side in their own colours, presets such as "Eggs, 7 min" start in one tap, and "set a 10 minute timer for the pasta" works by voice without any AI key.
 - **Household widgets**: bin day (bins collected together share one card, a split week shows two), medications with doses to tick off and refill warnings, a sticky-note board, guest Wi-Fi with a QR code, and plants with watering meters.
 - **Rename and re-room anything**: give any device or camera your own name and room, make new rooms, and reorder them. Home Assistant keeps its own names and areas.
 - **Light colour**: colour and white temperature for lights that have them, from Home Assistant and Matter. Press and hold a light, or tap its swatch, for brightness, presets, and Arc's colour picker; lit tiles glow in the light's real colour.
@@ -30,13 +45,13 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 - **Scenes**: set your devices the way you want them, choose **New scene**, and Hearth saves their current state as one tap. Run scenes from their tile or ask the assistant.
 - **Doorbell**: a ring shows a banner on every open dashboard and, with alerts on, a notification on your phone.
 - **Search**: Cmd or Ctrl K finds any device, scene, page, or setting, and switches things straight from the search box.
-- **Automations**: when, only if, then rules: a time, sunrise or sunset, or a device changing (or staying changed for some minutes); only after dark, between times, or while another device is in a state; then control devices, run scenes, or send an alert. Ready-made ideas fill in from your own devices.
-- **Activity and alerts**: a log of what happened and who did it, kept 60 days, and Web Push alerts for the doorbell, leaks and smoke, doors left open, jammed locks, timers, and doses.
+- **Automations**: when, only if, then rules: a time, sunrise or sunset, or a device changing (or staying changed for some minutes); only after dark, between times, or while another device is in a state; then control devices, run scenes, or send an alert. Ready-made ideas fill in from your own devices. Pause a rule with its switch, or snooze it for an hour, four hours, or until tomorrow.
+- **Activity and alerts**: what happened and who did it, from Hearth's own log and Home Assistant's logbook together, so changes made in the Home Assistant app or at a wall switch show too, even on Vercel. Web Push alerts for the doorbell, leaks and smoke, doors left open, jammed locks, timers, and doses.
 - **History**: temperature and other readings as a line on their tile, and day, week, and month charts with the low, average, and high.
-- **Wall tablet mode**: install Hearth as an app, keep the screen awake, dim it at night, rest on a drifting clock with what is next, and wake on a touch or a motion sensor.
+- **Wall tablet mode**: install Hearth as an app, keep the screen awake, dim it at night, rest on a drifting clock with running timers big enough to read across the room, and wake on a touch or a motion sensor. A finished timer takes over the screen with a louder chime until someone dismisses it, in dim red at night.
 - **Household**: invite members, who share everything, and guests, who see only the pages you pick and can never unlock or open anything.
 - **Cameras**: Home Assistant cameras over WebRTC, the way Home Assistant's own app plays them, falling back to HLS relayed through Hearth, then MJPEG, then the last picture, and saying which. "Live" only appears once a frame has actually played. RTSP cameras with a username and password stream through [go2rtc](https://github.com/AlexxIT/go2rtc). Every camera has full screen and a snapshot download.
-- **Assistant**: a pill in the corner (or Cmd or Ctrl J) opens a chat. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, or point it at a model you run yourself.
+- **Assistant and voice**: a pill in the corner (or Cmd or Ctrl J) opens a chat, and the microphone beside it starts listening in one tap, with a [voice-glow](https://libraries.dev) beam that rises as you speak. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, or point it at a model you run yourself.
 - **Accounts**: email and password sign up and sign in. Each home has its own connections, cameras, pages, and assistants, shared with the people invited into it.
 - **Look**: liquid glass surfaces over a still backdrop (Studio, Linen, Slate), a slowly moving [Paper Shaders](https://shaders.paper.design) mesh gradient (Aurora, Dusk, Meadow), a gradient of your own, or your own photo, light and dark, and eight accents. The Background studio picks colours with Arc's colour picker, shuffles harmonious palettes, tunes motion, swirl, and grain, blurs and dims photos, and can turn any photo into a moving gradient from its own colours. Moving backgrounds hold still when reduced motion is on.
 - **Security**: integration tokens, camera passwords, calendar addresses, and AI keys are encrypted at rest (AES-256-GCM) and never sent to the browser. Unlocking a door or opening a garage door takes a press and hold.
@@ -105,7 +120,7 @@ This starts Hearth on port 3000 and go2rtc next to it. If you open Hearth from o
 
 ### Deploy to Vercel
 
-Vercel needs a Postgres database (Neon from the Vercel Marketplace works), `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`; until they are set, Hearth shows a setup screen listing what is missing. Alerts, automations, and history need an always-on server, so they stay off there. [docs/vercel.md](docs/vercel.md) has the steps.
+Vercel needs a Postgres database (Neon from the Vercel Marketplace works), `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`; until they are set, Hearth shows a setup screen listing what is missing. Alerts, automations, and sensor history need an always-on server, so they stay off there; Activity reads Home Assistant's logbook instead. [docs/vercel.md](docs/vercel.md) has the steps.
 
 ## How Hearth works with Home Assistant and Matter
 
@@ -210,6 +225,9 @@ The best way to learn this codebase is to follow one request end to end. Here is
 | Web Push alerts | `src/lib/push.ts`, `public/sw.js`, Settings in `src/components/connections/alerts-section.tsx` |
 | Households, members, and guests | `src/lib/household.ts`, `src/lib/household-actions.ts`, `getHome` in `src/lib/session.ts` |
 | Wall tablet and the installable app | `src/components/shell/wall-mode.tsx`, `src/app/manifest.ts`, `src/app/icons` |
+| Timers, presets, and spoken timer requests | `src/lib/widgets/schedules.ts` (`applyTimerControl`, `parseTimerRequest`), `src/components/dashboard/household/timers-tile.tsx`, `timer-takeover.tsx` |
+| Activity, merged with Home Assistant's logbook | `src/lib/activity-feed.ts`, `logbook` in `src/lib/integrations/home-assistant.ts` |
+| Voice and the voice glow | `src/components/assistant/speech.ts`, `assistant-dock.tsx` ([voice-glow](https://libraries.dev)) |
 
 ### One provider interface, three integrations
 
