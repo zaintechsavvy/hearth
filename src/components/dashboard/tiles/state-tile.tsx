@@ -14,6 +14,7 @@ import {
 import type { OpenMethod } from "@/lib/security-types";
 import { PinPad } from "../pin-pad";
 import { LevelPill } from "./level-pill";
+import { useHoldToOpen } from "./use-hold-to-open";
 import { useLongPress } from "./use-long-press";
 import { MiniTrend } from "./mini-trend";
 import { TILE_ICON_COMPONENTS } from "./tile-icons";
@@ -189,10 +190,18 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
     return onCommand(next).then(() => device.kind === "scene" && setRan(true), cause => setError(cause instanceof Error ? cause.message : "The device did not respond."));
   };
   const request = (next: DeviceCommand) => isSensitive(device, next) ? setPending(next) : run(next);
+  const holdToOpen = Boolean(command && !disabled && openMethod === "hold" && isSensitive(device, command));
+  const hold = useHoldToOpen(holdToOpen, () => { if (command) void run(command); });
+  const holdWords = command ? `${actionWord(command)}` : "";
 
-  const press = useLongPress(onHold ?? undefined);
-  const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-template": "toggle", "data-on": active || undefined, "data-glow": config.options?.glow || undefined, ...press };
-  const meta = error ?? (ran ? "Done" : [device.room && config.size !== "1x1" ? device.room : null, config.options?.hideStatus && device.kind !== "sensor" ? null : text].filter(Boolean).join(" · "));
+  const press = useLongPress(holdToOpen ? undefined : onHold ?? undefined);
+  const shared = {
+    "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-template": "toggle", "data-on": active || undefined, "data-glow": config.options?.glow || undefined,
+    "data-holding": hold.holding || undefined, ...press,
+  };
+  const holdMeta = hold.holding ? "Keep holding" : hold.hint ? `Hold to ${holdWords.toLowerCase()}` : null;
+  const meta = error ?? holdMeta ?? (ran ? "Done" : [device.room && config.size !== "1x1" ? device.room : null, config.options?.hideStatus && device.kind !== "sensor" ? null : text].filter(Boolean).join(" · "));
+  const fill = holdToOpen && <span className={styles.holdFill} aria-hidden="true" />;
   const isReading = device.kind === "sensor";
   const confirm = pending && (openMethod === "pin"
     ? <PinConfirm device={device} state={text} onClose={() => setPending(null)} onPin={pin => onCommand(pending, pin).then(() => { setPending(null); return null; }, cause => cause instanceof Error ? cause.message : "That did not work.")} />
@@ -240,12 +249,14 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
       <>
         <div className={`${glassClass("panel")} ${styles.tile} ${styles.tall}`} {...shared}>
           <span className={styles.tallBadge}><span className={styles.icon} aria-hidden="true"><Icon size={26} strokeWidth={1.75} /></span></span>
+          {fill}
           <span className={styles.tallText}>
             <span className={styles.tallState}>{error ? "Try again" : text}</span>
             <span className={styles.name}>{device.name}</span>
-            {device.room && <span className={styles.meta}>{device.room}</span>}
+            {(holdMeta ?? device.room) && <span className={styles.meta}>{holdMeta ?? device.room}</span>}
           </span>
-          <button type="button" className={styles.tallAction} disabled={disabled} onClick={() => request(command)} aria-label={`${actionWord(command)} ${device.name}`}>{actionWord(command)}</button>
+          <button type="button" className={styles.tallAction} disabled={disabled} onClick={() => { if (!hold.justOpened()) void request(command); }} {...hold.handlers}
+            aria-label={holdToOpen ? `Hold to ${actionWord(command).toLowerCase()} ${device.name}` : `${actionWord(command)} ${device.name}`}>{actionWord(command)}</button>
         </div>
         {confirm}
       </>
@@ -257,17 +268,19 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   return (
     <>
       <Root
-        {...(command ? { type: "button" as const, onClick: () => request(command), disabled, "aria-label": `${device.name}${device.room ? ` in ${device.room}` : ""}, ${text}` }
+        {...(command ? { type: "button" as const, onClick: () => { if (!hold.justOpened()) void request(command); }, disabled, "aria-label": `${device.name}${device.room ? ` in ${device.room}` : ""}, ${text}${holdToOpen ? `. Hold to ${holdWords.toLowerCase()}` : ""}` }
           : charted ? { type: "button" as const, onClick: onOpenHistory, "aria-label": `${device.name}, ${text}. Show history` }
             : { role: "group", "aria-label": `${device.name}, ${text}` })}
         className={`${glassClass("panel")} ${styles.tile} ${styles.press} ${isReading ? styles.reading : ""}`}
         {...shared}
+        {...hold.handlers}
         title={error ?? undefined}
       >
+        {fill}
         {config.size === "1x1" ? (
           <>
             {isReading ? <span className={styles.value}>{text}</span> : <span className={styles.icon} aria-hidden="true"><Icon size={28} strokeWidth={1.75} /></span>}
-            <span className={styles.name}>{device.name}</span>
+            <span className={styles.name}>{holdMeta ?? device.name}</span>
           </>
         ) : (
           <>

@@ -148,19 +148,11 @@
   background: var(--surface-muted);
 }
 
-.notice {
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-control);
-  background: oklch(50% 0 0 / .06);
-  font-size: var(--text-sm);
-}
-
-.link {
-  color: inherit;
-  font: inherit;
-  font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+.unconfigured {
+  grid-row: 2 / -1;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
 }
 
 .beam {

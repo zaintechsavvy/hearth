@@ -46,7 +46,7 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 
 ![How Hearth connects](docs/diagrams/overview.png)
 
-**New here?** [docs/guide.md](docs/guide.md) walks through every screen and shows, in pictures, how your screens, Hearth, the database, Home Assistant, and your devices talk to each other.
+**New here?** [How it works](https://hearth-kappa-six.vercel.app/how-it-works) shows, in pictures, how your screens, Hearth, the database, Home Assistant, and your devices fit together, and [docs/guide.md](docs/guide.md) walks through every screen.
 
 ## What it does
 

@@ -350,3 +350,11 @@
 .clockColor[aria-checked="true"] {
   box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--foreground);
 }
+
+.ledeLink {
+  color: var(--foreground);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}

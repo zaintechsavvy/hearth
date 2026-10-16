@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CalendarDays, Leaf, MoreHorizontal, Package, Pill, Recycle, Thermometer } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import useSWR from "swr";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
@@ -29,7 +30,7 @@ const fetchJson = <T,>(url: string): Promise<T> => fetch(url).then(response => {
 
 /** Wall tablet mode, on this device only: keeps the screen on, dims at night, rests on a glanceable screensaver, and wakes on touch or motion. */
 export function WallMode() {
-  const [stored] = useStoredJson<WallSettings>(WALL_KEY, DEFAULT_WALL);
+  const [stored, setStored] = useStoredJson<WallSettings>(WALL_KEY, DEFAULT_WALL);
   const settings = { ...DEFAULT_WALL, ...stored };
   useEffect(() => {
     const root = document.documentElement;
@@ -37,10 +38,14 @@ export function WallMode() {
     else delete root.dataset.wall;
     return () => { delete root.dataset.wall; };
   }, [settings.enabled, settings.showAssistant]);
-  return settings.enabled ? <Wall settings={settings} /> : null;
+  return settings.enabled ? <Wall settings={settings} onLeave={() => setStored({ ...settings, enabled: false })} /> : null;
 }
 
-function Wall({ settings }: { settings: WallSettings }) {
+/** The header is hidden on a wall tablet, so its menu carries the way around the app and out of wall tablet mode. */
+const PAGES = [{ href: "/dashboard", label: "Home" }, { href: "/activity", label: "Activity" }, { href: "/automations", label: "Automations" }, { href: "/settings", label: "Settings" }];
+
+function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => void }) {
+  const path = usePathname();
   const reduce = useReducedMotion();
   const { home } = useHome();
   const now = useTick(1000) ?? 0;
@@ -123,9 +128,17 @@ function Wall({ settings }: { settings: WallSettings }) {
           <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><MoreHorizontal size={18} strokeWidth={1.75} aria-hidden="true" /></button>
         </PopoverTrigger>
         <PopoverContent align="end" className={`${glassSheetClass} ${styles.menuContent}`}>
+          <nav aria-label="Pages" className={styles.menuGroup}>
+            {PAGES.map(page => (
+              <Link key={page.href} href={page.href} className={styles.menuItem} aria-current={path.startsWith(page.href) ? "page" : undefined} onClick={() => setMenu(false)}>{page.label}</Link>
+            ))}
+          </nav>
+          <span className={styles.menuDivider} aria-hidden="true" />
           <Link href="/settings#wall" className={styles.menuItem} onClick={() => setMenu(false)}>Wall tablet settings</Link>
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); }}>Rest the screen now</button>
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.documentElement.requestFullscreen?.().catch(() => {}); }}>Full screen</button>
+          <span className={styles.menuDivider} aria-hidden="true" />
+          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.exitFullscreen?.().catch(() => {}); onLeave(); }}>Leave wall tablet mode</button>
         </PopoverContent>
       </Popover>
     </>

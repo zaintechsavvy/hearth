@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { and, eq, gt } from "drizzle-orm";
 import { AccountSection } from "@/components/connections/account-section";
@@ -53,7 +54,7 @@ export default async function ConnectionsPage() {
     <div className={styles.page}>
       <header data-on-wall>
         <h1 className={styles.title}>Settings</h1>
-        <p className={styles.lede}>Pick a section to open it. Passwords and keys are encrypted before they are stored.</p>
+        <p className={styles.lede}>Pick a section to open it. Passwords and keys are encrypted before they are stored. <Link href="/how-it-works" className={styles.ledeLink}>How Hearth works</Link></p>
       </header>
       <SettingsShell items={[
         ...(owner ? [{ id: "connections", label: "Connections" }] : []),

@@ -36,6 +36,9 @@ export function describeDevice(device: ToggleDevice, shownLevel = levelOf(device
   return hasLevel(device) ? `${shownLevel}%` : "On";
 }
 
+/** Only the fan icon turns, so a running fan shown as a lamp or a vent does not spin. */
+const SPINNING_ICONS = new Set<string>(["fan"]);
+
 /** Lights, switches, and fans: tap to switch, with a vertical level in the tall and large templates. */
 export function ToggleTile({ device, config, onCommand, interactive = true, onOpenControls, onHold }: ToggleTileProps) {
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +46,7 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
   const Icon = TILE_ICON_COMPONENTS[config.icon ?? style.icon];
   const color = config.color ?? style.color;
   const disabled = !device.available || !interactive;
-  const spin = device.kind === "fan" && device.on ? { "--spin-duration": `${Math.max(0.5, 3 - device.speed / 100 * 2.4)}s` } as CSSProperties : undefined;
+  const spin = device.kind === "fan" && device.on && SPINNING_ICONS.has(config.icon ?? style.icon) ? { "--spin-duration": `${Math.max(0.5, 3 - device.speed / 100 * 2.4)}s` } as CSSProperties : undefined;
   const controls = device.kind === "light" && hasControls(device) && interactive && device.available ? onOpenControls : undefined;
   const press = useLongPress(onHold === undefined ? controls : onHold ?? undefined);
   const tint = device.kind === "light" ? lightTint(device) : null;

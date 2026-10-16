@@ -219,3 +219,8 @@
   font-size: var(--text-sm);
   font-weight: 500;
 }
+
+.kindChoice {
+  justify-self: start;
+  width: fit-content;
+}

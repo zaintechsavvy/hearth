@@ -346,3 +346,28 @@ div.reading {
 .tallAction:disabled {
   opacity: .5;
 }
+
+/* Opening the home from the tile itself: a bar fills across it while it is held, and the command runs once full. */
+.holdFill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: color-mix(in oklab, var(--foreground) 14%, transparent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.tile[data-holding] .holdFill {
+  transform: scaleX(1);
+  transition: transform 1s linear;
+}
+
+.tile:has(.holdFill) {
+  isolation: isolate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile[data-holding] .holdFill { transition-duration: 1s; transition-timing-function: steps(4); }
+}

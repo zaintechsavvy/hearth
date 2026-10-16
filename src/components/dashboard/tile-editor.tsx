@@ -324,7 +324,7 @@ function IdentityFields({ identity, rooms, onIdentity }: { identity: TileIdentit
       {identity.kind && (
         <div className={styles.nameField}>
           <span className={styles.fieldLabel} aria-hidden="true">Shows as</span>
-          <SegmentedControl label="Shows as" value={identity.kind} options={KIND_CHOICES}
+          <SegmentedControl label="Shows as" className={styles.kindChoice} value={identity.kind} options={KIND_CHOICES}
             onValueChange={value => onIdentity({ kind: value === (identity.sourceKind ?? identity.kind) ? null : value as SwitchableKind })} />
           <p className={styles.note}>
             {identity.sourceKind

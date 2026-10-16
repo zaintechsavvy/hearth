@@ -188,9 +188,9 @@
   z-index: 50;
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  opacity: .45;
+  width: 44px;
+  height: 44px;
+  opacity: .6;
   transition: opacity var(--duration-fast) var(--ease-standard);
 }
 
@@ -219,6 +219,22 @@
 
 .menuItem:hover {
   background: var(--surface-muted);
+}
+
+.menuItem[aria-current="page"] {
+  font-weight: 500;
+  background: var(--surface-muted);
+}
+
+.menuGroup {
+  display: grid;
+  gap: 2px;
+}
+
+.menuDivider {
+  height: 1px;
+  margin: var(--space-1) var(--space-2);
+  background: var(--border-subtle);
 }
 
 @media (prefers-reduced-motion: reduce) {

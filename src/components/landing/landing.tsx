@@ -31,6 +31,7 @@ export function Landing() {
       <header className={styles.header} data-on-wall>
         <Logo />
         <nav className={styles.headerNav} aria-label="Account">
+          <Link href="/how-it-works" className={styles.textLink}>How it works</Link>
           <Link href="/sign-in" className={styles.textLink}>Sign in</Link>
         </nav>
       </header>

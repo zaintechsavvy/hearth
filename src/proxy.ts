@@ -2,7 +2,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 import { setupProblems } from "@/lib/setup-check";
 
-const PUBLIC = ["/", "/sign-in", "/sign-up"];
+const PUBLIC = ["/", "/sign-in", "/sign-up", "/how-it-works"];
 const SETUP = "/setup";
 
 export function proxy(request: NextRequest) {
