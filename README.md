@@ -38,15 +38,15 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 
 ![Automations](docs/screenshots/automations.png)
 
-**A wall tablet at rest**: the date, a clock you can read across the room, and the timers that are running.
+**A wall tablet at rest**: the date and a clock you can read across the room, in the colour and brightness you choose.
 
-![Wall clock with timers](docs/screenshots/wall-clock.png)
+![Wall clock](docs/screenshots/wall-clock.png)
 
-**When a timer finishes**, it rises over everything until someone answers it.
+**How it fits together**: your screens only talk to Hearth, and Hearth talks to everything else.
 
-![Timer finished](docs/screenshots/wall-timer-done.png)
+![How Hearth connects](docs/diagrams/overview.png)
 
-**New here?** [docs/guide.md](docs/guide.md) walks through every screen and shows, with diagrams, how your screens, Hearth, the database, Home Assistant, and your devices talk to each other.
+**New here?** [docs/guide.md](docs/guide.md) walks through every screen and shows, in pictures, how your screens, Hearth, the database, Home Assistant, and your devices talk to each other.
 
 ## What it does
 
@@ -146,13 +146,7 @@ Home Assistant does not speak Matter inside its own process. Its Matter integrat
 
 Hearth can reach those devices along two paths. Pick one per device.
 
-```
-1. Through Home Assistant (recommended if you run it)
-   Hearth ──REST + token──▶ Home Assistant ──▶ Matter integration ──WebSocket──▶ Matter Server ──▶ device
-
-2. Straight to the Matter Server
-   Hearth ──WebSocket :5580──────────────────────────────────────────────────▶ Matter Server ──▶ device
-```
+![Two ways to reach Matter devices](docs/diagrams/matter.png)
 
 **Path 1, through Home Assistant.** Hearth reads `/api/states` and calls services such as `light.turn_on` with a long-lived access token. It never speaks Matter itself; it sees Home Assistant entities. You get every device Home Assistant knows about, Matter or not (Zigbee, Z-Wave, Wi-Fi), with Home Assistant's names and areas.
 
