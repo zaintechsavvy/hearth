@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { activity, integration } from "@/lib/db/schema";
 import { deviceId, type Device } from "@/lib/devices/types";
 import { loadHome } from "@/lib/home";
+import { RING_MATCH_MS, ringPicturesBetween } from "@/lib/doorbell";
 import { createProvider } from "@/lib/integrations/registry";
 import type { LogbookEntry, Provider } from "@/lib/integrations/types";
 
@@ -59,7 +60,8 @@ export async function activityPage(homeId: string, filter: Filter): Promise<Acti
   const sources = rows.map(row => ({ row, provider: createProvider(row) })).filter(source => source.provider.logbook);
   if (sources.length === 0) {
     const page = await db.select().from(activity).where(and(...filters, ...(filter.before ? [lt(activity.at, filter.before)] : []))).orderBy(desc(activity.at)).limit(PAGE);
-    return { entries: page.map(row => ({ ...row, at: row.at.toISOString() })), more: page.length === PAGE };
+    const entries = page.map(row => ({ ...row, at: row.at.toISOString() }));
+    return { entries: await withPictures(homeId, entries), more: page.length === PAGE };
   }
 
   const home = await loadHome(homeId);
@@ -67,7 +69,7 @@ export async function activityPage(homeId: string, filter: Filter): Promise<Acti
   let to = filter.before ?? new Date();
   for (let window = 1; ; window++) {
     const page = await windowPage(filters, sources, devices, { category, room }, to);
-    if (page.entries.length || !page.more || window === MAX_WINDOWS) return page;
+    if (page.entries.length || !page.more || window === MAX_WINDOWS) return { ...page, entries: await withPictures(homeId, page.entries) };
     to = new Date(page.next!);
   }
 }
@@ -83,7 +85,8 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
       return entries.map((entry, index): ActivityEntry => {
         const id = entry.nativeId ? deviceId(row.id, entry.nativeId) : null;
         const device = id ? devices.get(id) : undefined;
-        const change = logbookChange(device, entry.nativeId, entry.what);
+        const what = device?.kind === "event" ? (device.eventClass === "doorbell" ? "rang" : "was pressed") : entry.what;
+        const change = logbookChange(device, entry.nativeId, what);
         return { id: `${row.id}:${entry.at.getTime()}:${index}`, at: entry.at.toISOString(), deviceId: device ? id : null, name: device?.name ?? entry.name, room: device?.room ?? null, by: entry.by, ...change };
       });
     } catch {
@@ -102,4 +105,19 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
   const older = await db.select({ at: activity.at }).from(activity).where(and(...filters, lt(activity.at, from))).limit(1);
   const more = older.length > 0 || from.getTime() > Date.now() - LOGBOOK_DAYS * 86_400_000;
   return { entries, more, next: from.toISOString() };
+}
+
+/** Puts each doorbell ring's kept picture beside it. */
+async function withPictures(homeId: string, entries: ActivityEntry[]): Promise<ActivityEntry[]> {
+  const rings = entries.filter(entry => entry.deviceId && entry.what === "rang");
+  if (rings.length === 0) return entries;
+  const times = rings.map(entry => Date.parse(entry.at));
+  const pictures = await ringPicturesBetween(homeId, new Date(Math.min(...times)), new Date(Math.max(...times)));
+  if (pictures.length === 0) return entries;
+  return entries.map(entry => {
+    if (!entry.deviceId || entry.what !== "rang") return entry;
+    const time = Date.parse(entry.at);
+    const match = pictures.find(picture => picture.deviceId === entry.deviceId && Math.abs(picture.at.getTime() - time) < RING_MATCH_MS);
+    return match ? { ...entry, picture: `/api/doorbell?id=${match.id}` } : entry;
+  });
 }

@@ -14,6 +14,7 @@ import { noteCommand } from "@/lib/monitor/attribution";
 import { DEFAULT_ALERTS } from "@/lib/activity-types";
 import { DEFAULT_SECURITY, type OpenMethod } from "@/lib/security-types";
 import { isServerless } from "@/lib/setup-check";
+import { sunTimes } from "@/lib/automations/sun";
 
 export interface IntegrationStatus {
   id: string;
@@ -46,6 +47,8 @@ export interface HomeSnapshot {
   widgets: WidgetItem[];
   /** How opening the home is confirmed here; the PIN itself never leaves the server. */
   openMethod: OpenMethod;
+  /** Today's sunrise and sunset at the home's location, when it is set. */
+  sun: { sunrise: string; sunset: string } | null;
 }
 
 type Override = { name: string | null; room: string | null; kind?: SwitchableKind | null };
@@ -130,7 +133,9 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
   const widgets = itemRows.map(row => ({ id: row.id, kind: row.kind, position: row.position, createdAt: row.createdAt.toISOString(), data: row.kind === "wifi" ? openWifi(row.data) : row.data }) as WidgetItem);
   const connected = new Set(rows.map(row => row.id));
   const pages = preferences.pages.map(page => ({ ...page, layout: withoutOrphanTiles(page.layout, connected) }));
-  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method };
+  const times = preferences.location ? sunTimes(new Date(), preferences.location.latitude, preferences.location.longitude) : null;
+  const sun = times ? { sunrise: times.sunrise.toISOString(), sunset: times.sunset.toISOString() } : null;
+  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, sun };
 }
 
 /** Sends a device a command. `by` says who, for the activity log: a person, the assistant, a scene, or an automation. */

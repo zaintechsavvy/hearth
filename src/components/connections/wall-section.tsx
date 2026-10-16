@@ -75,6 +75,14 @@ export function WallSection() {
         </div>
         <div className={`${styles.row} ${styles.stacked}`}>
           <div className={styles.rowText}>
+            <span className={styles.rowTitle}>Left open after dark</span>
+            <span className={styles.rowMeta}>A gentle note when a door, window, or garage door stays open once it is dark, with a way to close the garage.</span>
+          </div>
+          <Switch label="Remind me" checked={settings.openReminder} onCheckedChange={openReminder => set({ openReminder })} />
+          <Slider label="After" value={settings.openMinutes} min={5} max={60} step={5} format={value => `${value} min`} onValueChange={openMinutes => set({ openMinutes })} />
+        </div>
+        <div className={`${styles.row} ${styles.stacked}`}>
+          <div className={styles.rowText}>
             <span className={styles.rowTitle}>Wake when someone walks by</span>
             <span className={styles.rowMeta}>{sensors.length ? "Pick motion, presence, or door sensors near this screen." : "Connect a motion or door sensor to wake the screen hands-free."}</span>
           </div>

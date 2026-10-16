@@ -17,10 +17,11 @@ export function logbookChange(device: Device | undefined, nativeId: string | nul
     : device.kind === "light" || device.kind === "switch" || device.kind === "fan" ? "lights"
       : device.kind === "lock" || device.kind === "cover" || (device.kind === "binary_sensor" && ENTRY_CLASSES.has(device.sensorClass)) ? "doors"
         : device.kind === "thermostat" ? "climate"
-          : device.kind === "binary_sensor" || device.kind === "sensor" || device.kind === "event" ? "sensors"
+          : device.kind === "event" && device.eventClass === "doorbell" ? "doors"
+            : device.kind === "binary_sensor" || device.kind === "sensor" || device.kind === "event" ? "sensors"
             : device.kind === "scene" ? "automations" : "system";
   const tone = what === "jammed" || what.startsWith("detected a leak") || what.startsWith("detected smoke") ? "alert"
-    : what === "unlocked" || what === "went offline" || (category === "doors" && what === "opened") ? "warning" : "info";
+    : what === "unlocked" || what === "went offline" || what === "rang" || (category === "doors" && what === "opened") ? "warning" : "info";
   return { what, category, tone };
 }
 

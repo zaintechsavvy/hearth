@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CalendarDays, Leaf, MoreHorizontal, Package, Pill, Recycle, Thermometer } from "lucide-react";
+import { CalendarDays, DoorOpen, Leaf, Moon, MoreHorizontal, Package, Pill, Recycle, Thermometer } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -10,7 +10,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popove
 import { useHome } from "@/components/dashboard/use-home";
 import { useTick } from "@/components/dashboard/household/use-tick";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
+import { startBedtime } from "@/components/shell/bedtime-check";
+import { LeftOpenBanner, leftOpenWords, useLeftOpen, type LeftOpen } from "@/components/shell/left-open";
 import { useStoredJson } from "@/components/shell/use-stored-json";
+import { isDark } from "@/lib/left-open";
 import { isWidget, type TileConfig } from "@/lib/dashboard/layout";
 import { CLOCK_COLORS, DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
 import type { Agenda } from "@/lib/widgets/calendar";
@@ -47,13 +50,15 @@ const PAGES = [{ href: "/dashboard", label: "Home" }, { href: "/activity", label
 function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => void }) {
   const path = usePathname();
   const reduce = useReducedMotion();
-  const { home } = useHome();
+  const { home, send } = useHome();
   const now = useTick(1000) ?? 0;
   const [resting, setResting] = useState(false);
   const [menu, setMenu] = useState(false);
   const lastActive = useRef(0);
   const sensorState = useRef<Map<string, boolean>>(new Map());
   const night = now > 0 && isNight(settings, new Date(now));
+  const dark = now > 0 && isDark(new Date(now), home?.sun ?? null, night);
+  const leftOpen = useLeftOpen(home?.devices, now, home?.sun ?? null, night, settings.openMinutes, settings.openReminder);
 
   useEffect(() => {
     lastActive.current = Date.now();
@@ -119,10 +124,18 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           <motion.button type="button" key="saver" className={styles.saver} data-night={night || undefined} data-red={(night && settings.nightRed) || undefined} aria-label="Wake the screen"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.6 }}
             onClick={() => { lastActive.current = Date.now(); setResting(false); }}>
-            <Glance now={now} night={night} settings={settings} />
+            <Glance now={now} night={night} settings={settings} leftOpen={leftOpen.items} />
           </motion.button>
         )}
       </AnimatePresence>
+      {resting && dark && (
+        <button type="button" className={styles.bedtime} data-red={(night && settings.nightRed) || undefined}
+          onPointerDown={event => event.stopPropagation()} onTouchStart={event => event.stopPropagation()}
+          onClick={() => { lastActive.current = Date.now(); setResting(false); startBedtime(); }}>
+          <Moon size={18} strokeWidth={1.75} aria-hidden="true" /> Good night
+        </button>
+      )}
+      {!resting && <LeftOpenBanner items={leftOpen.items} onClose={device => void send(device, { type: "cover", action: "close" }).catch(() => {})} onQuiet={leftOpen.quietTonight} />}
       <Popover open={menu} onOpenChange={setMenu}>
         <PopoverTrigger asChild>
           <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><MoreHorizontal size={18} strokeWidth={1.75} aria-hidden="true" /></button>
@@ -135,6 +148,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           </nav>
           <span className={styles.menuDivider} aria-hidden="true" />
           <Link href="/settings#wall" className={styles.menuItem} onClick={() => setMenu(false)}>Wall tablet settings</Link>
+          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night check</button>
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); }}>Rest the screen now</button>
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.documentElement.requestFullscreen?.().catch(() => {}); }}>Full screen</button>
           <span className={styles.menuDivider} aria-hidden="true" />
@@ -146,7 +160,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
 }
 
 /** The resting screen: the date over a large clock, the weather, then running timers and what needs doing next as cards. It drifts a little each minute so nothing burns in. */
-function Glance({ now, night, settings }: { now: number; night: boolean; settings: WallSettings }) {
+function Glance({ now, night, settings, leftOpen }: { now: number; night: boolean; settings: WallSettings; leftOpen: LeftOpen[] }) {
   const { home } = useHome();
   const date = new Date(now || 0);
   const drift = Math.floor(now / DRIFT_EVERY_MS);
@@ -163,7 +177,7 @@ function Glance({ now, night, settings }: { now: number; night: boolean; setting
   const { data: weather } = useSWR<Forecast>(place?.place ? `/api/weather?lat=${place.place.latitude}&lon=${place.place.longitude}` : null, fetchJson, { refreshInterval: 10 * 60_000 });
   const { data: agenda } = useSWR<Agenda>(tiles.some(tile => tile.kind === "calendar") ? "/api/calendar" : null, fetchJson, { refreshInterval: 5 * 60_000 });
 
-  const notes: { icon: ReactNode; text: string; key: string }[] = [];
+  const notes: { icon: ReactNode; text: string; key: string }[] = leftOpen.map(item => ({ key: `open-${item.device.id}`, icon: <DoorOpen size={18} strokeWidth={1.75} />, text: leftOpenWords(item) }));
   const widgets = home?.widgets ?? [];
   const timers = itemsOf(widgets, "timer").filter(item => item.data.endsAt && timerRemaining(item.data, now) > 0)
     .sort((a, b) => timerRemaining(a.data, now) - timerRemaining(b.data, now)).slice(0, 3);

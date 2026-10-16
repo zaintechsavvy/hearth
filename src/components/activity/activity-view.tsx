@@ -104,12 +104,18 @@ export function ActivityView() {
                 {list.map(entry => {
                   const Icon = iconFor(entry, devices);
                   return (
-                    <li key={entry.id} className={styles.entry} data-tone={entry.tone}>
+                    <li key={entry.id} className={styles.entry} data-tone={entry.tone} data-picture={entry.picture ? "" : undefined}>
                       <Icon className={styles.icon} size={16} strokeWidth={1.75} aria-hidden="true" />
                       <span className={styles.text}>
                         <span><b>{entry.name}</b> {entry.what}</span>
                         {(entry.room || entry.by) && <span className={styles.meta}>{[entry.room, entry.by && `by ${entry.by}`].filter(Boolean).join(" · ")}</span>}
                       </span>
+                      {entry.picture && (
+                        <a className={styles.picture} href={entry.picture} target="_blank" rel="noreferrer" aria-label={`Picture from when ${entry.name} rang`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- an authenticated camera picture that must bypass the image optimiser */}
+                          <img src={entry.picture} alt="" loading="lazy" />
+                        </a>
+                      )}
                       <time className={styles.time} dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>
                     </li>
                   );

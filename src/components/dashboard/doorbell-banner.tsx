@@ -11,7 +11,7 @@ import styles from "./doorbell-banner.module.css";
 const SHOW_MS = 30_000;
 const FRESH_MS = 60_000;
 
-/** Announces a doorbell ring that arrives while the dashboard is open. Rings from before it opened stay quiet. */
+/** Announces a doorbell ring that arrives while the dashboard is open, and asks Hearth to keep a picture of it. Rings from before it opened stay quiet. */
 export function DoorbellBanner({ devices }: { devices: Device[] }) {
   const reduce = useReducedMotion();
   const seen = useRef<Map<string, string | null> | null>(null);
@@ -26,7 +26,10 @@ export function DoorbellBanner({ devices }: { devices: Device[] }) {
     for (const doorbell of doorbells) {
       const previous = seen.current.get(doorbell.id);
       seen.current.set(doorbell.id, doorbell.last);
-      if (doorbell.last && doorbell.last !== previous && Date.now() - Date.parse(doorbell.last) < FRESH_MS) setRing(doorbell);
+      if (doorbell.last && doorbell.last !== previous && Date.now() - Date.parse(doorbell.last) < FRESH_MS) {
+        setRing(doorbell);
+        void fetch("/api/doorbell", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId: doorbell.id, at: doorbell.last }) }).catch(() => {});
+      }
     }
   }, [devices]);
 

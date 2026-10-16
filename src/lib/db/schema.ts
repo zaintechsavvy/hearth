@@ -1,5 +1,5 @@
 import type { SwitchableKind } from "@/lib/devices/types";
-import { boolean, customType, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
+import { boolean, customType, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { DashboardPage, SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
 import type { ItemKind } from "@/lib/widgets/items";
@@ -201,6 +201,19 @@ export const activity = pgTable("activity", {
   /** Who or what did it, when Hearth knows: a person, the assistant, a scene, or an automation. */
   by: text("by"),
 }, t => [index("activity_user_at_idx").on(t.userId, t.at)]);
+
+/** A picture from the doorbell's camera when it rang, shown beside the ring in Activity. Kept 30 days. */
+export const ringPicture = pgTable("ring_picture", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  /** The doorbell's device id. */
+  deviceId: text("device_id").notNull(),
+  at: timestamp("at").notNull(),
+  cameraName: text("camera_name").notNull(),
+  contentType: text("content_type").notNull(),
+  /** The JPEG, base64. */
+  image: text("image").notNull(),
+}, t => [uniqueIndex("ring_picture_ring_idx").on(t.userId, t.deviceId, t.at)]);
 
 /** A browser or phone that asked for alerts. Removed when the push service says it is gone. */
 export const pushSubscription = pgTable("push_subscription", {

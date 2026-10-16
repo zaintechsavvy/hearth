@@ -240,3 +240,28 @@
 @media (prefers-reduced-motion: reduce) {
   .dim, .glance, .timerProgress { transition: none; }
 }
+
+/* After dark the resting screen offers the bedtime check, out of the way in a corner. */
+.bedtime {
+  position: fixed;
+  left: max(var(--space-5), env(safe-area-inset-left));
+  bottom: max(var(--space-5), env(safe-area-inset-bottom));
+  z-index: 85;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 48px;
+  padding-inline: var(--space-4) var(--space-5);
+  border-radius: 999px;
+  background: oklch(100% 0 0 / .08);
+  box-shadow: inset 0 0 0 1px oklch(100% 0 0 / .1);
+  color: oklch(100% 0 0 / .72);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.bedtime[data-red] {
+  background: oklch(14% 0.02 25 / .8);
+  color: oklch(58% 0.15 25);
+  box-shadow: inset 0 0 0 1px oklch(58% 0.15 25 / .2);
+}

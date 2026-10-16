@@ -25,4 +25,6 @@ export interface ActivityEntry {
   category: ActivityCategory;
   tone: "info" | "warning" | "alert";
   by: string | null;
+  /** A doorbell ring's picture from its camera, when one was kept. */
+  picture?: string;
 }

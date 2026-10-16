@@ -98,3 +98,25 @@
 .more {
   justify-self: center;
 }
+
+.entry[data-picture] {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+/* A doorbell ring's picture, small beside the ring and full size when opened. */
+.picture {
+  display: block;
+  width: 72px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: oklch(50% 0 0 / .08);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+
+.picture img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

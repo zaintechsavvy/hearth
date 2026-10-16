@@ -17,6 +17,9 @@ export interface WallSettings {
   clockBrightness: number;
   /** Turn the resting clock a dim red in the night window, instead of the chosen colour. */
   nightRed: boolean;
+  /** After dark, point out a door, window, or garage door open for longer than `openMinutes`. */
+  openReminder: boolean;
+  openMinutes: number;
 }
 
 export const CLOCK_COLORS = {
@@ -34,7 +37,7 @@ export const WALL_KEY = "hearth-wall";
 
 export const DEFAULT_WALL: WallSettings = {
   enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: true, showAssistant: true,
-  clockColor: "white", clockBrightness: 0.85, nightRed: true,
+  clockColor: "white", clockBrightness: 0.85, nightRed: true, openReminder: true, openMinutes: 15,
 };
 
 const minutes = (time: string) => {

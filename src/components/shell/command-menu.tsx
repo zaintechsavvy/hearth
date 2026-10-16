@@ -8,6 +8,7 @@ import { CommandPalette, type CommandItem } from "@/components/arc/command-palet
 import { askHearth } from "@/components/assistant/assistant-dock";
 import { useHome } from "@/components/dashboard/use-home";
 import { useResolvedTheme } from "@/components/shell/use-resolved-theme";
+import { startBedtime } from "@/components/shell/bedtime-check";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { useThemePreference } from "@/components/shell/use-theme-preference";
 import { HOME_PAGE_ID } from "@/lib/dashboard/layout";
@@ -121,6 +122,7 @@ function Menu({ close, limited }: { close: () => void; limited: boolean }) {
     for (const minutes of [5, 10, 15, 30]) {
       add({ id: `timer:${minutes}`, label: `Start a ${minutes} minute timer`, group: "Timers", keywords: ["timer", "kitchen", "countdown"], icon: icon(Timer) }, () => saveItem("timer", quickTimer(minutes)));
     }
+    add({ id: "bedtime", label: "Bedtime check", group: "Home", keywords: ["night", "lock up", "good night", "bed"], icon: icon(Moon) }, () => startBedtime());
     add({ id: "add-tile", label: "Add a tile", group: "Dashboard", keywords: ["new", "widget", "tile"], icon: icon(Plus) }, () => { router.push("/dashboard"); setTimeout(() => window.dispatchEvent(new Event(ADD_TILE_EVENT)), 150); });
     add({ id: "studio", label: "Change the background", group: "Dashboard", keywords: ["wallpaper", "gradient", "photo", "theme"], icon: icon(Palette) }, () => router.push("/settings#appearance"));
     add({ id: "theme", label: theme === "dark" ? "Switch to light mode" : "Switch to dark mode", group: "Dashboard", keywords: ["theme", "dark", "light", "night"], icon: icon(theme === "dark" ? Sun : Moon) }, () => setTheme(theme === "dark" ? "light" : "dark"));
