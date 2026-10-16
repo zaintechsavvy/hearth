@@ -18,6 +18,8 @@ interface DeviceBase {
   sourceName?: string;
   /** The integration's room, when the room was changed in Hearth. */
   sourceRoom?: string | null;
+  /** The integration's kind, when Hearth shows the device as another on/off kind. */
+  sourceKind?: SwitchableKind;
 }
 
 export interface LightDevice extends DeviceBase {
@@ -35,6 +37,22 @@ export interface LightDevice extends DeviceBase {
   temperatureRange: { min: number; max: number } | null;
   /** The current white temperature in kelvin, when it reports one. */
   temperature: number | null;
+}
+
+/** Devices that only switch on and off at heart, which can be shown as one another. */
+export const SWITCHABLE_KINDS = ["light", "switch", "fan"] as const;
+export type SwitchableKind = (typeof SWITCHABLE_KINDS)[number];
+export const isSwitchableKind = (kind: string): kind is SwitchableKind => (SWITCHABLE_KINDS as readonly string[]).includes(kind);
+
+/** The same device as another on/off kind: what it can still do carries over, and what the new kind cannot do is dropped. */
+export function showAs(device: LightDevice | SwitchDevice | FanDevice, kind: SwitchableKind): LightDevice | SwitchDevice | FanDevice {
+  const { integrationId, id, name, room, available, auxiliary, sourceName, sourceRoom } = device;
+  const base = { integrationId, id, name, room, available, auxiliary, sourceName, sourceRoom, sourceKind: device.sourceKind ?? device.kind };
+  const level = device.kind === "light" ? device.brightness : device.kind === "fan" ? device.speed : device.on ? 100 : 0;
+  const adjustable = device.kind === "light" ? device.dimmable : device.kind === "fan" && device.adjustable;
+  if (kind === "switch") return { ...base, kind, on: device.on };
+  if (kind === "fan") return { ...base, kind, on: device.on, adjustable: false, speed: device.on ? 100 : 0 };
+  return { ...base, kind, on: device.on, dimmable: device.kind === "light" && adjustable, brightness: device.kind === "light" ? level : device.on ? 100 : 0, supportsColor: false, color: null, colorMode: null, temperatureRange: null, temperature: null };
 }
 
 export interface SwitchDevice extends DeviceBase {

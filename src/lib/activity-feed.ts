@@ -7,7 +7,7 @@ import { activity, integration } from "@/lib/db/schema";
 import { deviceId, type Device } from "@/lib/devices/types";
 import { loadHome } from "@/lib/home";
 import { createProvider } from "@/lib/integrations/registry";
-import type { Provider } from "@/lib/integrations/types";
+import type { LogbookEntry, Provider } from "@/lib/integrations/types";
 
 const PAGE = 80;
 /** Each page with an integration's logbook covers this much time, so a busy home never sends days of entries at once. */
@@ -17,6 +17,22 @@ const LOGBOOK_DAYS = 10;
 /** An integration's entry this close to one Hearth logged for the same device is the same change, and Hearth's says who. */
 const SAME_CHANGE_MS = 20_000;
 const LOGBOOK_TIMEOUT_MS = 8000;
+/** Past windows do not change, so their logbook is kept a while instead of asked of Home Assistant on every refresh. */
+const PAST_CACHE_MS = 10 * 60_000;
+const past = new Map<string, { at: number; entries: LogbookEntry[] }>();
+
+async function logbookFor(integrationId: string, provider: Provider, from: Date, to: Date) {
+  const settled = to.getTime() < Date.now() - 60_000;
+  const key = `${integrationId}:${from.getTime()}:${to.getTime()}`;
+  const cached = settled ? past.get(key) : undefined;
+  if (cached && Date.now() - cached.at < PAST_CACHE_MS) return cached.entries;
+  const entries = await Promise.race([provider.logbook!(from, to), new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), LOGBOOK_TIMEOUT_MS))]);
+  if (settled) {
+    past.set(key, { at: Date.now(), entries });
+    for (const [stale, value] of past) if (Date.now() - value.at > PAST_CACHE_MS) past.delete(stale);
+  }
+  return entries;
+}
 /** Quiet windows skipped in one request before an empty page is returned. */
 const MAX_WINDOWS = 6;
 
@@ -63,7 +79,7 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
 
   const logged = await Promise.all(sources.map(async ({ row, provider }) => {
     try {
-      const entries = await Promise.race([provider.logbook!(from, to), new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), LOGBOOK_TIMEOUT_MS))]);
+      const entries = await logbookFor(row.id, provider, from, to);
       return entries.map((entry, index): ActivityEntry => {
         const id = entry.nativeId ? deviceId(row.id, entry.nativeId) : null;
         const device = id ? devices.get(id) : undefined;

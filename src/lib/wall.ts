@@ -12,12 +12,29 @@ export interface WallSettings {
   wakeSensors: string[];
   keepAwake: boolean;
   showAssistant: boolean;
+  /** The resting clock's colour and how bright it shows, 0.15 to 1. */
+  clockColor: ClockColor;
+  clockBrightness: number;
+  /** Turn the resting clock a dim red in the night window, instead of the chosen colour. */
+  nightRed: boolean;
 }
+
+export const CLOCK_COLORS = {
+  white: "oklch(96% 0 0)",
+  warm: "oklch(90% 0.05 75)",
+  amber: "oklch(80% 0.14 72)",
+  red: "oklch(64% 0.17 25)",
+  green: "oklch(80% 0.13 150)",
+  blue: "oklch(78% 0.1 240)",
+  violet: "oklch(76% 0.12 300)",
+} as const;
+export type ClockColor = keyof typeof CLOCK_COLORS;
 
 export const WALL_KEY = "hearth-wall";
 
 export const DEFAULT_WALL: WallSettings = {
   enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: true, showAssistant: true,
+  clockColor: "white", clockBrightness: 0.85, nightRed: true,
 };
 
 const minutes = (time: string) => {

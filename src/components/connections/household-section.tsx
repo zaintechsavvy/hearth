@@ -50,7 +50,7 @@ export function HouseholdSection({ role, ownerName, members, invites, pages }: H
   useEffect(() => {
     if (!link) return;
     let cancelled = false;
-    void import("qrcode").then(({ toString }) => toString(link, { type: "svg", margin: 0, errorCorrectionLevel: "M" })).then(svg => { if (!cancelled) setQr(`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`); });
+    void import("qrcode").then(({ toDataURL }) => toDataURL(link, { margin: 0, width: 480, errorCorrectionLevel: "M" })).then(url => { if (!cancelled) setQr(url); });
     return () => { cancelled = true; };
   }, [link]);
 

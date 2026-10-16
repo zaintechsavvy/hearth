@@ -304,3 +304,49 @@
   .pageTime { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
   .pageTime > :first-child { grid-column: 1 / -1; }
 }
+
+/* Wall tablet: a small dark stage showing the resting clock as it will look. */
+.clockPreview {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-control);
+  background: radial-gradient(120% 90% at 50% 0%, oklch(22% .01 260), oklch(8% .005 260));
+}
+
+.clockPreview > * {
+  opacity: var(--clock-brightness, 1);
+}
+
+.clockPreviewDate {
+  font-size: var(--text-sm);
+  color: color-mix(in oklab, currentColor 62%, transparent);
+}
+
+.clockPreviewTime {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 500;
+  letter-spacing: -.05em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.clockColors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.clockColor {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .12);
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.clockColor[aria-checked="true"] {
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--foreground);
+}

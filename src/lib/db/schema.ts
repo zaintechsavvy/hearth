@@ -1,3 +1,4 @@
+import type { SwitchableKind } from "@/lib/devices/types";
 import { boolean, customType, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { DashboardPage, SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
@@ -148,6 +149,8 @@ export const deviceOverride = pgTable("device_override", {
   name: text("name"),
   /** Null keeps the integration's room; an empty string means no room. */
   room: text("room"),
+  /** What an on/off device shows as in Hearth, such as a light switch Home Assistant files as a fan; null keeps the integration's kind. */
+  kind: text("kind").$type<SwitchableKind>(),
   updatedAt: updatedAt(),
 }, t => [primaryKey({ columns: [t.userId, t.deviceId] })]);
 

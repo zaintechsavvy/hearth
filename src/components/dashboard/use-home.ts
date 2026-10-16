@@ -14,10 +14,40 @@ const STREAM = "/api/home/stream";
 /** Only while the live stream is down. */
 const FALLBACK_POLL_MS = 15_000;
 
+/** How long a connection that stops answering keeps its last devices on screen before Hearth says so. */
+const STEADY_MS = 120_000;
+const failingSince = new Map<string, number>();
+let lastGood: HomeSnapshot | null = null;
+
+/**
+ * Rides out a connection missing one look, as a hosted Hearth's can when it reaches home slowly: its last devices
+ * stay on the dashboard and the warning waits, unless the connection is still not answering two minutes on.
+ */
+function steady(next: HomeSnapshot): HomeSnapshot {
+  const previous = lastGood;
+  let devices = next.devices;
+  let integrations = next.integrations;
+  for (const integration of next.integrations) {
+    if (integration.ok) {
+      failingSince.delete(integration.id);
+      continue;
+    }
+    const since = failingSince.get(integration.id) ?? Date.now();
+    failingSince.set(integration.id, since);
+    const kept = previous?.devices.filter(device => device.integrationId === integration.id) ?? [];
+    if (Date.now() - since > STEADY_MS || kept.length === 0) continue;
+    devices = [...devices, ...kept];
+    integrations = integrations.map(item => item.id === integration.id ? { ...item, ok: true, error: null, deviceCount: kept.length } : item);
+  }
+  const result = devices === next.devices ? next : { ...next, devices, integrations };
+  lastGood = result;
+  return result;
+}
+
 async function fetchHome(url: string): Promise<HomeSnapshot> {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) throw new Error("Could not load your home.");
-  return response.json();
+  return steady(await response.json());
 }
 
 function patch(snapshot: HomeSnapshot, id: string, command: DeviceCommand): HomeSnapshot {
@@ -42,7 +72,7 @@ function connect() {
     const source = new EventSource(STREAM);
     source.addEventListener("snapshot", event => {
       notifyLive(true);
-      const snapshot = JSON.parse((event as MessageEvent<string>).data) as HomeSnapshot;
+      const snapshot = steady(JSON.parse((event as MessageEvent<string>).data) as HomeSnapshot);
       if (shared.inFlight > 0) shared.held = snapshot;
       else void mutateKey(KEY, snapshot, { revalidate: false });
     });

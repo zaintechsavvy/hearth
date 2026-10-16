@@ -18,6 +18,7 @@ import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { glassSheetClass } from "@/components/glass/glass";
 import { KIND_INFO } from "@/lib/dashboard/catalog";
 import { isWidget, SIZE_OPTIONS, spanOf, TILE_COLORS, TILE_ICONS, type TileColor, type TileConfig, type TileHold, type TileIcon, type TileKind, type TileOptions, type TileSize, type TimerPreset } from "@/lib/dashboard/layout";
+import type { SwitchableKind } from "@/lib/devices/types";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { RoomPicker } from "./room-picker";
 import { TILE_ICON_COMPONENTS, iconLabel } from "./tiles/tile-icons";
@@ -34,9 +35,12 @@ export interface TileIdentity {
   roomEditable: boolean;
   /** The integration's name for the source, such as "Home Assistant". */
   source: string;
+  /** For on/off devices: what Hearth shows it as, and what the integration calls it. */
+  kind?: SwitchableKind;
+  sourceKind?: SwitchableKind;
 }
 
-export type IdentityChange = { name?: string | null; room?: string | null };
+export type IdentityChange = { name?: string | null; room?: string | null; kind?: SwitchableKind | null };
 
 export interface EditableTile {
   config: TileConfig;
@@ -317,9 +321,24 @@ function IdentityFields({ identity, rooms, onIdentity }: { identity: TileIdentit
       {identity.roomEditable && (
         <RoomPicker rooms={rooms} value={identity.room} sourceRoom={identity.sourceRoom} sourceLabel={identity.source} onChange={room => onIdentity({ room })} />
       )}
+      {identity.kind && (
+        <div className={styles.nameField}>
+          <span className={styles.fieldLabel} aria-hidden="true">Shows as</span>
+          <SegmentedControl label="Shows as" value={identity.kind} options={KIND_CHOICES}
+            onValueChange={value => onIdentity({ kind: value === (identity.sourceKind ?? identity.kind) ? null : value as SwitchableKind })} />
+          <p className={styles.note}>
+            {identity.sourceKind
+              ? <>{identity.source} calls it a {KIND_WORDS[identity.sourceKind]}. <button type="button" className={styles.restore} onClick={() => onIdentity({ kind: null })}>Use that</button></>
+              : `For a light switch ${identity.source} files as a fan, or the reverse.`}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
+
+const KIND_CHOICES: { value: SwitchableKind; label: string }[] = [{ value: "light", label: "Light" }, { value: "switch", label: "Switch" }, { value: "fan", label: "Fan" }];
+const KIND_WORDS: Record<SwitchableKind, string> = { light: "light", switch: "switch", fan: "fan" };
 
 function CalendarChoice({ config, onChange }: { config: TileConfig; onChange: TileEditorProps["onChange"] }) {
   const { data } = useSWR<Agenda>("/api/calendar", (url: string) => fetch(url).then(response => response.json()));

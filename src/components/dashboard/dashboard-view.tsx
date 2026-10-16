@@ -24,7 +24,7 @@ import {
 import { hasLevel, tileSources } from "@/lib/dashboard/sources";
 import { defaultStyle } from "@/lib/dashboard/style";
 import { kindLabel, statusText } from "@/lib/devices/status";
-import type { Device, DeviceKind, ThermostatDevice } from "@/lib/devices/types";
+import { isSwitchableKind, type Device, type DeviceKind, type ThermostatDevice } from "@/lib/devices/types";
 import { sceneTileId, type HearthScene } from "@/lib/scenes/types";
 import { CameraTile } from "./camera-tile";
 import { DoorbellBanner } from "./doorbell-banner";
@@ -512,7 +512,10 @@ function editableTile(tile: TileConfig, linked: Linked | null, name: string, sou
     return { ...base, linkedName: camera.name, adjustable: false, identity: { id: cameraTileId(camera.id), name: camera.name, sourceName: camera.sourceName, room: null, roomEditable: false, source: "Settings" } };
   }
   const device = linked.device;
-  const identity = { id: device.id, name: device.name, sourceName: device.sourceName, room: device.room, sourceRoom: device.sourceRoom, roomEditable: true, source: sourceLabel(device) };
+  const identity = {
+    id: device.id, name: device.name, sourceName: device.sourceName, room: device.room, sourceRoom: device.sourceRoom, roomEditable: true, source: sourceLabel(device),
+    ...(isSwitchableKind(device.kind) ? { kind: device.kind, sourceKind: device.sourceKind } : {}),
+  };
   const holds = [
     ...(device.kind === "light" && hasControls(device) ? [{ value: "controls", label: "Open colour and brightness" }] : []),
     ...(device.kind === "sensor" ? [{ value: "history", label: "Show history" }] : []),

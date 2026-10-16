@@ -64,7 +64,7 @@ export function ActivityView() {
   const { data, error, size, setSize, isLoading } = useSWRInfinite<Page>(
     (index, previous: Page | null) => index === 0 ? query() : previous?.more ? query(previous.next ?? previous.entries.at(-1)?.at) : null,
     fetchPage,
-    { refreshInterval: 10_000, revalidateFirstPage: true },
+    { refreshInterval: 30_000, revalidateFirstPage: true },
   );
   const entries = data?.flatMap(page => page.entries) ?? [];
   const devices = new Map((home?.devices ?? []).map(device => [device.id, device]));

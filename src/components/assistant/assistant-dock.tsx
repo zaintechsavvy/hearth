@@ -5,13 +5,13 @@ import { Check, Mic, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { getAudioContext, useMicrophone, VoiceBeam } from "voice-glow";
+import { VoiceBeam } from "voice-glow";
 import { ChatComposer, type ChatComposerHandle } from "@/components/arc/chat-thread/chat-thread";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
 import { useHome } from "@/components/dashboard/use-home";
 import { formatSpoken, parseTimerRequest } from "@/lib/widgets/schedules";
-import { createRecognition, sharesMicrophone, speak, speechSupported, type Recognition } from "./speech";
+import { createRecognition, speak, speechSupported, type Recognition } from "./speech";
 import styles from "./assistant-dock.module.css";
 
 interface AssistantInfo {
@@ -65,8 +65,8 @@ export function AssistantDock() {
   const canListen = useSyncExternalStore(subscribeNever, speechSupported, () => false);
   const { data: info } = useSWR<AssistantInfo>("/api/assistant", fetchInfo, { revalidateOnFocus: false });
   const { saveItem } = useHome();
-  const mic = useMicrophone();
   const lastHeard = useRef(0);
+  /** The glow follows the recogniser hearing speech, not a second capture of the microphone, which Safari and Android refuse while it listens. */
   const voiceLevel = useCallback(() => 0.18 + 0.7 * Math.exp(-(performance.now() - lastHeard.current) / 450), []);
   const dark = useSyncExternalStore(subscribeTheme, () => document.documentElement.dataset.theme === "dark", () => false);
 
@@ -142,8 +142,6 @@ export function AssistantDock() {
     if (listening) return recognition.current?.stop();
     const instance = createRecognition();
     if (!instance) return;
-    getAudioContext();
-    if (sharesMicrophone()) void mic.start();
     instance.onspeechstart = () => { lastHeard.current = performance.now(); };
     recognition.current = instance;
     let finalText = "";
@@ -160,13 +158,9 @@ export function AssistantDock() {
     instance.onend = () => {
       setListening(false);
       setHeard("");
-      mic.stop();
       if (finalText.trim()) void send(finalText, true);
     };
-    instance.onerror = () => {
-      setListening(false);
-      mic.stop();
-    };
+    instance.onerror = () => setListening(false);
     setListening(true);
     instance.start();
   }
@@ -236,7 +230,7 @@ export function AssistantDock() {
                 {pending && <li className={styles.turn} data-role="assistant"><TextShimmer className={styles.working}>Working on it</TextShimmer></li>}
               </ol>
               {listening && <p className={styles.listening}><span className={styles.pulse} aria-hidden="true" />{heard || "Listening"}</p>}
-              <VoiceBeam className={styles.beam} stream={listening ? mic.stream : null} level={voiceLevel} active={listening} theme={dark ? "dark" : "light"} colorVariant="colorful">
+              <VoiceBeam className={styles.beam} level={voiceLevel} active={listening} theme={dark ? "dark" : "light"} colorVariant="colorful">
                 <div className={styles.composerRow}>
                   <ChatComposer ref={composer} className={styles.composer} placeholder="Ask Hearth" allowAttachments={false} disabled={pending} onSend={draft => void send(draft.text)} />
                   {canListen && (

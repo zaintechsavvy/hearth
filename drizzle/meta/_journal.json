@@ -99,6 +99,13 @@
       "when": 1791996984932,
       "tag": "0013_automation_snooze",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792117433380,
+      "tag": "0014_device_kind",
+      "breakpoints": true
     }
   ]
 }

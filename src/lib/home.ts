@@ -6,13 +6,14 @@ import { unseal } from "@/lib/crypto";
 import type { WidgetItem } from "@/lib/widgets/items";
 import { HOME_PAGE_ID, withoutOrphanTiles, type DashboardPage, type SavedTile } from "@/lib/dashboard/layout";
 import type { HearthScene } from "@/lib/scenes/types";
-import { parseDeviceId, type Device, type DeviceCommand } from "@/lib/devices/types";
+import { parseDeviceId, type Device, type DeviceCommand, showAs, type SwitchableKind } from "@/lib/devices/types";
 import { createProvider } from "@/lib/integrations/registry";
 import { integrationTopic, publish } from "@/lib/live/bus";
 import { IntegrationError, type IntegrationKind } from "@/lib/integrations/types";
 import { noteCommand } from "@/lib/monitor/attribution";
 import { DEFAULT_ALERTS } from "@/lib/activity-types";
 import { DEFAULT_SECURITY, type OpenMethod } from "@/lib/security-types";
+import { isServerless } from "@/lib/setup-check";
 
 export interface IntegrationStatus {
   id: string;
@@ -47,7 +48,7 @@ export interface HomeSnapshot {
   openMethod: OpenMethod;
 }
 
-type Override = { name: string | null; room: string | null };
+type Override = { name: string | null; room: string | null; kind?: SwitchableKind | null };
 
 /** Hearth's names and rooms over the integration's, keeping the originals so they can be shown and restored. */
 export function applyOverride<T extends Device>(device: T, override: Override | undefined): T {
@@ -61,6 +62,7 @@ export function applyOverride<T extends Device>(device: T, override: Override | 
     next.sourceRoom = device.room;
     next.room = override.room || null;
   }
+  if (override.kind && override.kind !== device.kind && (next.kind === "light" || next.kind === "switch" || next.kind === "fan")) return showAs(next, override.kind) as T;
   return next;
 }
 
@@ -78,7 +80,8 @@ export function orderedRooms(custom: string[], devices: { room: string | null }[
   return [...custom, ...others];
 }
 
-const LIST_TIMEOUT_MS = 10_000;
+/** A hosted Hearth reaches home over the internet and may be opening its connection cold, so it waits longer. */
+const LIST_TIMEOUT_MS = isServerless() ? 20_000 : 10_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
   return Promise.race([promise, new Promise<never>((_, reject) => setTimeout(() => reject(new IntegrationError(message)), ms))]);

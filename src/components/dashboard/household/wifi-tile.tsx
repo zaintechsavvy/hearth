@@ -18,8 +18,9 @@ export function WifiTile({ tile, items, interactive, onManage }: HouseholdTilePr
   useEffect(() => {
     if (!text) return;
     let cancelled = false;
-    void import("qrcode").then(({ toString }) => toString(text, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#111111", light: "#ffffff" } }))
-      .then(svg => { if (!cancelled) setQr(`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`); });
+    // A PNG rather than an SVG: some tablet browsers draw the SVG's stroked modules as nothing, leaving a white square.
+    void import("qrcode").then(({ toDataURL }) => toDataURL(text, { margin: 0, width: 480, errorCorrectionLevel: "M", color: { dark: "#111111", light: "#ffffff" } }))
+      .then(url => { if (!cancelled) setQr(url); });
     return () => { cancelled = true; };
   }, [text]);
 

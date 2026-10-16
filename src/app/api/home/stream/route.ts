@@ -6,11 +6,15 @@ import { guestView } from "@/lib/household";
 import { createProvider } from "@/lib/integrations/registry";
 import { integrationTopic, listen, userTopic } from "@/lib/live/bus";
 import { getHome } from "@/lib/session";
+import { isServerless } from "@/lib/setup-check";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 const THROTTLE_MS = 150;
 const HEARTBEAT_MS = 25_000;
+/** On serverless hosts the stream ends itself just inside the platform's limit; the browser reconnects in three seconds. */
+const SERVERLESS_LIFETIME_MS = 285_000;
 
 /**
  * Server-Sent Events: a snapshot on connect, then a new one whenever an integration pushes a change, a command
@@ -100,6 +104,15 @@ export async function GET(request: Request) {
         } catch {}
       });
 
+      if (isServerless()) {
+        const lifetime = setTimeout(() => {
+          stop();
+          try {
+            controller.close();
+          } catch {}
+        }, SERVERLESS_LIFETIME_MS);
+        cleanups.push(() => clearTimeout(lifetime));
+      }
       write("retry: 3000\n\n");
       void watchIntegrations().then(send);
     },

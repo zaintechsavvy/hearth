@@ -1,16 +1,17 @@
 "use client";
 
 import { Download, Tablet } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type CSSProperties } from "react";
 import { Button } from "@/components/arc/button/button";
 import { Input } from "@/components/arc/input/input";
 import { Slider } from "@/components/arc/slider/slider";
 import { Switch } from "@/components/arc/switch/switch";
 import { useHome } from "@/components/dashboard/use-home";
+import { useMinute } from "@/components/dashboard/widgets/use-minute";
 import { Glass } from "@/components/glass/glass";
 import { installPrompt } from "@/components/shell/service-worker";
 import { useStoredJson } from "@/components/shell/use-stored-json";
-import { DEFAULT_WALL, WALL_KEY, type WallSettings } from "@/lib/wall";
+import { CLOCK_COLORS, DEFAULT_WALL, WALL_KEY, type ClockColor, type WallSettings } from "@/lib/wall";
 import styles from "./connections.module.css";
 import { SettingsSection } from "./settings-section";
 
@@ -19,7 +20,9 @@ const standalone = () => matchMedia("(display-mode: standalone), (display-mode: 
 
 /** Turns this screen into a wall tablet. Settings stay on this device, so each tablet can behave differently. */
 export function WallSection() {
-  const [settings, setSettings] = useStoredJson<WallSettings>(WALL_KEY, DEFAULT_WALL);
+  const [stored, setSettings] = useStoredJson<WallSettings>(WALL_KEY, DEFAULT_WALL);
+  const settings = { ...DEFAULT_WALL, ...stored };
+  const now = useMinute();
   const { home } = useHome();
   const canInstall = useSyncExternalStore(installPrompt.subscribe, () => Boolean(installPrompt.get()), () => false);
   const installed = useSyncExternalStore(() => () => {}, standalone, () => false);
@@ -51,6 +54,24 @@ export function WallSection() {
           <Slider label="Night dimming" value={Math.round(settings.dimLevel * 100)} min={0} max={85} format={value => `${value}%`} onValueChange={value => set({ dimLevel: value / 100 })} />
           <Switch label="Keep the screen awake" checked={settings.keepAwake} onCheckedChange={keepAwake => set({ keepAwake })} />
           <Switch label="Show the assistant" checked={settings.showAssistant} onCheckedChange={showAssistant => set({ showAssistant })} />
+        </div>
+        <div className={`${styles.row} ${styles.stacked}`}>
+          <div className={styles.rowText}>
+            <span className={styles.rowTitle}>Resting screen</span>
+            <span className={styles.rowMeta}>The clock this screen rests on.</span>
+          </div>
+          <div className={styles.clockPreview} style={{ color: CLOCK_COLORS[settings.clockColor], "--clock-brightness": settings.clockBrightness } as CSSProperties} aria-hidden="true">
+            <span className={styles.clockPreviewDate}>{now ? new Date(now).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : "\u00a0"}</span>
+            <span className={styles.clockPreviewTime}>{now ? new Date(now).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "\u00a0"}</span>
+          </div>
+          <div role="radiogroup" aria-label="Clock colour" className={styles.clockColors}>
+            {(Object.keys(CLOCK_COLORS) as ClockColor[]).map(color => (
+              <button key={color} type="button" role="radio" aria-checked={settings.clockColor === color} aria-label={color[0].toUpperCase() + color.slice(1)} title={color[0].toUpperCase() + color.slice(1)}
+                className={styles.clockColor} style={{ background: CLOCK_COLORS[color] }} onClick={() => set({ clockColor: color })} />
+            ))}
+          </div>
+          <Slider label="Brightness" value={Math.round(settings.clockBrightness * 100)} min={15} max={100} format={value => `${value}%`} onValueChange={value => set({ clockBrightness: value / 100 })} />
+          <Switch label="Dim red at night" checked={settings.nightRed} onCheckedChange={nightRed => set({ nightRed })} />
         </div>
         <div className={`${styles.row} ${styles.stacked}`}>
           <div className={styles.rowText}>

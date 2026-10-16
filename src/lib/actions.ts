@@ -14,7 +14,7 @@ import { tileSources } from "@/lib/dashboard/sources";
 import { db } from "@/lib/db";
 import { assistant, automation, calendar, camera, deviceOverride, integration, preference, reminder, scene } from "@/lib/db/schema";
 import { automationInput } from "@/lib/automations/types";
-import { isSensitive } from "@/lib/devices/types";
+import { isSensitive, SWITCHABLE_KINDS, type SwitchableKind } from "@/lib/devices/types";
 import { runAutomationNow } from "@/lib/monitor/automations";
 import { getPreferences, loadHome, orderedRooms, streamRelayUrl } from "@/lib/home";
 import { parseDeviceId } from "@/lib/devices/types";
@@ -404,6 +404,8 @@ const deviceChange = z.object({
   name: z.string().trim().max(60, "Keep names under 60 characters.").nullable().optional(),
   /** Null restores the integration's room; an empty string means no room. */
   room: z.union([roomName, z.literal("")]).nullable().optional(),
+  /** Null shows it as the integration's own kind. */
+  kind: z.enum(SWITCHABLE_KINDS).nullable().optional(),
 });
 
 async function ownsTarget(userId: string, id: string) {
@@ -412,10 +414,14 @@ async function ownsTarget(userId: string, id: string) {
   return Boolean(parsed && await db.query.integration.findFirst({ where: and(eq(integration.id, parsed.integrationId), eq(integration.userId, userId)) }));
 }
 
-async function writeOverride(userId: string, deviceId: string, change: { name?: string | null; room?: string | null }) {
+async function writeOverride(userId: string, deviceId: string, change: { name?: string | null; room?: string | null; kind?: SwitchableKind | null }) {
   const current = await db.query.deviceOverride.findFirst({ where: and(eq(deviceOverride.userId, userId), eq(deviceOverride.deviceId, deviceId)) });
-  const next = { name: change.name === undefined ? current?.name ?? null : change.name || null, room: change.room === undefined ? current?.room ?? null : change.room };
-  if (next.name === null && next.room === null) {
+  const next = {
+    name: change.name === undefined ? current?.name ?? null : change.name || null,
+    room: change.room === undefined ? current?.room ?? null : change.room,
+    kind: change.kind === undefined ? current?.kind ?? null : change.kind,
+  };
+  if (next.name === null && next.room === null && next.kind === null) {
     await db.delete(deviceOverride).where(and(eq(deviceOverride.userId, userId), eq(deviceOverride.deviceId, deviceId)));
     return;
   }

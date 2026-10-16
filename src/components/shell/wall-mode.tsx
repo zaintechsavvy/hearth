@@ -11,7 +11,7 @@ import { useTick } from "@/components/dashboard/household/use-tick";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { isWidget, type TileConfig } from "@/lib/dashboard/layout";
-import { DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
+import { CLOCK_COLORS, DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { itemsOf } from "@/lib/widgets/items";
 import { doseSlots, groupPickups, pickupWords, timerColors, timerRemaining, formatDuration } from "@/lib/widgets/schedules";
@@ -29,7 +29,8 @@ const fetchJson = <T,>(url: string): Promise<T> => fetch(url).then(response => {
 
 /** Wall tablet mode, on this device only: keeps the screen on, dims at night, rests on a glanceable screensaver, and wakes on touch or motion. */
 export function WallMode() {
-  const [settings] = useStoredJson<WallSettings>(WALL_KEY, DEFAULT_WALL);
+  const [stored] = useStoredJson<WallSettings>(WALL_KEY, DEFAULT_WALL);
+  const settings = { ...DEFAULT_WALL, ...stored };
   useEffect(() => {
     const root = document.documentElement;
     if (settings.enabled) root.dataset.wall = settings.showAssistant ? "assistant" : "";
@@ -110,10 +111,10 @@ function Wall({ settings }: { settings: WallSettings }) {
       <div className={styles.dim} style={{ opacity: night && !resting ? settings.dimLevel : 0 }} aria-hidden="true" />
       <AnimatePresence>
         {resting && (
-          <motion.button type="button" key="saver" className={styles.saver} data-night={night || undefined} aria-label="Wake the screen"
+          <motion.button type="button" key="saver" className={styles.saver} data-night={night || undefined} data-red={(night && settings.nightRed) || undefined} aria-label="Wake the screen"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.6 }}
             onClick={() => { lastActive.current = Date.now(); setResting(false); }}>
-            <Glance now={now} night={night} dimLevel={settings.dimLevel} />
+            <Glance now={now} night={night} settings={settings} />
           </motion.button>
         )}
       </AnimatePresence>
@@ -132,11 +133,18 @@ function Wall({ settings }: { settings: WallSettings }) {
 }
 
 /** The resting screen: the date over a large clock, the weather, then running timers and what needs doing next as cards. It drifts a little each minute so nothing burns in. */
-function Glance({ now, night, dimLevel }: { now: number; night: boolean; dimLevel: number }) {
+function Glance({ now, night, settings }: { now: number; night: boolean; settings: WallSettings }) {
   const { home } = useHome();
   const date = new Date(now || 0);
   const drift = Math.floor(now / DRIFT_EVERY_MS);
-  const offset = { "--drift-x": `${((drift * 37) % 41) - 20}px`, "--drift-y": `${((drift * 53) % 31) - 15}px`, "--saver-dim": night ? 1 - dimLevel * 0.6 : 1 } as CSSProperties;
+  const red = night && settings.nightRed;
+  const brightness = settings.clockBrightness * (night ? 1 - settings.dimLevel * 0.6 : 1);
+  const offset = {
+    "--drift-x": `${((drift * 37) % 41) - 20}px`,
+    "--drift-y": `${((drift * 53) % 31) - 15}px`,
+    "--saver-dim": brightness,
+    color: red ? undefined : CLOCK_COLORS[settings.clockColor] ?? CLOCK_COLORS.white,
+  } as CSSProperties;
   const tiles = home?.pages.flatMap(page => page.layout).filter((tile): tile is TileConfig => "kind" in tile && tile.kind !== undefined && isWidget(tile.kind)) ?? [];
   const place = tiles.find(tile => tile.kind === "weather" && tile.options?.place)?.options;
   const { data: weather } = useSWR<Forecast>(place?.place ? `/api/weather?lat=${place.place.latitude}&lon=${place.place.longitude}` : null, fetchJson, { refreshInterval: 10 * 60_000 });
@@ -183,7 +191,7 @@ function Glance({ now, night, dimLevel }: { now: number; night: boolean; dimLeve
             {timers.map(timer => {
               const left = timerRemaining(timer.data, now);
               return (
-                <span key={timer.id} className={`${styles.card} ${styles.timer}`} style={{ "--timer": night ? NIGHT_RED : timers.length > 1 ? colors.get(timer.id) : "currentColor" } as CSSProperties}>
+                <span key={timer.id} className={`${styles.card} ${styles.timer}`} style={{ "--timer": red ? NIGHT_RED : timers.length > 1 ? colors.get(timer.id) : "currentColor" } as CSSProperties}>
                   <svg className={styles.timerRing} viewBox="0 0 100 100" aria-hidden="true">
                     <circle cx="50" cy="50" r="42" pathLength={100} className={styles.timerTrack} />
                     <circle cx="50" cy="50" r="42" pathLength={100} className={styles.timerProgress} strokeDasharray="100" strokeDashoffset={100 - (left / timer.data.durationMs) * 100} />

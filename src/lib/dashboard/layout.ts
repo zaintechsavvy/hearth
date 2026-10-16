@@ -227,6 +227,9 @@ export interface LegacyTile {
  */
 export type SavedTile = TileConfig | LegacyTile;
 
+/** On/off kinds a device can be shown as; a tile follows its device between them. */
+const SHOWN_AS = new Set<TileKind>(["light", "switch", "fan"]);
+
 export function resolveLayout(saved: SavedTile[], sources: TileSource[]): TileConfig[] {
   const byId = new Map(sources.map(source => [source.id, source]));
   const seen = new Set<string>();
@@ -241,6 +244,8 @@ export function resolveLayout(saved: SavedTile[], sources: TileSource[]): TileCo
       tile = { id: entry.id, kind: source.kind, link: entry.id, size: entry.size, icon: entry.icon, color: entry.color };
     } else {
       tile = entry;
+      const source = entry.link ? byId.get(entry.link) : undefined;
+      if (source && source.kind !== entry.kind && SHOWN_AS.has(source.kind) && SHOWN_AS.has(entry.kind)) tile = { ...entry, kind: source.kind };
     }
     const allowed = SIZE_OPTIONS[tile.kind].some(option => option.size === tile.size);
     tiles.push(allowed ? tile : { ...tile, size: defaultSize(tile.kind, byId.get(tile.link ?? "")?.adjustable) });

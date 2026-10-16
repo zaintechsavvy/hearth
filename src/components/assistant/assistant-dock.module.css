@@ -9,7 +9,11 @@
   gap: var(--space-2);
 }
 
+/* Beside the pill but outside the layout, so the pill's morph into the panel starts where the pill is. */
 .quickMic {
+  position: absolute;
+  right: calc(100% + var(--space-2));
+  bottom: 0;
   display: grid;
   place-items: center;
   width: 48px;
@@ -54,7 +58,7 @@
 
 .pill {
   height: 48px;
-  padding-inline: var(--space-5) var(--space-3);
+  padding-inline: var(--space-4);
   font-size: var(--text-sm);
   font-weight: 500;
 }
@@ -78,7 +82,8 @@
   .pillLabel,
   .kbd { display: none; }
   /* The header's page menu opens the assistant on phones, so no button floats over the tiles. */
-  .pill { display: none; }
+  .pill,
+  .quickMic { display: none; }
   .panel { height: min(600px, calc(100dvh - 120px - env(safe-area-inset-bottom))); }
 }
 
@@ -95,7 +100,6 @@
 .panel {
   width: min(400px, calc(100vw - 32px));
   height: min(600px, calc(100dvh - 120px));
-  overflow: visible;
 }
 
 .panelInner {
@@ -287,7 +291,7 @@
 
 .composerRow {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3) var(--space-3);
 }
