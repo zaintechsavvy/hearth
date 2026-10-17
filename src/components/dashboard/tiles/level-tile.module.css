@@ -64,3 +64,8 @@
   height: 100%;
   border-radius: calc(var(--radius-panel) - var(--space-3));
 }
+
+:global([data-kind="light"]) .overlay[data-filled],
+:global([data-kind="light"]) .overlay[data-filled] .foot :global(svg) {
+  color: color-mix(in oklab, var(--tile-color) 40%, oklch(28% .06 70));
+}

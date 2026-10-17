@@ -8,6 +8,9 @@
   overflow: hidden;
   color: var(--foreground);
   text-align: start;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   transition: background var(--duration-standard) var(--ease-standard), color var(--duration-standard) var(--ease-standard), box-shadow var(--duration-standard) var(--ease-standard), opacity var(--duration-standard) var(--ease-standard);
 }
 
@@ -78,6 +81,27 @@
 
 .tile[data-glow][data-on] .icon {
   color: color-mix(in oklab, var(--tile-color) 55%, oklch(20% 0 0));
+}
+
+/* A light that is on glows in its colour, warm yellow unless it is set to another, with its icon and name in a deeper shade of it. */
+.tile.tile[data-kind="light"][data-on],
+:root[data-theme="dark"] .tile.tile[data-kind="light"][data-on] {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--tile-color) 58%, oklch(99% .03 95)), color-mix(in oklab, var(--tile-color) 80%, oklch(90% .06 88)));
+  border-color: color-mix(in oklab, var(--tile-color) 45%, oklch(100% 0 0));
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .6), 0 16px 40px -14px color-mix(in oklab, var(--tile-color) 60%, transparent);
+}
+
+.tile[data-kind="light"][data-on] .icon,
+.tile[data-kind="light"][data-on] .name {
+  color: color-mix(in oklab, var(--tile-color) 40%, oklch(28% .06 70));
+}
+
+.tile[data-kind="light"][data-on] .meta {
+  color: color-mix(in oklab, var(--tile-color) 30%, oklch(34% .05 70));
+}
+
+.tile[data-kind="light"][data-on] .badge {
+  background: oklch(100% 0 0 / .4);
 }
 
 .tile[data-unavailable] {
@@ -297,6 +321,12 @@ div.reading {
   padding: 14%;
 }
 
+.tallTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .tallBadge {
   display: grid;
   place-items: center;
@@ -347,21 +377,58 @@ div.reading {
   opacity: .5;
 }
 
-/* Opening the home from the tile itself: a bar fills across it while it is held, and the command runs once full. */
+/* The large card: the same parts with more room, and a dot that says secure or not from across the room. */
+.tall[data-size="2x2"] {
+  gap: var(--space-3);
+  padding: clamp(14px, 9cqi, 24px);
+}
+
+.tall[data-size="2x2"] .tallBadge {
+  width: 56px;
+  height: 56px;
+}
+
+.tall[data-size="2x2"] .tallState {
+  font-size: clamp(var(--text-xl), 12cqi, var(--text-3xl));
+  line-height: 1.1;
+}
+
+.tall[data-size="2x2"] .name {
+  font-size: clamp(var(--text-sm), 7cqi, var(--text-base));
+}
+
+.tall[data-size="2x2"] .tallAction {
+  height: 44px;
+  font-size: var(--text-base);
+}
+
+.statusDot {
+  width: 10px;
+  height: 10px;
+  margin: var(--space-2);
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--success) 20%, transparent);
+}
+
+.statusDot[data-tone="warning"] {
+  background: var(--warning);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--warning) 22%, transparent);
+}
+
+/* Opening the home from the tile itself: a straight edge sweeps across while it is held, and the command runs once it reaches the far side. */
 .holdFill {
   position: absolute;
   inset: 0;
   z-index: -1;
-  border-radius: inherit;
   background: color-mix(in oklab, var(--foreground) 14%, transparent);
-  transform: scaleX(0);
-  transform-origin: left center;
+  clip-path: inset(0 100% 0 0);
   pointer-events: none;
 }
 
 .tile[data-holding] .holdFill {
-  transform: scaleX(1);
-  transition: transform 1s linear;
+  clip-path: inset(0 0 0 0);
+  transition: clip-path 1s linear;
 }
 
 .tile:has(.holdFill) {

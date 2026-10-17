@@ -358,3 +358,66 @@
   text-underline-offset: 3px;
   white-space: nowrap;
 }
+
+.fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset > .row + .row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* A setting with a few choices: the words beside the control, or above it where the row is narrow. */
+.choiceRow {
+  flex-wrap: wrap;
+  row-gap: var(--space-3);
+}
+
+.choiceRow > .rowText {
+  min-width: min(240px, 100%);
+}
+
+.listRow > .rowText {
+  flex: none;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 32px;
+  padding-inline: var(--space-3) var(--space-1);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  font-size: var(--text-sm);
+}
+
+.chipRoom {
+  color: var(--text-secondary);
+}
+
+.chipRemove {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+}
+
+.chipRemove:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--foreground);
+}

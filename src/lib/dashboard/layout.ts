@@ -102,7 +102,7 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   fan: LEVELLED,
   cover: [...SWITCHABLE, { size: "1x2", label: "Tall" }, { size: "2x2", label: "Large" }],
   switch: SWITCHABLE,
-  lock: [...SWITCHABLE, { size: "1x2", label: "Tall" }],
+  lock: [...SWITCHABLE, { size: "1x2", label: "Tall" }, { size: "2x2", label: "Large" }],
   binary_sensor: SWITCHABLE,
   sensor: [...SWITCHABLE, { size: "2x2", label: "Chart" }, { size: "4x2", label: "Wide chart" }],
   person: SWITCHABLE,
@@ -178,9 +178,10 @@ export function defaultSize(kind: TileKind, adjustable = false): TileSize {
     case "countdown":
     case "timers":
       return "2x1";
+    case "wifi":
+      return "2x1";
     case "medications":
     case "notes":
-    case "wifi":
     case "plants":
     case "packages":
       return "2x2";

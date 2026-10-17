@@ -1,0 +1,165 @@
+/* The doorbell call: dark over everything so the camera reads, whatever the theme or wallpaper. */
+.call {
+  position: fixed;
+  inset: 0;
+  z-index: 96;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: clamp(var(--space-4), 3vh, var(--space-8));
+  padding: calc(max(var(--space-6), env(safe-area-inset-top)) + var(--space-2)) max(var(--space-6), env(safe-area-inset-right)) calc(max(var(--space-6), env(safe-area-inset-bottom)) + var(--space-2)) max(var(--space-6), env(safe-area-inset-left));
+  background: oklch(13% .01 260 / .88);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  backdrop-filter: blur(18px) saturate(120%);
+  color: oklch(98% 0 0);
+  overflow: hidden;
+}
+
+/* The screen flashes a few times when the bell rings, so it is noticed from across the room. */
+.flash {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(120% 90% at 50% 0%, oklch(92% .09 85 / .9), oklch(80% .12 70 / .35) 55%, transparent 80%);
+  opacity: 0;
+  pointer-events: none;
+  animation: flash 700ms var(--ease-standard) 4;
+}
+
+@keyframes flash {
+  0%, 100% { opacity: 0; }
+  40% { opacity: 1; }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  justify-self: center;
+  width: min(100%, 1040px);
+}
+
+.bell {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--warning) 26%, transparent);
+  color: oklch(90% .12 85);
+  animation: bell 1.2s var(--ease-standard) infinite;
+}
+
+@keyframes bell {
+  0%, 60%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(-14deg); }
+  20%, 40% { transform: rotate(14deg); }
+}
+
+.words {
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-xl), 3.4vw, var(--text-3xl));
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.15;
+}
+
+.where {
+  margin-top: 2px;
+  color: oklch(98% 0 0 / .7);
+  font-size: clamp(var(--text-sm), 1.6vw, var(--text-base));
+}
+
+.view {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+
+.frame {
+  width: min(100%, 1040px, calc((100dvh - 320px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px -30px oklch(0% 0 0 / .7);
+}
+
+.noCamera {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  max-width: 420px;
+  color: oklch(98% 0 0 / .72);
+  text-align: center;
+}
+
+.problem {
+  justify-self: center;
+  color: oklch(88% .12 85);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: clamp(var(--space-5), 5vw, var(--space-12));
+}
+
+.control {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  color: oklch(98% 0 0);
+}
+
+.controlIcon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: oklch(100% 0 0 / .14);
+  box-shadow: inset 0 0 0 1px oklch(100% 0 0 / .14);
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), transform var(--duration-spring) var(--ease-spring);
+}
+
+.control[aria-pressed="true"] .controlIcon {
+  background: oklch(98% 0 0);
+  color: oklch(18% 0 0);
+}
+
+.control:active:not(:disabled) .controlIcon {
+  transform: scale(.94);
+}
+
+.control:disabled {
+  opacity: .4;
+}
+
+.controlLabel {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .frame { aspect-ratio: 4 / 3; border-radius: 20px; }
+  .controlIcon { width: 64px; height: 64px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bell { animation: none; }
+  .controlIcon { transition: none; }
+}
+
+.control:focus-visible {
+  outline: none;
+}
+
+.control:focus-visible .controlIcon {
+  box-shadow: inset 0 0 0 1px oklch(100% 0 0 / .14), 0 0 0 3px oklch(98% 0 0 / .85);
+}

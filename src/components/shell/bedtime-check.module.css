@@ -52,3 +52,9 @@
   justify-content: flex-end;
   gap: var(--space-2);
 }
+
+/* Phones: the hold button takes the full width on top, where the thumb is, with Cancel under it. */
+@media (max-width: 640px) {
+  .actions { flex-direction: column-reverse; align-items: stretch; }
+  .actions > * { width: 100%; }
+}

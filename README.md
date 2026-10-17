@@ -50,7 +50,7 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 
 ## What it does
 
-- **A dashboard you build.** It starts empty. Choose **Add tile** and pick what the tile is: a light, lock, garage door, camera, thermostat, doorbell, sensor, scene, weather, calendar, reminders, or a clock. Link it to a device straight away, or leave it as a placeholder ("Front door") and tap it later to link it. Tiles sit on square cells in sizes from 1×1 to 4×3; lights and fans have four templates: **Icon** (tap to switch), **Card** (name, room, status), **Slider** (a tall vertical brightness or speed control), and **Large** (details beside a slider). Choose **Edit** to drag, resize, relink, restyle, or remove tiles, or start from **Start with suggestions**. Filter by room.
+- **A dashboard you build.** It starts empty. Choose **Add tile** and pick what the tile is: a light, lock, garage door, camera, thermostat, doorbell, sensor, scene, weather, calendar, reminders, or a clock. Link it to a device straight away, or leave it as a placeholder ("Front door") and tap it later to link it. Tiles sit on square cells in sizes from 1×1 to 4×3; lights and fans have four templates: **Icon** (tap to switch), **Card** (name, room, status), **Slider** (a tall vertical brightness or speed control), and **Large** (details beside a slider). Locks and garage doors get a **Tall** card and a **Large** card with the state, a status dot, and one big button. Choose **Edit** to drag, resize, relink, restyle, or remove tiles, or start from **Start with suggestions**. Filter by room.
 - **Pages**: make pages such as Kitchen or Wall tablet, each with its own tiles. Swipe between them on a touch screen.
 - **Everyday widgets**: weather for any city (Open-Meteo, no key needed), Google Calendar or any iCal feed, reminders, a clock, and countdowns.
 - **Kitchen timers**: every screen counts down together. One timer fills its tile as a dial, up to four sit side by side in their own colours, presets such as "Eggs, 7 min" start in one tap, and "set a 10 minute timer for the pasta" works by voice without any AI key.
@@ -59,7 +59,8 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 - **Light colour**: colour and white temperature for lights that have them, from Home Assistant and Matter. Press and hold a light, or tap its swatch, for brightness, presets, and Arc's colour picker; lit tiles glow in the light's real colour.
 - **Home Assistant** and **Matter**: lights, switches, fans, thermostats, locks, garage doors, gates, blinds and shades, door and window sensors, motion and leak sensors, temperature, humidity, light level and battery readings, doorbells and buttons, cameras, and Home Assistant scenes, scripts, and buttons. Rooms come from your Home Assistant areas. Anything Hearth cannot show yet is listed under the connection in Settings.
 - **Scenes**: set your devices the way you want them, choose **New scene**, and Hearth saves their current state as one tap. Run scenes from their tile or ask the assistant.
-- **Doorbell**: a ring shows a banner on every open dashboard and, with alerts on, a notification on your phone.
+- **Doorbell**: a ring takes over every open screen: it flashes, plays the doorbell's camera, and offers **Listen** and **Talk** for two-way audio when the camera has a speaker. With alerts on, it also sends a notification to your phone, and Activity keeps a picture of each ring.
+- **Good night**: one hold locks the doors, closes the garage, turns off the lights, and arms the alarm, then lists what needs a look. Choose what it does, what it only checks, and what it never touches in Settings, under Good night.
 - **Search**: Cmd or Ctrl K finds any device, scene, page, or setting, and switches things straight from the search box.
 - **Automations**: when, only if, then rules: a time, sunrise or sunset, or a device changing (or staying changed for some minutes); only after dark, between times, or while another device is in a state; then control devices, run scenes, or send an alert. Ready-made ideas fill in from your own devices. Pause a rule with its switch, or snooze it for an hour, four hours, or until tomorrow.
 - **Activity and alerts**: what happened and who did it, from Hearth's own log and Home Assistant's logbook together, so changes made in the Home Assistant app or at a wall switch show too, even on Vercel. Web Push alerts for the doorbell, leaks and smoke, doors left open, jammed locks, timers, and doses.
@@ -97,7 +98,7 @@ Open http://localhost:3000, create an account, and choose **Open the demo home**
 | Garage doors, gates, blinds | `cover` | Window Covering | Open, close, stop, and a position slider for blinds; opening a garage, door, or gate asks first |
 | Door, window, motion, leak, smoke | `binary_sensor` | Boolean State, Occupancy | Reading |
 | Temperature, humidity, light, battery | `sensor` with a device class | Temperature, Humidity, Illuminance, Power Source | Reading; batteries start hidden |
-| Doorbells and buttons | `event` | Switch events | Last ring, and a banner on a new ring |
+| Doorbells and buttons | `event` | Switch events | Last ring, and a full-screen call on a new ring |
 | Cameras | `camera` (streamed through Home Assistant) | Recognised, not streamed | Live view |
 | Scenes and scripts | `scene`, `script`, `button` | | Run |
 

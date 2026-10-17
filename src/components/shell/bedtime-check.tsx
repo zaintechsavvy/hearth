@@ -1,59 +1,75 @@
 "use client";
 
-import { Check, TriangleAlert } from "lucide-react";
+import { Check, Moon, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSWRConfig } from "swr";
 import { Button } from "@/components/arc/button/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
+import { HoldToConfirm } from "@/components/arc/hold-to-confirm/hold-to-confirm";
 import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
+import { useHome } from "@/components/dashboard/use-home";
 import { glassSheetClass } from "@/components/glass/glass";
-import type { BedtimeResult } from "@/lib/bedtime";
+import { bedtimePlan, bedtimeSteps, type BedtimeResult } from "@/lib/bedtime";
+import { haptic } from "@/lib/haptics";
 import styles from "./bedtime-check.module.css";
 
 const BEDTIME_EVENT = "hearth-bedtime";
-/** Runs the bedtime check from anywhere: the wall tablet's clock and menu, or search. */
+/** Opens the good night check from anywhere: the wall tablet's clock and menu, or search. */
 export const startBedtime = () => window.dispatchEvent(new Event(BEDTIME_EVENT));
 
-type State = { kind: "idle" } | { kind: "running" } | { kind: "done"; result: BedtimeResult } | { kind: "error"; message: string };
+type State = { kind: "idle" } | { kind: "confirm" } | { kind: "running" } | { kind: "done"; result: BedtimeResult } | { kind: "error"; message: string };
 
-/** One tap for the night: locks, garage doors, lights, and the alarm, then a short list of anything that did not listen. */
+/**
+ * Good night: says what it is about to do and what needs a look, runs once held like opening a lock, then lists
+ * anything that did not listen. What it does is set in Settings.
+ */
 export function BedtimeCheck() {
   const { mutate } = useSWRConfig();
+  const { home } = useHome();
   const [state, setState] = useState<State>({ kind: "idle" });
+  const steps = home ? bedtimeSteps(home.devices, home.bedtime) : [];
+  const plan = bedtimePlan(steps);
+  const looks = steps.filter(step => !step.command);
 
   const run = async () => {
     setState({ kind: "running" });
     try {
       const response = await fetch("/api/bedtime", { method: "POST" });
       const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(body?.error ?? "Hearth could not run the bedtime check.");
-      setState({ kind: "done", result: body as BedtimeResult });
+      if (!response.ok) throw new Error(body?.error ?? "Hearth could not run the good night check.");
+      const result = body as BedtimeResult;
+      haptic(result.failed.length ? "press" : "success");
+      setState({ kind: "done", result });
       void mutate("/api/home");
     } catch (error) {
-      setState({ kind: "error", message: error instanceof Error ? error.message : "Hearth could not run the bedtime check." });
+      setState({ kind: "error", message: error instanceof Error ? error.message : "Hearth could not run the good night check." });
     }
   };
 
   useEffect(() => {
-    const onStart = () => void run();
+    const onStart = () => setState({ kind: "confirm" });
     window.addEventListener(BEDTIME_EVENT, onStart);
     return () => window.removeEventListener(BEDTIME_EVENT, onStart);
-  });
+  }, []);
 
   const result = state.kind === "done" ? state.result : null;
-  const title = state.kind === "running" ? "Getting the home ready for the night"
-    : state.kind === "error" ? "The bedtime check did not run"
-      : result && result.failed.length ? "Almost set for the night"
-        : result && result.done.length === 0 ? "Already set for the night" : "All set for the night";
+  const title = state.kind === "confirm" ? (plan ? "Good night?" : "Already set for the night")
+    : state.kind === "running" ? "Getting the home ready for the night"
+      : state.kind === "error" ? "The good night check did not run"
+        : result && result.failed.length ? "Almost set for the night"
+          : result && result.done.length === 0 ? "Already set for the night" : "All set for the night";
+  const description = state.kind === "confirm" ? plan ?? (looks.length ? "Nothing to lock, close, or turn off. A few things need a look." : "Everything is locked, closed, and off.")
+    : state.kind === "running" ? undefined : "Change what good night does in Settings, under Good night.";
+  const failed = state.kind === "confirm" ? looks.map(step => ({ name: step.name, why: step.skip ?? "" })) : result?.failed ?? [];
   return (
     <Dialog open={state.kind !== "idle"} onOpenChange={open => !open && setState({ kind: "idle" })}>
-      <DialogContent className={glassSheetClass} title={title} description={state.kind === "running" ? undefined : "Doors locked, garage closed, lights off, and the alarm on."}>
+      <DialogContent className={glassSheetClass} title={title} description={description}>
         <div className={styles.body}>
           {state.kind === "running" && <TextShimmer className={styles.working}>Locking up</TextShimmer>}
           {state.kind === "error" && <p className={styles.failed}>{state.message}</p>}
-          {result && result.failed.length > 0 && (
-            <ul className={styles.list} aria-label="What did not listen">
-              {result.failed.map(item => (
+          {failed.length > 0 && (
+            <ul className={styles.list} aria-label="What needs a look">
+              {failed.map(item => (
                 <li key={item.name} className={styles.row} data-failed>
                   <TriangleAlert size={16} strokeWidth={1.75} aria-hidden="true" />
                   <span><b>{item.name}</b> {item.why}</span>
@@ -72,7 +88,13 @@ export function BedtimeCheck() {
             </ul>
           )}
           {result && result.done.length === 0 && result.failed.length === 0 && <p className={styles.quiet}>Everything was already locked, closed, and off.</p>}
-          {state.kind !== "running" && (
+          {state.kind === "confirm" && (
+            <div className={styles.actions}>
+              <DialogClose asChild><Button variant="ghost">{plan ? "Cancel" : "Done"}</Button></DialogClose>
+              {plan && <HoldToConfirm label="Hold for good night" confirmedLabel="Good night" tone="neutral" duration={1000} icon={<Moon size={18} strokeWidth={1.75} />} onConfirm={() => void run()} autoFocus />}
+            </div>
+          )}
+          {state.kind !== "running" && state.kind !== "confirm" && (
             <div className={styles.actions}>
               {(state.kind === "error" || (result && result.failed.length > 0)) && <Button variant="ghost" onClick={() => void run()}>Try again</Button>}
               <DialogClose asChild><Button>Done</Button></DialogClose>

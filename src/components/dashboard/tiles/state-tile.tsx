@@ -244,11 +244,15 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
     );
   }
 
-  if ((device.kind === "lock" || device.kind === "cover") && config.size === "1x2" && command) {
+  if ((device.kind === "lock" || device.kind === "cover") && (config.size === "1x2" || config.size === "2x2") && command) {
+    const large = config.size === "2x2";
     return (
       <>
         <div className={`${glassClass("panel")} ${styles.tile} ${styles.tall}`} {...shared}>
-          <span className={styles.tallBadge}><span className={styles.icon} aria-hidden="true"><Icon size={26} strokeWidth={1.75} /></span></span>
+          <span className={styles.tallTop}>
+            <span className={styles.tallBadge}><span className={styles.icon} aria-hidden="true"><Icon size={large ? 30 : 26} strokeWidth={1.75} /></span></span>
+            {large && device.available && <span className={styles.statusDot} data-tone={active ? "warning" : "success"} aria-hidden="true" />}
+          </span>
           {fill}
           <span className={styles.tallText}>
             <span className={styles.tallState}>{error ? "Try again" : text}</span>

@@ -30,3 +30,9 @@
 @media (prefers-reduced-motion: reduce) {
   .fill { transition: none; }
 }
+
+/* A light's level fills in the same warm colour as a lit light tile. */
+:global([data-kind="light"]) .fill {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--tile-color) 58%, oklch(99% .03 95)), color-mix(in oklab, var(--tile-color) 80%, oklch(90% .06 88)));
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .6);
+}

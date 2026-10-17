@@ -1,6 +1,6 @@
 "use client";
 
-import { Clapperboard, House, LayoutGrid, Plus, Sparkles, Sun, Video } from "lucide-react";
+import { Clapperboard, House, LayoutGrid, Plus, QrCode, Sparkles, Sun, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Alert } from "@/components/arc/alert/alert";
@@ -27,7 +27,6 @@ import { kindLabel, statusText } from "@/lib/devices/status";
 import { isSwitchableKind, type Device, type DeviceKind, type ThermostatDevice } from "@/lib/devices/types";
 import { sceneTileId, type HearthScene } from "@/lib/scenes/types";
 import { CameraTile } from "./camera-tile";
-import { DoorbellBanner } from "./doorbell-banner";
 import type { Candidate } from "./entity-chooser";
 import { HomeGrid } from "./home-grid";
 import { IntegrationCameraTile } from "./integration-camera-tile";
@@ -65,6 +64,7 @@ import { PlantsTile } from "./household/plants-tile";
 import { PackagesTile } from "./household/packages-tile";
 import { TimersTile } from "./household/timers-tile";
 import { WidgetEditor, isHousehold, ITEM_KIND_FOR, type WidgetEditorState } from "./household/widget-editor";
+import { WifiShare } from "./household/wifi-share";
 import { WifiTile } from "./household/wifi-tile";
 import { itemsOf } from "@/lib/widgets/items";
 import styles from "./dashboard.module.css";
@@ -89,10 +89,10 @@ type Linked =
   | { type: "camera"; camera: HomeCamera }
   | { type: "scene"; scene: HearthScene };
 
-function greeting(hour: number | null, name: string) {
-  const first = name.split(" ")[0];
-  if (hour === null) return `Welcome home, ${first}`;
-  return `${hour < 5 ? "Good evening" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"}, ${first}`;
+/** The wall tablet is shared by the household, so it drops the name and keeps only the greeting. */
+function Greeting({ hour, name }: { hour: number | null; name: string }) {
+  const words = hour === null ? "Welcome home" : hour < 5 ? "Good evening" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  return <>{words}<span data-wall-hide>, {name.split(" ")[0]}</span></>;
 }
 
 function summarize(devices: Device[]) {
@@ -114,6 +114,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const [controlling, setControlling] = useState<string | null>(null);
   const [managing, setManaging] = useState<WidgetEditorState | null>(null);
   const [charting, setCharting] = useState<string | null>(null);
+  const [sharing, setSharing] = useState<string | null | undefined>(undefined);
   const [room, setRoom] = useState(ALL_ROOMS);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const latest = useRef<TileConfig[] | null>(null);
@@ -216,7 +217,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
 
   const fitSize = (tile: TileConfig, kind: TileKind, source: TileSource | undefined) => {
     const allowed = SIZE_OPTIONS[kind].some(option => option.size === tile.size);
-    const needsLevel = LEVEL_SIZES.has(tile.size) && SIZE_OPTIONS[kind].length > 2;
+    const needsLevel = LEVEL_SIZES.has(tile.size) && (kind === "light" || kind === "fan");
     return allowed && !(needsLevel && !source?.adjustable) ? tile.size : defaultSize(kind, source?.adjustable);
   };
 
@@ -308,7 +309,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       case "notes":
         return <NotesTile tile={tile} items={itemsOf(home.widgets, "note")} interactive={interactive} author={userName.split(" ")[0]} onManage={() => setManaging({ kind: "notes", tile })} />;
       case "wifi":
-        return <WifiTile tile={tile} items={itemsOf(home.widgets, "wifi")} interactive={interactive} onManage={itemId => setManaging({ kind: "wifi", tile, itemId })} />;
+        return <WifiTile tile={tile} items={itemsOf(home.widgets, "wifi")} interactive={interactive} onManage={itemId => setManaging({ kind: "wifi", tile, itemId })} onShare={setSharing} />;
       case "timers":
         return <TimersTile tile={tile} items={itemsOf(home.widgets, "timer")} interactive={interactive} onManage={() => setManaging({ kind: "timers", tile })} />;
       case "plants":
@@ -367,6 +368,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       />
       <WidgetEditor state={managing} items={home.widgets} onOpenChange={open => !open && setManaging(null)}
         onLink={(tileId, itemId) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, itemId } } : tile))} />
+      <WifiShare items={itemsOf(home.widgets, "wifi")} itemId={sharing} onOpenChange={open => !open && setSharing(undefined)} />
       <HistorySheet device={chartedDevice} onOpenChange={open => !open && setCharting(null)} />
       <LightControls device={controlledLight} onOpenChange={open => !open && setControlling(null)} onCommand={send} />
       <SceneEditor open={sceneEditing !== null} onOpenChange={open => !open && setSceneEditing(null)} devices={home.devices} scene={sceneEditing === "new" ? null : sceneEditing} onSaved={() => refresh()} />
@@ -424,7 +426,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     <div className={styles.dashboard}>
       <header className={styles.intro} data-on-wall>
         <div>
-          <h1 className={styles.title}>{greeting(hour, userName)}</h1>
+          <h1 className={styles.title}><Greeting hour={hour} name={userName} /></h1>
           <p className={styles.summary}>
             {summarize(home.devices)}
             <span className={styles.live} data-live={live || undefined} title={live ? "Updates arrive as they happen" : "Connecting to live updates"}>{live ? "Live" : "Connecting"}</span>
@@ -439,6 +441,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
           ) : (
             <>
               {canEdit && <Button variant="ghost" className={styles.toolButton} aria-label="New scene" onClick={() => setSceneEditing("new")}><Clapperboard size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.toolLabel}>New scene</span></Button>}
+              {itemsOf(home.widgets, "wifi").length > 0 && <Button variant="ghost" className={styles.toolButton} aria-label="Show the Wi-Fi QR code" onClick={() => setSharing(null)}><QrCode size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.toolLabel}>Wi-Fi</span></Button>}
               {canEdit && <Button variant="ghost" className={styles.toolButton} aria-label="Add tile" onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.toolLabel}>Add tile</span></Button>}
               {canEdit && tiles.length > 0 && <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
             </>
@@ -451,8 +454,6 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       {linkedRooms.length > 1 && !editing && (
         <SegmentedControl label="Room" className={styles.rooms} value={filtering ? room : ALL_ROOMS} onValueChange={setRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} />
       )}
-
-      <DoorbellBanner devices={home.devices} />
 
       {failing.map(integration => (
         <Alert key={integration.id} tone="warning" title={`${integration.name} is not responding`}>{integration.error ?? ""}</Alert>

@@ -5,6 +5,7 @@ import type { DashboardPage, SavedTile, TileColor, TileIcon } from "@/lib/dashbo
 import type { ItemKind } from "@/lib/widgets/items";
 import { DEFAULT_ALERTS, type ActivityCategory, type AlertSettings } from "@/lib/activity-types";
 import { DEFAULT_SECURITY, type SecuritySettings } from "@/lib/security-types";
+import { DEFAULT_BEDTIME, type BedtimeSettings } from "@/lib/bedtime";
 import type { Action, Condition, HomeLocation, Trigger } from "@/lib/automations/types";
 import type { SceneAction } from "@/lib/scenes/types";
 
@@ -96,6 +97,8 @@ export const preference = pgTable("preference", {
   rooms: jsonb("rooms").$type<string[]>().notNull().default([]),
   /** How opening the home is confirmed, with the hashed PIN when there is one. */
   security: jsonb("security").$type<SecuritySettings>().notNull().default(DEFAULT_SECURITY),
+  /** What the good night check does. */
+  bedtime: jsonb("bedtime").$type<BedtimeSettings>().notNull().default(DEFAULT_BEDTIME),
   updatedAt: updatedAt(),
 });
 

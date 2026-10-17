@@ -201,7 +201,7 @@ export function HoldToConfirm({ label, confirmedLabel = "Done", onConfirm, durat
         <Face icon={icon} text={text} done={done} width={width} reduced={reduced} />
       </motion.span>
     </motion.button>
-    <span id={hintId} className={styles.srOnly}>{`Press and hold for ${seconds} seconds to confirm. With a keyboard, hold Space or Enter.`}</span>
+    <span id={hintId} className={styles.srOnly}>{`Press and hold for ${seconds} ${duration === 1000 ? "second" : "seconds"} to confirm. With a keyboard, hold Space or Enter.`}</span>
     <span className={styles.srOnly} role="status">{done ? confirmedLabel : ""}</span>
   </>;
 }

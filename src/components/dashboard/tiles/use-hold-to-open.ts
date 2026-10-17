@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { haptic } from "@/lib/haptics";
 
 export const HOLD_MS = 1000;
 /** A press shorter than this is a tap, which explains how to open instead of opening. */
@@ -33,12 +34,13 @@ export function useHoldToOpen(enabled: boolean, onOpen: () => void) {
     started.current = Date.now();
     setHint(false);
     setHolding(true);
+    haptic("tap");
     timer.current = setTimeout(() => {
       timer.current = undefined;
       setHolding(false);
       opened.current = Date.now();
-      navigator.vibrate?.(30);
       latest.current();
+      haptic("success");
     }, HOLD_MS);
   };
   const stop = () => {

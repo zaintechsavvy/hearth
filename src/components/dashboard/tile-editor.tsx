@@ -3,7 +3,7 @@
 import { Link2, MapPin, Plus, X } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/arc/button/button";
 import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
@@ -81,6 +81,7 @@ interface Preview {
 function sizeNote(kind: TileKind, size: TileSize) {
   if (size === "1x1") return kind === "lock" ? "Tap to lock or unlock" : kind === "cover" ? "Tap to open or close" : kind === "scene" ? "Tap to run" : kind === "sensor" || kind === "binary_sensor" || kind === "event" ? "Just the reading" : SIZE_NOTES["1x1"];
   if (size === "1x2" && kind !== "light" && kind !== "fan") return kind === "lock" || kind === "cover" ? "One big button" : "A tall card";
+  if (size === "2x2" && (kind === "lock" || kind === "cover")) return "State, name, and a button";
   return SIZE_NOTES[size];
 }
 
@@ -106,8 +107,8 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
   const [preview, setPreview] = useState<Preview>({});
   const styled = tile && tile.icon !== null;
   const options = tile ? SIZE_OPTIONS[tile.kind] : [];
-  // Sliders need a level; a cover without one still gets the tall card, so only its large slider template is blocked.
-  const blocked = (size: TileSize) => !tile?.adjustable && (tile?.kind === "light" || tile?.kind === "fan" ? size === "1x2" || size === "2x2" : tile?.kind === "cover" && size === "2x2");
+  // Sliders need a level; a cover without one gets the tall and large cards instead.
+  const blocked = (size: TileSize) => !tile?.adjustable && (tile?.kind === "light" || tile?.kind === "fan") && (size === "1x2" || size === "2x2");
   const shown: TileConfig | null = tile && {
     ...tile.config,
     size: preview.size ?? tile.config.size,
@@ -378,7 +379,7 @@ function TilePreview({ config, label, children }: { config: TileConfig; label: s
   const height = rows * CELL + (rows - 1) * GAP;
   const scale = Math.min(1, STAGE_WIDTH / width, STAGE_HEIGHT / height);
   return (
-    <figure className={styles.stage} style={{ minHeight: STAGE_HEIGHT + 56 }} aria-label={`${label} tile, ${config.size.replace("x", " by ")}`}>
+    <figure className={styles.stage} style={{ "--stage-height": `${STAGE_HEIGHT + 56}px` } as CSSProperties} aria-label={`${label} tile, ${config.size.replace("x", " by ")}`}>
       <motion.div className={styles.frame} animate={{ width: width * scale, height: height * scale }} initial={false} transition={reduce ? { duration: 0 } : motionTokens.spring.smooth}>
         <div className={styles.scaled} style={{ width, height, transform: `scale(${scale})` }} inert>{children}</div>
       </motion.div>

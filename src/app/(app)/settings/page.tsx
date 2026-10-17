@@ -4,6 +4,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { AccountSection } from "@/components/connections/account-section";
 import { AlertsSection } from "@/components/connections/alerts-section";
 import { AppearanceSection } from "@/components/connections/appearance-section";
+import { BedtimeSection } from "@/components/connections/bedtime-section";
 import { HouseholdSection } from "@/components/connections/household-section";
 import { AssistantsSection } from "@/components/connections/assistants-section";
 import { CalendarsSection } from "@/components/connections/calendars-section";
@@ -62,6 +63,7 @@ export default async function ConnectionsPage() {
         { id: "rooms", label: "Rooms" },
         { id: "alerts", label: "Alerts" },
         { id: "security", label: "Doors and alarm" },
+        { id: "bedtime", label: "Good night" },
         ...(owner ? [{ id: "assistants", label: "Assistants" }, { id: "cameras", label: "Cameras" }] : []),
         { id: "calendars", label: "Calendars" },
         { id: "appearance", label: "Appearance" },
@@ -73,6 +75,7 @@ export default async function ConnectionsPage() {
       <RoomsSection />
       <AlertsSection alerts={preferences.alerts} />
       <SecuritySection method={preferences.security.method} hasPin={Boolean(preferences.security.hash)} owner={owner} />
+      <BedtimeSection owner={owner} />
       {owner && <AssistantsSection assistants={assistants} />}
       {owner && <CamerasSection cameras={cameras.map(row => ({ id: row.id, name: row.name, host: hostOf(unseal<CameraSource>(row.source).url) }))} relayUrl={relayUrl}
         homeAssistants={integrations.filter(row => row.kind === "home-assistant").map(row => ({ id: row.id, name: row.name }))} />}

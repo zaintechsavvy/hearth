@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Device } from "@/lib/devices/types";
-import { bedtimeSteps } from "./bedtime";
+import { bedtimePlan, bedtimeSteps, DEFAULT_BEDTIME } from "./bedtime";
 import { isDark, openThings } from "./left-open";
 import { cameraFor } from "./ring-camera";
 
@@ -17,10 +17,24 @@ const devices: Device[] = [
 ];
 
 describe("bedtimeSteps", () => {
-  it("locks, closes the garage, turns lights off, and arms for the night, leaving what is already set", () => {
-    expect(bedtimeSteps(devices).map(step => [step.name, step.done])).toEqual([
-      ["Front door", "locked"], ["Garage door", "closed"], ["Porch", "turned off"], ["Alarm", "armed for the night"],
+  it("locks, closes the garage, turns lights off, arms for the night, and reports open windows", () => {
+    expect(bedtimeSteps(devices).map(step => [step.name, step.done || step.skip])).toEqual([
+      ["Front door", "locked"], ["Garage door", "closed"], ["Porch", "turned off"], ["Alarm", "armed for the night"], ["Kitchen window", "is open"],
     ]);
+  });
+
+  it("only reports what is set to be checked, and leaves kept devices out", () => {
+    const steps = bedtimeSteps(devices, { ...DEFAULT_BEDTIME, locks: "check", lights: "skip", alarm: "skip", keep: ["ha:cover.garage"], turnOn: ["ha:light.porch"] });
+    expect(steps.map(step => [step.name, step.command ? step.done : step.skip])).toEqual([["Front door", "is unlocked"], ["Kitchen window", "is open"]]);
+  });
+
+  it("turns on what is chosen for the night instead of off", () => {
+    const off = { ...devices[4], on: false } as Device;
+    expect(bedtimeSteps([off], { ...DEFAULT_BEDTIME, turnOn: [off.id] })[0]).toMatchObject({ done: "turned on", command: { type: "power", on: true } });
+  });
+
+  it("sums up the plan in a sentence", () => {
+    expect(bedtimePlan(bedtimeSteps(devices))).toBe("Lock Front door, close Garage door, turn off Porch, and arm the alarm.");
   });
 
   it("skips an alarm that needs its code to arm", () => {

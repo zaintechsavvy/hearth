@@ -10,8 +10,9 @@ export async function POST() {
   const home = await getHome();
   if (!home) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   if (home.role === "guest") return NextResponse.json({ error: "Guests cannot do this." }, { status: 403 });
-  const steps = bedtimeSteps((await loadHome(home.homeId)).devices);
-  const by = `${home.user.name}'s bedtime check`;
+  const snapshot = await loadHome(home.homeId);
+  const steps = bedtimeSteps(snapshot.devices, snapshot.bedtime);
+  const by = `${home.user.name}'s good night check`;
   const outcomes = await Promise.all(steps.map(async step => {
     if (!step.command) return { step, error: step.skip ?? "was skipped" };
     try {

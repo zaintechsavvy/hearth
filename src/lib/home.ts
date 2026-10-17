@@ -15,6 +15,7 @@ import { DEFAULT_ALERTS } from "@/lib/activity-types";
 import { DEFAULT_SECURITY, type OpenMethod } from "@/lib/security-types";
 import { isServerless } from "@/lib/setup-check";
 import { sunTimes } from "@/lib/automations/sun";
+import { DEFAULT_BEDTIME, type BedtimeSettings } from "@/lib/bedtime";
 
 export interface IntegrationStatus {
   id: string;
@@ -49,6 +50,8 @@ export interface HomeSnapshot {
   openMethod: OpenMethod;
   /** Today's sunrise and sunset at the home's location, when it is set. */
   sun: { sunrise: string; sunset: string } | null;
+  /** What the good night check does here. */
+  bedtime: BedtimeSettings;
 }
 
 type Override = { name: string | null; room: string | null; kind?: SwitchableKind | null };
@@ -100,7 +103,7 @@ export async function getPreferences(userId: string) {
   const row = await db.query.preference.findFirst({ where: eq(preference.userId, userId) });
   const layout = row?.layout ?? [];
   const pages: DashboardPage[] = row?.pages.length ? row.pages : [{ id: HOME_PAGE_ID, name: "Home", layout }];
-  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [], alerts: { ...DEFAULT_ALERTS, ...row?.alerts }, location: row?.location ?? null, security: row?.security ?? DEFAULT_SECURITY };
+  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [], alerts: { ...DEFAULT_ALERTS, ...row?.alerts }, location: row?.location ?? null, security: row?.security ?? DEFAULT_SECURITY, bedtime: { ...DEFAULT_BEDTIME, ...row?.bedtime } };
 }
 
 export async function loadHome(userId: string): Promise<HomeSnapshot> {
@@ -135,7 +138,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
   const pages = preferences.pages.map(page => ({ ...page, layout: withoutOrphanTiles(page.layout, connected) }));
   const times = preferences.location ? sunTimes(new Date(), preferences.location.latitude, preferences.location.longitude) : null;
   const sun = times ? { sunrise: times.sunrise.toISOString(), sunset: times.sunset.toISOString() } : null;
-  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, sun };
+  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, sun, bedtime: preferences.bedtime };
 }
 
 /** Sends a device a command. `by` says who, for the activity log: a person, the assistant, a scene, or an automation. */

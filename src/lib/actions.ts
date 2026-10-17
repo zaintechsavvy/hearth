@@ -64,26 +64,26 @@ export async function addIntegration(input: unknown): Promise<CreatedResult> {
     const row = { id, userId, kind: config.kind, name: name || INTEGRATION_LABELS[config.kind], config: seal(config satisfies IntegrationConfig), createdAt: new Date() };
     await createProvider(row).check();
     await db.insert(integration).values(row);
+    if (config.kind === "demo") await placeDemoTiles(userId, id);
     revalidatePath("/", "layout");
     return OK;
   });
   return result.ok ? { ok: true, id } : result;
 }
 
-/** The demo home also fills an empty dashboard, so there is something to try straight away. */
+/** A demo home arrives with its devices already on the first page, after whatever is there, so there is something to try straight away. */
+async function placeDemoTiles(userId: string, integrationId: string) {
+  const home = await loadHome(userId);
+  const placed = new Set(home.layout.map(tile => tile.kind === undefined ? tile.id : tile.link));
+  const fresh = suggestedTiles(tileSources(home).filter(source => source.id.startsWith(`${integrationId}:`) && !placed.has(source.id)));
+  if (!fresh.length) return;
+  const layout = [...(home.layout.length ? home.layout : [createTile("clock")]), ...fresh];
+  await savePreferences(userId, { layout, pages: home.pages.map((page, index) => index === 0 ? { ...page, layout } : page) });
+}
+
 export async function addDemoHome(): Promise<ActionResult> {
-  const denied = await ownerOnly();
-  if (denied) return denied;
   const result = await addIntegration({ kind: "demo", name: "Demo home" });
-  if (!result.ok) return result;
-  return authed(async userId => {
-    const home = await loadHome(userId);
-    if (home.layout.length === 0) {
-      const layout = [createTile("clock"), ...suggestedTiles(tileSources(home))];
-      await savePreferences(userId, { layout, pages: home.pages.map((page, index) => index === 0 ? { ...page, layout } : page) });
-    }
-    return OK;
-  });
+  return result.ok ? OK : result;
 }
 
 export async function removeIntegration(id: string): Promise<ActionResult> {
@@ -569,6 +569,30 @@ export async function saveHomeLocation(input: unknown): Promise<ActionResult> {
 }
 
 /** Chooses how opening the home is confirmed. Switching to a PIN, or changing it, needs the new PIN. */
+const bedtimeChoice = z.enum(["do", "check", "skip"]);
+const bedtimeInput = z.object({
+  locks: bedtimeChoice,
+  doors: bedtimeChoice,
+  lights: z.enum(["do", "skip"]),
+  alarm: bedtimeChoice,
+  openings: z.enum(["check", "skip"]),
+  turnOn: z.array(z.string().max(300)).max(100),
+  turnOff: z.array(z.string().max(300)).max(100),
+  keep: z.array(z.string().max(300)).max(200),
+});
+
+/** What the good night check does, for the whole household. */
+export async function saveBedtime(input: unknown): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
+  const parsed = bedtimeInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  return authed(async userId => {
+    await savePreferences(userId, { bedtime: parsed.data });
+    return OK;
+  });
+}
+
 export async function setOpenMethod(method: unknown, pin?: string): Promise<ActionResult> {
   const denied = await ownerOnly();
   if (denied) return denied;

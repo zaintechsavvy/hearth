@@ -49,7 +49,9 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
   const spin = device.kind === "fan" && device.on && SPINNING_ICONS.has(config.icon ?? style.icon) ? { "--spin-duration": `${Math.max(0.5, 3 - device.speed / 100 * 2.4)}s` } as CSSProperties : undefined;
   const controls = device.kind === "light" && hasControls(device) && interactive && device.available ? onOpenControls : undefined;
   const press = useLongPress(onHold === undefined ? controls : onHold ?? undefined);
-  const tint = device.kind === "light" ? lightTint(device) : null;
+  const swatchTint = device.kind === "light" ? lightTint(device) : null;
+  // A white light glows warm yellow; only a coloured one takes its colour onto the tile.
+  const tint = device.kind === "light" && device.colorMode === "color" ? swatchTint : null;
   const colorable = device.kind === "light" && (device.supportsColor || device.temperatureRange !== null);
 
   const run = (command: DeviceCommand) => {
@@ -64,11 +66,11 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
       <Icon size={size} strokeWidth={1.75} />
     </span>
   );
-  const shared = { "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-tinted": tint ? "" : undefined, "data-glow": config.options?.glow || undefined, style: tint ? { "--tile-color": tint } as CSSProperties : undefined };
+  const shared = { "data-kind": device.kind, "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-tinted": tint ? "" : undefined, "data-glow": config.options?.glow || undefined, style: tint ? { "--tile-color": tint } as CSSProperties : undefined };
   const detail = [device.room, config.options?.hideStatus ? null : describeDevice(device)].filter(Boolean).join(" · ");
   const swatch = controls && colorable && (
     <button type="button" className={`${styles.swatch} ${glassClass("pill")}`} onClick={controls} aria-label={`Colour and brightness for ${device.name}`} title="Colour and brightness">
-      <span className={styles.swatchDot} style={tint ? { "--swatch": tint } as CSSProperties : undefined} aria-hidden="true" />
+      <span className={styles.swatchDot} style={swatchTint ? { "--swatch": swatchTint } as CSSProperties : undefined} aria-hidden="true" />
     </button>
   );
 

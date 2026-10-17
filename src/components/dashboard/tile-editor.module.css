@@ -16,9 +16,16 @@
   min-width: 0;
 }
 
+/* Stacked, the preview scrolls away with the options instead of floating over them. */
 @media (max-width: 760px) {
   .body {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stage.stage {
+    position: relative;
+    min-height: 0;
+    padding-block: var(--space-5) var(--space-3);
   }
 }
 
@@ -99,6 +106,7 @@
 .stage {
   position: sticky;
   top: 0;
+  min-height: var(--stage-height);
   z-index: 1;
   display: grid;
   place-items: center;

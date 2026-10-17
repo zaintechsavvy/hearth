@@ -75,12 +75,17 @@ async function* lines(response: Response) {
   }
 }
 
+/** A call that also carries sound both ways: the camera's microphone in, and the sender `onTalk` gets for ours, when the camera can play it. */
+interface TwoWay {
+  onTalk: (sender: RTCRtpSender | null) => void;
+}
+
 /**
- * A receive-only call through Hearth to the integration, using the ICE servers it recommends. The call lives inside
- * one streaming request; when the server asks to renew it (serverless hosts cap how long a request runs) or the
- * request ends, `onRenew` starts a fresh call. Resolves at the first painted frame.
+ * A call through Hearth to the integration, using the ICE servers it recommends: receive-only, or with sound both ways
+ * when `twoWay` is given. The call lives inside one streaming request; when the server asks to renew it (serverless
+ * hosts cap how long a request runs) or the request ends, `onRenew` starts a fresh call. Resolves at the first painted frame.
  */
-async function playWebRtc(base: string, video: HTMLVideoElement, signal: AbortSignal, cleanups: (() => void)[], onDrop: () => void, onRenew: () => void) {
+async function playWebRtc(base: string, video: HTMLVideoElement, signal: AbortSignal, cleanups: (() => void)[], onDrop: () => void, onRenew: () => void, twoWay?: TwoWay) {
   const config = await fetch(`${base}/webrtc`, { signal });
   if (!config.ok) throw new Error(await readError(config, "Home Assistant did not answer"));
   const { supported, iceServers } = await config.json() as { supported: boolean; iceServers: IceServer[] };
@@ -89,11 +94,14 @@ async function playWebRtc(base: string, video: HTMLVideoElement, signal: AbortSi
   const call = new AbortController();
   const hangUp = () => call.abort();
   signal.addEventListener("abort", hangUp, { once: true });
-  cleanups.push(() => { hangUp(); peer.close(); });
+  cleanups.push(() => { hangUp(); peer.close(); twoWay?.onTalk(null); });
   peer.addTransceiver("video", { direction: "recvonly" });
-  peer.addTransceiver("audio", { direction: "recvonly" });
+  const audio = peer.addTransceiver("audio", { direction: twoWay ? "sendrecv" : "recvonly" });
+  const media = new MediaStream();
   peer.addEventListener("track", event => {
-    if (event.track.kind === "video") video.srcObject = new MediaStream([event.track]);
+    if (event.track.kind === "audio" && !twoWay) return;
+    media.addTrack(event.track);
+    video.srcObject = media;
   });
   await peer.setLocalDescription(await peer.createOffer());
   await iceGathered(peer);
@@ -106,6 +114,7 @@ async function playWebRtc(base: string, video: HTMLVideoElement, signal: AbortSi
   const candidates = first.value.candidates ?? [];
   await peer.setRemoteDescription({ type: "answer", sdp: answer });
   for (const candidate of candidates) await peer.addIceCandidate(candidate).catch(() => {});
+  twoWay?.onTalk(audio.currentDirection === "sendrecv" || audio.currentDirection === "sendonly" ? audio.sender : null);
   let playing = false;
   void (async () => {
     try {
@@ -178,12 +187,18 @@ async function playHls(base: string, video: HTMLVideoElement, signal: AbortSigna
   await Promise.race([firstFrame(video, signal), fatal, timeout(HLS_FRAME_MS, signal, "no picture arrived in 30 seconds")]);
 }
 
+interface IntegrationCameraTileProps {
+  camera: CameraDevice;
+  /** For a doorbell call: plays the camera's sound while true, and reports the sender for talking back. */
+  call?: { listen: boolean; onTalk: (sender: RTCRtpSender | null) => void };
+}
+
 /**
  * A camera an integration relays, such as any Home Assistant camera. Tries WebRTC the way Home Assistant's own app
  * does, then HLS relayed through Hearth, then MJPEG, and only then shows the last picture, saying why.
  * "Live" appears once a frame has actually been painted.
  */
-export function IntegrationCameraTile({ camera }: { camera: CameraDevice }) {
+export function IntegrationCameraTile({ camera, call }: IntegrationCameraTileProps) {
   const frame = useRef<HTMLElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const [view, setView] = useState<View>(camera.streamable ? { kind: "connecting", stage: "webrtc" } : { kind: "offline" });
@@ -196,6 +211,14 @@ export function IntegrationCameraTile({ camera }: { camera: CameraDevice }) {
   const pictureFailures = useRef(0);
   const base = `/api/devices/${encodeURIComponent(camera.id)}/camera`;
   const stage = view.kind === "connecting" || view.kind === "live" ? view.stage : null;
+  const twoWay = call !== undefined;
+  const onTalk = useRef(call?.onTalk);
+  useEffect(() => { onTalk.current = call?.onTalk; });
+  const listen = call?.listen ?? false;
+
+  useEffect(() => {
+    if (video.current) video.current.muted = !listen;
+  }, [listen]);
 
   useEffect(() => {
     const element = video.current;
@@ -220,10 +243,11 @@ export function IntegrationCameraTile({ camera }: { camera: CameraDevice }) {
     };
     const run = async () => {
       const failures: string[] = [];
+      const talk = twoWay ? { onTalk: (sender: RTCRtpSender | null) => onTalk.current?.(sender) } : undefined;
       for (const [next, play] of [["webrtc", playWebRtc], ["hls", playHls]] as const) {
         if (next === "hls") setView({ kind: "connecting", stage: "hls" });
         try {
-          await play(base, element, controller.signal, cleanups, onDrop, onRenew);
+          await play(base, element, controller.signal, cleanups, onDrop, onRenew, talk);
           if (controller.signal.aborted) return;
           setHeld(null);
           setNotes(failures);
@@ -244,7 +268,7 @@ export function IntegrationCameraTile({ camera }: { camera: CameraDevice }) {
       controller.abort();
       reset();
     };
-  }, [base, camera.name, camera.streamable, attempt]);
+  }, [base, camera.name, camera.streamable, attempt, twoWay]);
 
   useEffect(() => {
     if (view.kind !== "connecting" || view.stage !== "mjpeg") return;

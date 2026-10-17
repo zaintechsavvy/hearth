@@ -17,11 +17,21 @@
   --font-heading: var(--font-display);
 }
 
-html {
-  color-scheme: light;
+/*
+ * "only light" keeps Samsung Internet's and Chrome's automatic dark mode from repainting the light theme into a
+ * murky dark one; plain "light" does not stop them. Samsung also looks for a dark media query, so it is answered there too.
+ */
+:root:not([data-theme="dark"]) {
+  color-scheme: only light;
 }
 
-html[data-theme="dark"] {
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: only light;
+  }
+}
+
+:root[data-theme="dark"] {
   color-scheme: dark;
 }
 
@@ -87,8 +97,19 @@ body {
 }
 
 :root[data-wall] main {
+  padding-top: calc(max(var(--space-6), env(safe-area-inset-top)) + var(--space-8));
+  padding-inline: max(clamp(16px, 4vw, 32px), calc(env(safe-area-inset-left) + var(--space-3))) max(clamp(16px, 4vw, 32px), calc(env(safe-area-inset-right) + var(--space-3)));
   translate: var(--wall-shift-x, 0) var(--wall-shift-y, 0);
   transition: translate 2s ease;
+}
+
+/* A held button never selects its words or opens the long-press callout on a phone. */
+button,
+[role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* iOS zooms the page into any field set smaller than 16px; touch screens get 16px so tapping a field keeps the layout still. */

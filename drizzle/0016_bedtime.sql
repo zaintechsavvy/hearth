@@ -1,0 +1,1 @@
+ALTER TABLE "preference" ADD COLUMN "bedtime" jsonb DEFAULT '{"locks":"do","doors":"do","lights":"do","alarm":"do","openings":"check","turnOn":[],"turnOff":[],"keep":[]}'::jsonb NOT NULL;

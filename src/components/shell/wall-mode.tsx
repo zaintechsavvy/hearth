@@ -3,13 +3,14 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CalendarDays, DoorOpen, Leaf, Moon, MoreHorizontal, Package, Pill, Recycle, Thermometer } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import useSWR from "swr";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
 import { useHome } from "@/components/dashboard/use-home";
 import { useTick } from "@/components/dashboard/household/use-tick";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
+import { WAKE_EVENT } from "@/components/dashboard/doorbell-call";
 import { startBedtime } from "@/components/shell/bedtime-check";
 import { LeftOpenBanner, leftOpenWords, useLeftOpen, type LeftOpen } from "@/components/shell/left-open";
 import { useStoredJson } from "@/components/shell/use-stored-json";
@@ -49,12 +50,14 @@ const PAGES = [{ href: "/dashboard", label: "Home" }, { href: "/activity", label
 
 function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => void }) {
   const path = usePathname();
+  const router = useRouter();
   const reduce = useReducedMotion();
   const { home, send } = useHome();
   const now = useTick(1000) ?? 0;
   const [resting, setResting] = useState(false);
   const [menu, setMenu] = useState(false);
   const lastActive = useRef(0);
+  const wasResting = useRef(false);
   const sensorState = useRef<Map<string, boolean>>(new Map());
   const night = now > 0 && isNight(settings, new Date(now));
   const dark = now > 0 && isDark(new Date(now), home?.sun ?? null, night);
@@ -67,7 +70,11 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
       setResting(false);
     };
     for (const type of ACTIVITY) window.addEventListener(type, wake, { passive: true });
-    return () => { for (const type of ACTIVITY) window.removeEventListener(type, wake); };
+    window.addEventListener(WAKE_EVENT, wake);
+    return () => {
+      for (const type of ACTIVITY) window.removeEventListener(type, wake);
+      window.removeEventListener(WAKE_EVENT, wake);
+    };
   }, []);
 
   useEffect(() => {
@@ -86,6 +93,12 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
       }
     }
   }, [home?.devices, settings.wakeSensors]);
+
+  // Waking always lands on Home, so a tablet left on Settings greets the next person with the dashboard.
+  useEffect(() => {
+    if (wasResting.current && !resting && !path.startsWith("/dashboard")) router.replace("/dashboard");
+    wasResting.current = resting;
+  }, [resting, path, router]);
 
   useEffect(() => {
     if (!settings.keepAwake || !("wakeLock" in navigator)) return;
@@ -148,7 +161,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           </nav>
           <span className={styles.menuDivider} aria-hidden="true" />
           <Link href="/settings#wall" className={styles.menuItem} onClick={() => setMenu(false)}>Wall tablet settings</Link>
-          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night check</button>
+          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night</button>
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); }}>Rest the screen now</button>
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.documentElement.requestFullscreen?.().catch(() => {}); }}>Full screen</button>
           <span className={styles.menuDivider} aria-hidden="true" />

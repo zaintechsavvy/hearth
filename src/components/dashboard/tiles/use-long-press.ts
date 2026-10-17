@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type MouseEvent, type PointerEvent } from "react";
+import { haptic } from "@/lib/haptics";
 
 const HOLD_MS = 450;
 const SLOP_PX = 8;
@@ -25,7 +26,7 @@ export function useLongPress(onLongPress: (() => void) | undefined) {
       start.current = { x: event.clientX, y: event.clientY };
       timer.current = setTimeout(() => {
         fired.current = true;
-        navigator.vibrate?.(10);
+        haptic("press");
         onLongPress();
       }, HOLD_MS);
     },

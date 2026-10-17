@@ -1,4 +1,5 @@
 import { AssistantDock } from "@/components/assistant/assistant-dock";
+import { DoorbellCall } from "@/components/dashboard/doorbell-call";
 import { HouseholdAlerts } from "@/components/dashboard/household/household-alerts";
 import { Wallpaper } from "@/components/glass/wallpaper";
 import { AppHeader } from "@/components/shell/app-header";
@@ -23,6 +24,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <WallMode />
       <HouseholdAlerts />
       {home.role !== "guest" && <BedtimeCheck />}
+      <DoorbellCall />
     </>
   );
 }
