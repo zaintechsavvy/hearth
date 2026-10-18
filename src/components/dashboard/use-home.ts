@@ -6,7 +6,6 @@ import type { ActionResult } from "@/lib/action-helpers";
 import { deleteWidgetItem, saveWidgetItem } from "@/lib/widget-actions";
 import type { ItemData, ItemKind, WidgetItem } from "@/lib/widgets/items";
 import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/types";
-import { haptic } from "@/lib/haptics";
 import type { HomeSnapshot, SceneRun } from "@/lib/home";
 import { applyScene, type HearthScene } from "@/lib/scenes/types";
 
@@ -150,7 +149,6 @@ export function useHome() {
   }, [mutate]);
 
   const send = useCallback(async (device: Device, command: DeviceCommand, pin?: string) => {
-    haptic("tap");
     shared.inFlight++;
     try {
       await mutate(async current => {
@@ -162,7 +160,8 @@ export function useHome() {
         if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? "The device did not respond.");
         return current && patch(current, device.id, command);
       }, {
-        optimisticData: current => current ? patch(current, device.id, command) : (current as unknown as HomeSnapshot),
+        // A change behind a PIN or an alarm code waits for the server to accept the code, so a wrong one never looks like it worked.
+        ...(pin || (command.type === "alarm" && command.code) ? {} : { optimisticData: (current: HomeSnapshot | undefined) => current ? patch(current, device.id, command) : (current as unknown as HomeSnapshot) }),
         rollbackOnError: true,
         revalidate: false,
       });
@@ -172,7 +171,6 @@ export function useHome() {
   }, [mutate]);
 
   const runScene = useCallback(async (scene: HearthScene): Promise<SceneRun> => {
-    haptic("tap");
     shared.inFlight++;
     try {
       let outcome: SceneRun = { ran: 0, failed: [] };

@@ -371,7 +371,11 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       <WifiShare items={itemsOf(home.widgets, "wifi")} itemId={sharing} onOpenChange={open => !open && setSharing(undefined)} />
       <HistorySheet device={chartedDevice} onOpenChange={open => !open && setCharting(null)} />
       <LightControls device={controlledLight} onOpenChange={open => !open && setControlling(null)} onCommand={send} />
-      <SceneEditor open={sceneEditing !== null} onOpenChange={open => !open && setSceneEditing(null)} devices={home.devices} scene={sceneEditing === "new" ? null : sceneEditing} onSaved={() => refresh()} />
+      <SceneEditor open={sceneEditing !== null} onOpenChange={open => !open && setSceneEditing(null)} devices={home.devices} scene={sceneEditing === "new" ? null : sceneEditing}
+        onSaved={(id, created) => {
+          if (created && id) change([...tiles, createTile("scene", sceneTileId(id))]);
+          void refresh();
+        }} />
       <TileEditor
         tile={editable}
         renderPreview={config => renderTile(config, true)}

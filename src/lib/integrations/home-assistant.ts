@@ -322,7 +322,11 @@ export interface HassLogbookRow {
   context_user_id?: string;
   context_domain?: string;
   context_name?: string;
+  context_event_type?: string;
 }
+
+/** Things someone switches by hand; a change to one with no context behind it came from the device itself. */
+const HANDS_ON = new Set(["light", "switch", "fan", "lock", "cover", "climate", "input_boolean"]);
 
 const PEOPLE_TEMPLATE = "{% for person in states.person %}{{ person.attributes.user_id }}|{{ person.name }}\n{% endfor %}";
 
@@ -331,17 +335,34 @@ export function logbookEntries(rows: HassLogbookRow[], people: Map<string, strin
   return rows.flatMap(row => {
     const at = typeof row.when === "number" ? new Date(row.when * 1000) : new Date(row.when);
     const what = logbookWords(row);
-    if (Number.isNaN(at.getTime()) || !row.name || !what) return [];
-    const by = row.context_domain === "automation" && row.context_name ? `the ${row.context_name} automation`
-      : row.context_domain === "script" && row.context_name ? `the ${row.context_name} script`
-        : row.context_user_id ? people.get(row.context_user_id) ?? null : null;
-    return [{ at, nativeId: row.entity_id ?? null, name: row.name, what, by }];
+    const name = row.name ?? row.entity_id;
+    if (Number.isNaN(at.getTime()) || !name || !what) return [];
+    const automated = row.context_domain === "automation" || row.context_domain === "script";
+    const by = automated && row.context_name ? `the ${row.context_name} ${row.context_domain}`
+      : row.context_user_id ? people.get(row.context_user_id) ?? null : null;
+    const domain = row.entity_id?.split(".")[0] ?? "";
+    const via = automated ? null
+      : row.context_user_id || row.context_event_type === "call_service" ? "in Home Assistant"
+        : HANDS_ON.has(domain) && !row.context_event_type ? "at the device" : null;
+    return [{ at, nativeId: row.entity_id ?? null, name, what, by, via }];
   });
+}
+
+const SWITCHED_DOMAINS = new Set(["light", "switch", "fan", "input_boolean"]);
+const TRANSITIONS = new Set(["locking", "unlocking", "opening", "closing"]);
+
+/** A bare state, as the live logbook sends it, in the log's words; null for a step on the way, such as "unlocking". */
+function stateWords(domain: string, state: string) {
+  if (TRANSITIONS.has(state)) return null;
+  if (SWITCHED_DOMAINS.has(domain) && (state === "on" || state === "off")) return `turned ${state}`;
+  if (state === "unavailable") return "became unavailable";
+  return `changed to ${state}`;
 }
 
 /** The logbook's message, worded like Hearth's own entries; null for chatter not worth listing. */
 function logbookWords(row: HassLogbookRow) {
-  const message = (row.message ?? (row.state ? `changed to ${row.state}` : "")).trim().replace(/^(was|is) /, "");
+  const domain = row.entity_id?.split(".")[0] ?? row.domain ?? "";
+  const message = (row.message ?? (row.state ? stateWords(domain, row.state) ?? "" : "")).trim().replace(/^(was|is) /, "");
   if (!message) return null;
   if (row.domain === "automation" && message.startsWith("triggered")) return "ran";
   if (row.domain === "script" && message.startsWith("started")) return "ran";
@@ -553,13 +574,18 @@ export class HomeAssistantProvider implements Provider {
   }
 
   /** Home Assistant's logbook, with who did each change: a person from the user behind it, or the automation or script that ran it. */
-  async logbook(from: Date, to: Date): Promise<LogbookEntry[]> {
-    const [rows, people] = await Promise.all([
-      this.request<HassLogbookRow[]>(`api/logbook/${from.toISOString()}?${new URLSearchParams({ end_time: to.toISOString() })}`),
+  async logbook(from: Date, to: Date, nativeIds?: string[]): Promise<LogbookEntry[]> {
+    const everything = () => this.request<HassLogbookRow[]>(`api/logbook/${from.toISOString()}?${new URLSearchParams({ end_time: to.toISOString() })}`);
+    // Asking about only the devices Hearth shows skips every sensor's chatter, which on a busy home is most of the logbook.
+    const rows = nativeIds?.length
+      ? this.live.request<HassLogbookRow[]>({ type: "logbook/get_events", start_time: from.toISOString(), end_time: to.toISOString(), entity_ids: nativeIds }).then(answer => answer.result, everything)
+      : everything();
+    const [found, people] = await Promise.all([
+      rows,
       this.request<string>("api/template", { method: "POST", body: JSON.stringify({ template: PEOPLE_TEMPLATE }) }, "text")
         .then(text => new Map(text.split("\n").map(line => line.split("|")).filter(([id, name]) => id && name).map(([id, name]) => [id.trim(), name.trim()])), () => new Map<string, string>()),
     ]);
-    return logbookEntries(rows, people);
+    return logbookEntries(found, people);
   }
 
   /** HLS through Home Assistant's stream integration: slower to start than WebRTC, but it only needs plain HTTP, which Hearth relays. */

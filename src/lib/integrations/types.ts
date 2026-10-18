@@ -39,7 +39,8 @@ export interface Provider {
   /** A device's readings between two times, from the integration's own history, or null when it keeps none. */
   history?(nativeId: string, from: Date, to: Date): Promise<HistoryPoint[] | null>;
   /** Everything the integration itself recorded happening between two times, oldest first, including changes made outside Hearth. */
-  logbook?(from: Date, to: Date): Promise<LogbookEntry[]>;
+  /** What the integration recorded between two times, for these devices when given, which is far quicker on a busy home. */
+  logbook?(from: Date, to: Date, nativeIds?: string[]): Promise<LogbookEntry[]>;
   /** Fetches a playlist or segment of a stream `cameraHls` started. */
   cameraHlsFetch?(path: string, search: string, signal: AbortSignal): Promise<Response>;
 }
@@ -53,6 +54,8 @@ export interface LogbookEntry {
   what: string;
   /** Who or what made the change, such as a person or "the Bedtime automation", when the integration knows. */
   by: string | null;
+  /** Where it was done, when not in Hearth: "in Home Assistant", or "at the device" for a wall switch or a remote. */
+  via: string | null;
 }
 
 export interface HistoryPoint {

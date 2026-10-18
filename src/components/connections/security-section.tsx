@@ -42,9 +42,12 @@ export function SecuritySection({ method, hasPin, owner }: { method: OpenMethod;
           {owner && choice === "pin" && (
             <form className={styles.inline} onSubmit={event => { event.preventDefault(); void save("pin", pin); }}>
               <Input label={hasPin ? "New PIN" : "PIN"} type="password" inputMode="numeric" autoComplete="new-password" pattern="\d{4,8}" maxLength={8} value={pin}
-                onChange={event => setPin(event.target.value.replace(/\D/g, ""))} description="4 to 8 digits. Everyone in the household uses it." />
+                onChange={event => setPin(event.target.value.replace(/\D/g, ""))} />
               <Button type="submit" variant="secondary" disabled={pin.length < 4}>{hasPin ? "Change PIN" : "Set PIN"}</Button>
             </form>
+          )}
+          {owner && choice === "pin" && (
+            <span className={styles.rowMeta}>4 to 8 digits. Everyone in the household uses it, and the keypad confirms as soon as the last digit is in.</span>
           )}
           {!owner && <span className={styles.rowMeta}>Only the owner can change this.</span>}
           <Alert tone="danger" title="Could not save" open={Boolean(error)}>{error ?? ""}</Alert>

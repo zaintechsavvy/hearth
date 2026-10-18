@@ -438,3 +438,19 @@ div.reading {
 @media (prefers-reduced-motion: reduce) {
   .tile[data-holding] .holdFill { transition-duration: 1s; transition-timing-function: steps(4); }
 }
+
+/* A lit large tile: the words go a shade deeper so they read on the yellow. */
+.tile[data-kind="light"][data-template="large"][data-on] .name {
+  color: color-mix(in oklab, var(--tile-color) 25%, oklch(22% .05 70));
+}
+
+.tile[data-kind="light"][data-template="large"][data-on] .meta {
+  color: color-mix(in oklab, var(--tile-color) 25%, oklch(30% .05 70));
+}
+
+/* On the large template the colour button sits beside the icon, clear of the level beside it. */
+.tile[data-template="large"] .swatch {
+  top: calc(var(--space-5) + 4px);
+  right: auto;
+  left: calc(var(--space-5) + 48px);
+}

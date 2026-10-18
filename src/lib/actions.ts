@@ -322,11 +322,15 @@ export async function setDefaultAssistant(id: string): Promise<ActionResult> {
   });
 }
 
-export async function createScene(input: unknown): Promise<ActionResult> {
-  return authed(async userId => {
-    const result = await saveScene(userId, input);
-    return result.ok ? OK : result;
+export async function createScene(input: unknown): Promise<CreatedResult> {
+  let id = "";
+  const result = await authed(async userId => {
+    const saved = await saveScene(userId, input);
+    if (!saved.ok) return saved;
+    id = saved.id;
+    return OK;
   });
+  return result.ok ? { ok: true, id } : result;
 }
 
 export async function updateScene(id: string, input: unknown): Promise<ActionResult> {
@@ -609,7 +613,7 @@ export async function setOpenMethod(method: unknown, pin?: string): Promise<Acti
       return OK;
     }
     if (!pin || !PIN_PATTERN.test(pin)) return { ok: false, error: "Use 4 to 8 digits." };
-    await savePreferences(userId, { security: { method: "pin", ...hashPin(pin) } });
+    await savePreferences(userId, { security: { method: "pin", ...hashPin(pin), length: pin.length } });
     return OK;
   });
 }

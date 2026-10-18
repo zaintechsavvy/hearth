@@ -15,7 +15,7 @@ import { defaultStyle } from "@/lib/dashboard/style";
 import type { Device } from "@/lib/devices/types";
 import styles from "./activity-view.module.css";
 
-type Page = { entries: ActivityEntry[]; more: boolean; next?: string };
+type Page = { entries: ActivityEntry[]; more: boolean; next?: string; missing?: string[] };
 const ALL = "all";
 const ANY_ROOM = "__any";
 const FILTERS: { value: ActivityCategory | typeof ALL; label: string }[] = [
@@ -61,7 +61,7 @@ export function ActivityView() {
     if (before) params.set("before", before);
     return `/api/activity?${params}`;
   };
-  const { data, error, size, setSize, isLoading } = useSWRInfinite<Page>(
+  const { data, error, size, setSize, isLoading, mutate } = useSWRInfinite<Page>(
     (index, previous: Page | null) => index === 0 ? query() : previous?.more ? query(previous.next ?? previous.entries.at(-1)?.at) : null,
     fetchPage,
     { refreshInterval: 30_000, revalidateFirstPage: true },
@@ -69,6 +69,7 @@ export function ActivityView() {
   const entries = data?.flatMap(page => page.entries) ?? [];
   const devices = new Map((home?.devices ?? []).map(device => [device.id, device]));
   const more = data?.at(-1)?.more ?? false;
+  const missing = [...new Set(data?.flatMap(page => page.missing ?? []) ?? [])];
   const days = new Map<string, ActivityEntry[]>();
   for (const entry of entries) {
     const key = new Date(entry.at).toDateString();
@@ -87,6 +88,12 @@ export function ActivityView() {
           <DropdownMenu label={room === ANY_ROOM ? "Every room" : room} items={[{ label: "Every room", onSelect: () => setRoom(ANY_ROOM) }, ...home.rooms.map(value => ({ label: value, onSelect: () => setRoom(value) }))]} />
         )}
       </div>
+      {missing.length > 0 && (
+        <Glass shape="panel" className={styles.notice} role="status">
+          <span>{missing.join(" and ")} did not send {missing.length === 1 ? "its" : "their"} history in time, so changes made outside Hearth may be missing.</span>
+          <Button size="sm" variant="ghost" onClick={() => void mutate()}>Try again</Button>
+        </Glass>
+      )}
       {isLoading && !data ? (
         <Glass shape="panel" className={styles.group}><Skeleton lines={5} label="Loading activity" /></Glass>
       ) : error ? (
@@ -108,7 +115,7 @@ export function ActivityView() {
                       <Icon className={styles.icon} size={16} strokeWidth={1.75} aria-hidden="true" />
                       <span className={styles.text}>
                         <span><b>{entry.name}</b> {entry.what}</span>
-                        {(entry.room || entry.by) && <span className={styles.meta}>{[entry.room, entry.by && `by ${entry.by}`].filter(Boolean).join(" · ")}</span>}
+                        {(entry.room || entry.by || entry.via) && <span className={styles.meta}>{[entry.room, entry.by && `by ${entry.by}`, entry.via].filter(Boolean).join(" · ")}</span>}
                       </span>
                       {entry.picture && (
                         <a className={styles.picture} href={entry.picture} target="_blank" rel="noreferrer" aria-label={`Picture from when ${entry.name} rang`}>

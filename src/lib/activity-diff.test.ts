@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Device } from "@/lib/devices/types";
-import { describeChange, logbookChange } from "./activity-diff";
+import { commandChange, describeChange, deviceWords, logbookChange } from "./activity-diff";
 
 const base = { integrationId: "a", room: "Entry", available: true };
 const lock = (state: "locked" | "unlocked" | "jammed"): Device => ({ ...base, id: "a:lock", name: "Front door", kind: "lock", state });
@@ -40,5 +40,23 @@ describe("logbookChange", () => {
     expect(logbookChange(undefined, "automation.bedtime", "ran").category).toBe("automations");
     expect(logbookChange(undefined, "light.porch", "turned on").category).toBe("lights");
     expect(logbookChange(undefined, null, "started")).toEqual({ what: "started", category: "system", tone: "info" });
+  });
+});
+
+describe("deviceWords", () => {
+  const sensor = (sensorClass: "door" | "motion" | "leak"): Device => ({ id: "ha:binary_sensor.x", integrationId: "ha", name: "X", room: null, available: true, kind: "binary_sensor", sensorClass, active: false });
+  it("turns a sensor's bare on and off into what happened, and drops motion clearing", () => {
+    expect(deviceWords(sensor("door"), "changed to on")).toBe("opened");
+    expect(deviceWords(sensor("leak"), "changed to off")).toBe("is dry again");
+    expect(deviceWords(sensor("motion"), "changed to off")).toBeNull();
+    expect(deviceWords(sensor("door"), "turned on")).toBe("turned on");
+  });
+});
+
+describe("commandChange", () => {
+  it("words what Hearth sent", () => {
+    expect(commandChange({ type: "lock", locked: false })).toMatchObject({ what: "unlocked", tone: "warning" });
+    expect(commandChange({ type: "brightness", value: 40 })).toMatchObject({ what: "was set to 40%", category: "lights" });
+    expect(commandChange({ type: "cover", action: "stop" })).toBeNull();
   });
 });

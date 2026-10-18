@@ -93,7 +93,6 @@ export function DoorbellCall() {
       setTalking(true);
       setListen(true);
       setProblem(null);
-      haptic("tap");
     } catch {
       setProblem("Hearth could not use the microphone. Allow it for this site, then try again.");
     }

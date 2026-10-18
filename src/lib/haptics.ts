@@ -1,3 +1,5 @@
+/** This device's choice, stored as JSON; anything but false keeps haptics on. */
+export const HAPTICS_KEY = "hearth-haptics";
 const PATTERNS = { tap: 10, press: 18, success: [14, 60, 22], alert: [60, 80, 60, 80, 120] } satisfies Record<string, number | number[]>;
 export type Haptic = keyof typeof PATTERNS;
 
@@ -6,7 +8,7 @@ export type Haptic = keyof typeof PATTERNS;
  * a hidden switch instead, which only fires during a tap. Elsewhere it does nothing.
  */
 export function haptic(kind: Haptic = "tap") {
-  if (typeof navigator === "undefined") return;
+  if (typeof navigator === "undefined" || localStorage.getItem(HAPTICS_KEY) === "false") return;
   if (typeof navigator.vibrate === "function") {
     navigator.vibrate(PATTERNS[kind]);
     return;

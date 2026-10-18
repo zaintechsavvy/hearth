@@ -10,6 +10,7 @@ import { ALARM_TEXT } from "@/lib/devices/status";
 import type { AlarmDevice, ArmMode, DeviceCommand } from "@/lib/devices/types";
 import type { OpenMethod } from "@/lib/security-types";
 import { PinPad } from "../pin-pad";
+import { useHome } from "../use-home";
 import styles from "./device-tiles.module.css";
 
 type Send = (command: DeviceCommand, pin?: string) => Promise<void>;
@@ -72,6 +73,7 @@ export function AlarmTile({ device, config, interactive, openMethod, onCommand }
 
 function AlarmDialog({ device, target, openMethod, onCommand, onArm, onClose }: { device: AlarmDevice; target: ArmMode | "disarm"; openMethod: OpenMethod; onCommand: Send; onArm: (mode: ArmMode) => void; onClose: () => void }) {
   const [held, setHeld] = useState(false);
+  const pinLength = useHome().home?.pinLength;
   const send = (command: DeviceCommand, pin?: string) => onCommand(command, pin).then(() => { onClose(); return null; }, errorOf);
   if (target !== "disarm") {
     if (device.codeToArm) {
@@ -101,7 +103,7 @@ function AlarmDialog({ device, target, openMethod, onCommand, onArm, onClose }: 
     <Dialog open onOpenChange={next => !next && onClose()}>
       <DialogContent className={glassSheetClass} title={title} description={`${ALARM_TEXT[device.state]}. ${device.codeFormat ? "Enter the alarm's code." : openMethod === "pin" ? "Enter the household PIN." : "Hold the button to disarm."}`}>
         {device.codeFormat ? <PinPad label="Alarm code" submitLabel="Disarm" text={device.codeFormat === "text"} onSubmit={code => send({ type: "alarm", action: "disarm", code })} />
-          : openMethod === "pin" ? <PinPad label="Household PIN" submitLabel="Disarm" onSubmit={pin => send({ type: "alarm", action: "disarm" }, pin)} />
+          : openMethod === "pin" ? <PinPad label="Household PIN" submitLabel="Disarm" length={pinLength} onSubmit={pin => send({ type: "alarm", action: "disarm" }, pin)} />
           : (
             <div className={styles.holdRow}>
               <HoldToConfirm label="Hold to disarm" confirmedLabel="Disarming" tone="neutral" duration={1000} confirmed={held} icon={<ShieldOff size={18} strokeWidth={1.75} />}

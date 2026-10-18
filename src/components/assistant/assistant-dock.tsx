@@ -40,7 +40,13 @@ interface Turn {
 const SUGGESTIONS = ["Set a 10 minute timer", "Turn on the bedroom fan", "Dim the kitchen lights to 30%", "Turn everything off"];
 const subscribeNever = () => () => {};
 
-const fetchInfo = (url: string) => fetch(url).then(response => response.json() as Promise<AssistantInfo>);
+/** The assistant key used for chat; the dock and Settings share it so connecting one there shows here straight away. */
+export const ASSISTANT_INFO_KEY = "/api/assistant";
+const fetchInfo = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Hearth could not check the assistant.");
+  return response.json() as Promise<AssistantInfo>;
+};
 
 /** Opens the assistant from anywhere, such as the command palette, optionally with a request to send. */
 export const ASK_EVENT = "hearth-ask";
@@ -64,7 +70,7 @@ export function AssistantDock() {
   const composer = useRef<ChatComposerHandle>(null);
   const log = useRef<HTMLOListElement>(null);
   const canListen = useSyncExternalStore(subscribeNever, speechSupported, () => false);
-  const { data: info } = useSWR<AssistantInfo>("/api/assistant", fetchInfo, { revalidateOnFocus: false });
+  const { data: info, error: infoError, mutate: refreshInfo, isValidating: checking } = useSWR<AssistantInfo>(ASSISTANT_INFO_KEY, fetchInfo);
   const { saveItem } = useHome();
   const lastHeard = useRef(0);
   /** The glow follows the recogniser hearing speech, not a second capture of the microphone, which Safari and Android refuse while it listens. */
@@ -84,9 +90,11 @@ export function AssistantDock() {
   }, []);
 
   useEffect(() => {
-    if (open) requestAnimationFrame(() => composer.current?.focus());
-    else recognition.current?.stop();
-  }, [open]);
+    if (open) {
+      void refreshInfo();
+      requestAnimationFrame(() => composer.current?.focus());
+    } else recognition.current?.stop();
+  }, [open, refreshInfo]);
 
   useEffect(() => {
     log.current?.lastElementChild?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "end" });
@@ -171,7 +179,7 @@ export function AssistantDock() {
   return (
     <div className={styles.anchor} data-wall-assistant>
       {!open && canListen && (
-        <button type="button" className={styles.quickMic} onClick={() => { setOpen(true); toggleListening(); }} aria-label="Speak to Hearth">
+        <button type="button" className={styles.quickMic} onClick={() => { setOpen(true); if (configured) toggleListening(); }} aria-label="Speak to Hearth">
           <Mic size={18} strokeWidth={1.75} aria-hidden="true" />
         </button>
       )}
@@ -198,7 +206,16 @@ export function AssistantDock() {
                 </button>
               </header>
 
-              {info && !configured ? (
+              {infoError && !info ? (
+                <div className={styles.unconfigured}>
+                  <EmptyState
+                    icon={<Sparkles size={24} strokeWidth={1.75} />}
+                    title="Could not check the assistant"
+                    description="Hearth did not hear back about which assistant is connected. Check your connection, then try again."
+                    action={<Button variant="secondary" loading={checking} onClick={() => void refreshInfo()}>Try again</Button>}
+                  />
+                </div>
+              ) : info && !configured ? (
                 <div className={styles.unconfigured}>
                   <EmptyState
                     icon={<Sparkles size={24} strokeWidth={1.75} />}

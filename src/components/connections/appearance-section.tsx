@@ -10,6 +10,8 @@ import { X } from "lucide-react";
 import { Button } from "@/components/arc/button/button";
 import { Input } from "@/components/arc/input/input";
 import { useStoredJson } from "@/components/shell/use-stored-json";
+import { Switch } from "@/components/arc/switch/switch";
+import { HAPTICS_KEY } from "@/lib/haptics";
 import { NO_PAGE_RULES, PAGE_SCHEDULE_KEY, type PageRule } from "@/lib/page-schedule";
 import { ACCENTS, ACCENT_KEY, DEFAULT_ACCENT, GLASS_KEY, type Accent, type GlassLevel, type ThemePreference } from "@/lib/theme";
 import styles from "./connections.module.css";
@@ -21,6 +23,7 @@ export function AppearanceSection({ pages }: { pages: { id: string; name: string
   const [accent, setAccent] = useHtmlPreference<Accent>(ACCENT_KEY, "accent", DEFAULT_ACCENT);
   const [theme, setTheme] = useThemePreference();
   const [glass, setGlass] = useHtmlPreference<GlassLevel>(GLASS_KEY, "glass", "frosted");
+  const [haptics, setHaptics] = useStoredJson<boolean>(HAPTICS_KEY, true);
 
   return (
     <SettingsSection id="appearance" title="Appearance" description={<>Theme, background, and accent.</>}>
@@ -51,6 +54,15 @@ export function AppearanceSection({ pages }: { pages: { id: string; name: string
           </div>
         </div>
         <PageTimes pages={pages} />
+        <div className={styles.row}>
+          <div className={styles.rowText}>
+            <span className={styles.rowTitle}>Vibrate on taps</span>
+            <span className={styles.rowMeta}>A light buzz on this phone or tablet when you tap a control, hold to open, or the doorbell rings.</span>
+          </div>
+          <div className={styles.rowActions}>
+            <Switch aria-label="Vibrate on taps" checked={haptics} onCheckedChange={setHaptics} />
+          </div>
+        </div>
         <div className={styles.row}>
           <div className={styles.rowText}>
             <span className={styles.rowTitle}>Accent</span>

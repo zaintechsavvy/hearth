@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/shell/app-header";
 import { BedtimeCheck } from "@/components/shell/bedtime-check";
 import { BackgroundStudio } from "@/components/shell/background-studio";
 import { CommandMenu } from "@/components/shell/command-menu";
+import { TapHaptics } from "@/components/shell/tap-haptics";
 import { WallMode } from "@/components/shell/wall-mode";
 import { requireHome } from "@/lib/session";
 import styles from "./app.module.css";
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <HouseholdAlerts />
       {home.role !== "guest" && <BedtimeCheck />}
       <DoorbellCall />
+      <TapHaptics />
     </>
   );
 }

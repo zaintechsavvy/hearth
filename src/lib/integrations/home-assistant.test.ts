@@ -126,4 +126,18 @@ describe("logbookEntries", () => {
     ]);
     expect(entries[1].at.getTime()).toBe(1791964800500);
   });
+
+  it("words the live logbook's bare states and says where each change was made", () => {
+    const entries = logbookEntries([
+      { when: 1791964800, entity_id: "light.kitchen", state: "off", context_user_id: "user-1", context_event_type: "call_service" },
+      { when: 1791964801, entity_id: "lock.front", state: "unlocking", context_user_id: "user-1" },
+      { when: 1791964802, entity_id: "switch.lamp", state: "on" },
+      { when: 1791964803, entity_id: "light.porch", state: "on", context_domain: "automation", context_name: "Sunset" },
+    ], people);
+    expect(entries.map(entry => [entry.nativeId, entry.what, entry.by, entry.via])).toEqual([
+      ["light.kitchen", "turned off", "Sam", "in Home Assistant"],
+      ["switch.lamp", "turned on", null, "at the device"],
+      ["light.porch", "turned on", "the Sunset automation", null],
+    ]);
+  });
 });

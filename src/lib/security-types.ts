@@ -6,6 +6,8 @@ export interface SecuritySettings {
   /** scrypt of the PIN, never the PIN itself. */
   salt?: string;
   hash?: string;
+  /** How many digits the PIN has, so the keypad confirms as soon as the last one is in. */
+  length?: number;
 }
 
 export const DEFAULT_SECURITY: SecuritySettings = { method: "hold" };

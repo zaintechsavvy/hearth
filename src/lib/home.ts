@@ -1,7 +1,8 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { camera, deviceOverride, integration, preference, scene, widgetItem } from "@/lib/db/schema";
+import { activity, camera, deviceOverride, integration, preference, scene, widgetItem } from "@/lib/db/schema";
+import { commandChange } from "@/lib/activity-diff";
 import { unseal } from "@/lib/crypto";
 import type { WidgetItem } from "@/lib/widgets/items";
 import { HOME_PAGE_ID, withoutOrphanTiles, type DashboardPage, type SavedTile } from "@/lib/dashboard/layout";
@@ -48,6 +49,8 @@ export interface HomeSnapshot {
   widgets: WidgetItem[];
   /** How opening the home is confirmed here; the PIN itself never leaves the server. */
   openMethod: OpenMethod;
+  /** The household PIN's length, when it is known, so the keypad confirms on the last digit. Never the PIN itself. */
+  pinLength: number | null;
   /** Today's sunrise and sunset at the home's location, when it is set. */
   sun: { sunrise: string; sunset: string } | null;
   /** What the good night check does here. */
@@ -138,7 +141,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
   const pages = preferences.pages.map(page => ({ ...page, layout: withoutOrphanTiles(page.layout, connected) }));
   const times = preferences.location ? sunTimes(new Date(), preferences.location.latitude, preferences.location.longitude) : null;
   const sun = times ? { sunrise: times.sunrise.toISOString(), sunset: times.sunset.toISOString() } : null;
-  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, sun, bedtime: preferences.bedtime };
+  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, pinLength: preferences.security.method === "pin" ? preferences.security.length ?? null : null, sun, bedtime: preferences.bedtime };
 }
 
 /** Sends a device a command. `by` says who, for the activity log: a person, the assistant, a scene, or an automation. */
@@ -150,6 +153,9 @@ export async function runCommand(userId: string, id: string, command: DeviceComm
   if (by) noteCommand(userId, id, by);
   await createProvider(row).execute(parsed.nativeId, command);
   publish(integrationTopic(row.id));
+  // A hosted Hearth has no monitor watching for the change, so it writes down who made it; Activity fills in the name.
+  const change = by && isServerless() ? commandChange(command) : null;
+  if (change) await db.insert(activity).values({ userId, at: new Date(), deviceId: id, name: "", room: null, by, ...change }).catch(() => {});
 }
 
 /** The provider behind one of this person's devices, with the id that provider knows it by. */

@@ -25,6 +25,8 @@ export interface ActivityEntry {
   category: ActivityCategory;
   tone: "info" | "warning" | "alert";
   by: string | null;
+  /** Where a change made outside Hearth was made: "in Home Assistant", or "at the device". */
+  via?: string | null;
   /** A doorbell ring's picture from its camera, when one was kept. */
   picture?: string;
 }

@@ -1,5 +1,5 @@
 import type { ActivityCategory } from "@/lib/activity-types";
-import type { Device } from "@/lib/devices/types";
+import type { Device, DeviceCommand } from "@/lib/devices/types";
 
 export interface Change {
   what: string;
@@ -10,6 +10,25 @@ export interface Change {
 const ENTRY_CLASSES = new Set(["door", "window", "garage", "opening"]);
 
 const DOMAIN_CATEGORIES: Record<string, ActivityCategory> = { light: "lights", switch: "lights", fan: "lights", input_boolean: "lights", lock: "doors", cover: "doors", climate: "climate", binary_sensor: "sensors", automation: "automations", script: "automations", scene: "automations" };
+
+const SENSOR_WORDS: Partial<Record<string, [string, string | null]>> = {
+  motion: ["noticed motion", null], occupancy: ["noticed someone", null], leak: ["detected a leak", "is dry again"], smoke: ["detected smoke", "cleared"],
+};
+
+/** An integration's bare "changed to on" in words for the device it is about, or null when it is noise such as motion clearing. */
+export function deviceWords(device: Device, what: string): string | null {
+  const state = /^changed to (.+)$/.exec(what)?.[1];
+  if (!state) return what;
+  if (device.kind === "binary_sensor" && (state === "on" || state === "off")) {
+    if (ENTRY_CLASSES.has(device.sensorClass)) return state === "on" ? "opened" : "closed";
+    const words = SENSOR_WORDS[device.sensorClass];
+    return words ? (state === "on" ? words[0] : words[1]) : null;
+  }
+  if (device.kind === "alarm") return state === "disarmed" ? "was disarmed" : state === "triggered" ? "went off" : state.startsWith("armed") ? "was armed" : null;
+  if (device.kind === "thermostat") return state === "off" ? "was turned off" : `was set to ${state.replace(/_/g, " ")}`;
+  if (device.kind === "vacuum") return state === "cleaning" ? "started cleaning" : state === "docked" ? "went back to its dock" : null;
+  return what;
+}
 
 /** Where an integration's own log entry belongs, from the device when Hearth shows it, otherwise the kind of thing it is. */
 export function logbookChange(device: Device | undefined, nativeId: string | null, what: string): Change {
@@ -72,5 +91,20 @@ export function describeChange(before: Device, after: Device): Change | null {
     }
     default:
       return null;
+  }
+}
+
+/** What a command Hearth sent does, in the log's words, for hosts where no monitor sees the change happen. */
+export function commandChange(command: DeviceCommand): Change | null {
+  switch (command.type) {
+    case "power": return { what: command.on ? "turned on" : "turned off", category: "lights", tone: "info" };
+    case "brightness": return { what: `was set to ${command.value}%`, category: "lights", tone: "info" };
+    case "lock": return command.locked ? { what: "locked", category: "doors", tone: "info" } : { what: "unlocked", category: "doors", tone: "warning" };
+    case "cover": return command.action === "stop" ? null : command.action === "open" ? { what: "opened", category: "doors", tone: "warning" } : { what: "closed", category: "doors", tone: "info" };
+    case "targetTemperature": return { what: `was set to ${command.value}°`, category: "climate", tone: "info" };
+    case "thermostatMode": return { what: command.mode === "off" ? "was turned off" : `was set to ${command.mode}`, category: "climate", tone: "info" };
+    case "alarm": return command.action === "arm" ? { what: "was armed", category: "doors", tone: "info" } : { what: "was disarmed", category: "doors", tone: "warning" };
+    case "activate": return { what: "ran", category: "automations", tone: "info" };
+    default: return null;
   }
 }

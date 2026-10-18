@@ -96,9 +96,17 @@ body {
   display: none;
 }
 
+/* Text on a big wall screen grows with it, so it reads from across the room; up to a laptop's width nothing changes. */
+:root[data-wall] {
+  font-size: clamp(16px, calc(.7vw + 7px), 21px);
+}
+
+/* The wall uses the whole screen: no reading width, a small even margin, and the assistant up top beside the menu so tiles reach the bottom. */
 :root[data-wall] main {
+  max-width: none;
   padding-top: calc(max(var(--space-6), env(safe-area-inset-top)) + var(--space-8));
-  padding-inline: max(clamp(16px, 4vw, 32px), calc(env(safe-area-inset-left) + var(--space-3))) max(clamp(16px, 4vw, 32px), calc(env(safe-area-inset-right) + var(--space-3)));
+  padding-inline: max(var(--space-5), calc(env(safe-area-inset-left) + var(--space-3))) max(var(--space-5), calc(env(safe-area-inset-right) + var(--space-3)));
+  padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
   translate: var(--wall-shift-x, 0) var(--wall-shift-y, 0);
   transition: translate 2s ease;
 }
@@ -119,4 +127,8 @@ button,
   :root select {
     font-size: max(16px, 1em);
   }
+}
+
+:root[data-wall="assistant"] main {
+  padding-top: calc(max(var(--space-3), env(safe-area-inset-top)) + 72px);
 }

@@ -3,6 +3,7 @@
 import { Plus, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useSWRConfig } from "swr";
 import { Alert } from "@/components/arc/alert/alert";
 import { Badge } from "@/components/arc/badge/badge";
 import { Button } from "@/components/arc/button/button";
@@ -15,6 +16,7 @@ import { RadioCards } from "@/components/arc/radio-cards/radio-cards";
 import { Glass, glassSheetClass } from "@/components/glass/glass";
 import { addAssistant, removeAssistant, setDefaultAssistant } from "@/lib/actions";
 import { ASSISTANT_PROVIDERS, ASSISTANT_PROVIDER_IDS, type AssistantProvider } from "@/lib/assistant/providers";
+import { ASSISTANT_INFO_KEY } from "@/components/assistant/assistant-dock";
 import styles from "./connections.module.css";
 import { SettingsSection } from "./settings-section";
 
@@ -28,6 +30,11 @@ export interface AssistantSummary {
 
 export function AssistantsSection({ assistants }: { assistants: AssistantSummary[] }) {
   const router = useRouter();
+  const { mutate } = useSWRConfig();
+  const changed = () => {
+    router.refresh();
+    void mutate(ASSISTANT_INFO_KEY);
+  };
   const [adding, setAdding] = useState(false);
   const [provider, setProvider] = useState<AssistantProvider>("anthropic");
   const [pending, setPending] = useState(false);
@@ -43,7 +50,7 @@ export function AssistantsSection({ assistants }: { assistants: AssistantSummary
     setPending(false);
     if (!result.ok) return setError(result.error);
     setAdding(false);
-    router.refresh();
+    changed();
   }
 
   return (
@@ -61,12 +68,12 @@ export function AssistantsSection({ assistants }: { assistants: AssistantSummary
             </div>
             <div className={styles.rowActions}>
               {item.isDefault ? <Badge tone="info" size="sm">Default</Badge> : (
-                <Button variant="ghost" size="sm" onClick={async () => { await setDefaultAssistant(item.id); router.refresh(); }}>Use by default</Button>
+                <Button variant="ghost" size="sm" onClick={async () => { await setDefaultAssistant(item.id); changed(); }}>Use by default</Button>
               )}
               <ConfirmMorph label="Remove" prompt={`Remove ${ASSISTANT_PROVIDERS[item.provider].label}?`} confirmLabel="Remove" pendingLabel="Removing" doneLabel="Removed" onConfirm={async () => {
                 const result = await removeAssistant(item.id);
                 if (!result.ok) throw new Error(result.error);
-                router.refresh();
+                changed();
               }} />
             </div>
           </div>

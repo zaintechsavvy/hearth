@@ -1,6 +1,6 @@
 import "server-only";
 import { and, desc, eq, gte, lt, type SQL } from "drizzle-orm";
-import { logbookChange } from "@/lib/activity-diff";
+import { deviceWords, logbookChange } from "@/lib/activity-diff";
 import type { ActivityCategory, ActivityEntry } from "@/lib/activity-types";
 import { db } from "@/lib/db";
 import { activity, integration } from "@/lib/db/schema";
@@ -9,6 +9,7 @@ import { loadHome } from "@/lib/home";
 import { RING_MATCH_MS, ringPicturesBetween } from "@/lib/doorbell";
 import { createProvider } from "@/lib/integrations/registry";
 import type { LogbookEntry, Provider } from "@/lib/integrations/types";
+import { isServerless } from "@/lib/setup-check";
 
 const PAGE = 80;
 /** Each page with an integration's logbook covers this much time, so a busy home never sends days of entries at once. */
@@ -17,17 +18,20 @@ const WINDOW_MS = 12 * 3_600_000;
 const LOGBOOK_DAYS = 10;
 /** An integration's entry this close to one Hearth logged for the same device is the same change, and Hearth's says who. */
 const SAME_CHANGE_MS = 20_000;
-const LOGBOOK_TIMEOUT_MS = 8000;
+/** A hosted Hearth reaches home over the internet, so it waits longer before saying the history did not load. */
+const LOGBOOK_TIMEOUT_MS = isServerless() ? 15_000 : 8000;
+/** Kinds whose changes are worth a line; readings are charted, and players and cameras change too often to read. */
+const LOGGED_KINDS = new Set<Device["kind"]>(["light", "switch", "fan", "thermostat", "lock", "cover", "binary_sensor", "event", "scene", "person", "vacuum", "alarm"]);
 /** Past windows do not change, so their logbook is kept a while instead of asked of Home Assistant on every refresh. */
 const PAST_CACHE_MS = 10 * 60_000;
 const past = new Map<string, { at: number; entries: LogbookEntry[] }>();
 
-async function logbookFor(integrationId: string, provider: Provider, from: Date, to: Date) {
+async function logbookFor(integrationId: string, provider: Provider, from: Date, to: Date, nativeIds: string[]) {
   const settled = to.getTime() < Date.now() - 60_000;
   const key = `${integrationId}:${from.getTime()}:${to.getTime()}`;
   const cached = settled ? past.get(key) : undefined;
   if (cached && Date.now() - cached.at < PAST_CACHE_MS) return cached.entries;
-  const entries = await Promise.race([provider.logbook!(from, to), new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), LOGBOOK_TIMEOUT_MS))]);
+  const entries = await Promise.race([provider.logbook!(from, to, nativeIds), new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), LOGBOOK_TIMEOUT_MS))]);
   if (settled) {
     past.set(key, { at: Date.now(), entries });
     for (const [stale, value] of past) if (Date.now() - value.at > PAST_CACHE_MS) past.delete(stale);
@@ -42,6 +46,8 @@ export interface ActivityPage {
   more: boolean;
   /** Where the next page starts, when it is not simply the last entry. */
   next?: string;
+  /** Connections whose own history did not load, so changes made outside Hearth may be missing. */
+  missing?: string[];
 }
 
 interface Filter {
@@ -60,7 +66,11 @@ export async function activityPage(homeId: string, filter: Filter): Promise<Acti
   const sources = rows.map(row => ({ row, provider: createProvider(row) })).filter(source => source.provider.logbook);
   if (sources.length === 0) {
     const page = await db.select().from(activity).where(and(...filters, ...(filter.before ? [lt(activity.at, filter.before)] : []))).orderBy(desc(activity.at)).limit(PAGE);
-    const entries = page.map(row => ({ ...row, at: row.at.toISOString() }));
+    const known = page.some(row => !row.name) ? new Map((await loadHome(homeId)).devices.map(device => [device.id, device])) : new Map<string, Device>();
+    const entries = page.map(row => {
+      const device = row.deviceId ? known.get(row.deviceId) : undefined;
+      return { ...row, at: row.at.toISOString(), name: row.name || device?.name || "A device", room: row.room ?? device?.room ?? null };
+    });
     return { entries: await withPictures(homeId, entries), more: page.length === PAGE };
   }
 
@@ -69,7 +79,7 @@ export async function activityPage(homeId: string, filter: Filter): Promise<Acti
   let to = filter.before ?? new Date();
   for (let window = 1; ; window++) {
     const page = await windowPage(filters, sources, devices, { category, room }, to);
-    if (page.entries.length || !page.more || window === MAX_WINDOWS) return { ...page, entries: await withPictures(homeId, page.entries) };
+    if (page.entries.length || !page.more || page.missing?.length || window === MAX_WINDOWS) return { ...page, entries: await withPictures(homeId, page.entries) };
     to = new Date(page.next!);
   }
 }
@@ -79,32 +89,46 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
   const page = await db.select().from(activity).where(and(...filters, lt(activity.at, to), gte(activity.at, from))).orderBy(desc(activity.at)).limit(PAGE * 4);
   if (page.length === PAGE * 4) from = page[page.length - 1].at;
 
+  const missing: string[] = [];
   const logged = await Promise.all(sources.map(async ({ row, provider }) => {
+    const shown = [...devices.values()].filter(device => device.integrationId === row.id && LOGGED_KINDS.has(device.kind) && !device.auxiliary);
+    const nativeIds = shown.map(device => device.id.slice(row.id.length + 1));
     try {
-      const entries = await logbookFor(row.id, provider, from, to);
-      return entries.map((entry, index): ActivityEntry => {
+      const entries = await logbookFor(row.id, provider, from, to, nativeIds);
+      return entries.flatMap((entry, index): ActivityEntry[] => {
         const id = entry.nativeId ? deviceId(row.id, entry.nativeId) : null;
         const device = id ? devices.get(id) : undefined;
-        const what = device?.kind === "event" ? (device.eventClass === "doorbell" ? "rang" : "was pressed") : entry.what;
+        if (!device || !LOGGED_KINDS.has(device.kind) || device.auxiliary) return [];
+        const what = device.kind === "event" ? (device.eventClass === "doorbell" ? "rang" : "was pressed") : deviceWords(device, entry.what);
+        if (!what || what === "changed to unknown") return [];
         const change = logbookChange(device, entry.nativeId, what);
-        return { id: `${row.id}:${entry.at.getTime()}:${index}`, at: entry.at.toISOString(), deviceId: device ? id : null, name: device?.name ?? entry.name, room: device?.room ?? null, by: entry.by, ...change };
+        return [{ id: `${row.id}:${entry.at.getTime()}:${index}`, at: entry.at.toISOString(), deviceId: id, name: device.name, room: device.room, by: entry.by, via: entry.via, ...change }];
       });
     } catch {
+      missing.push(row.name);
       return [];
     }
   }));
 
-  const mine: ActivityEntry[] = page.map(row => ({ ...row, at: row.at.toISOString() }));
-  const theirs = logged.flat().filter(entry => {
+  const theirsAll = logged.flat();
+  const sameChange = (own: ActivityEntry, entry: ActivityEntry) => own.deviceId !== null && own.deviceId === entry.deviceId && Math.abs(Date.parse(own.at) - Date.parse(entry.at)) < SAME_CHANGE_MS;
+  // A change Hearth noticed but did not make takes who and where from the integration's own record of it.
+  const mine: ActivityEntry[] = page.map(row => {
+    const device = row.deviceId ? devices.get(row.deviceId) : undefined;
+    const entry = { ...row, at: row.at.toISOString(), name: row.name || device?.name || "A device", room: row.room ?? device?.room ?? null };
+    const match = entry.by ? undefined : theirsAll.find(other => sameChange(entry, other));
+    return match ? { ...entry, by: match.by, via: match.via } : entry;
+  });
+  const theirs = theirsAll.filter(entry => {
     const time = Date.parse(entry.at);
     if (time < from.getTime() || time >= to.getTime()) return false;
     if ((category && entry.category !== category) || (room && entry.room !== room)) return false;
-    return !mine.some(own => own.deviceId !== null && own.deviceId === entry.deviceId && Math.abs(Date.parse(own.at) - time) < SAME_CHANGE_MS);
+    return !mine.some(own => sameChange(own, entry));
   });
   const entries = [...mine, ...theirs].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const older = await db.select({ at: activity.at }).from(activity).where(and(...filters, lt(activity.at, from))).limit(1);
   const more = older.length > 0 || from.getTime() > Date.now() - LOGBOOK_DAYS * 86_400_000;
-  return { entries, more, next: from.toISOString() };
+  return { entries, more, next: from.toISOString(), ...(missing.length ? { missing } : {}) };
 }
 
 /** Puts each doorbell ring's kept picture beside it. */

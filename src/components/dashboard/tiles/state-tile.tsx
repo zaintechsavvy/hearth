@@ -13,6 +13,7 @@ import {
 } from "@/lib/devices/types";
 import type { OpenMethod } from "@/lib/security-types";
 import { PinPad } from "../pin-pad";
+import { useHome } from "../use-home";
 import { LevelPill } from "./level-pill";
 import { useHoldToOpen } from "./use-hold-to-open";
 import { useLongPress } from "./use-long-press";
@@ -129,10 +130,11 @@ function confirmText(device: StateDevice, state: string) {
 /** The PIN way to open the home: the server checks the PIN, so a wrong one is refused there and shown here. */
 function PinConfirm({ device, state, onPin, onClose }: { device: StateDevice; state: string; onPin: (pin: string) => Promise<string | null>; onClose: () => void }) {
   const verb = device.kind === "lock" ? "Unlock" : "Open";
+  const { home } = useHome();
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
       <DialogContent className={glassSheetClass} title={`${verb} ${device.name}?`} description={`${device.name} is ${state.toLowerCase()}. Enter the household PIN to ${verb.toLowerCase()} it.`}>
-        <PinPad label="Household PIN" submitLabel={verb} onSubmit={onPin} />
+        <PinPad label="Household PIN" submitLabel={verb} length={home?.pinLength} onSubmit={onPin} />
       </DialogContent>
     </Dialog>
   );

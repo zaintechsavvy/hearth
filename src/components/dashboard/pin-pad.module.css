@@ -40,6 +40,18 @@
   text-align: center;
 }
 
+.message[data-checking] {
+  color: var(--text-secondary);
+}
+
+.pad:has(.message[data-checking]) .dot[data-on] {
+  animation: checking 1s var(--ease-standard) infinite alternate;
+}
+
+@keyframes checking {
+  to { opacity: .35; }
+}
+
 .keys {
   display: grid;
   grid-template-columns: repeat(3, 64px);

@@ -20,6 +20,9 @@ type View =
 const WEBRTC_FRAME_MS = 10_000;
 const HLS_FRAME_MS = 30_000;
 const MJPEG_FRAME_MS = 8000;
+/** How long an MJPEG picture has to change before it counts as live; a camera that only keeps stills repeats one. */
+const MJPEG_MOTION_MS = 10_000;
+const MJPEG_SAMPLE_MS = 1000;
 const PICTURE_MS = 2000;
 /** While only a still is showing, try for live video again this often. */
 const RETRY_LIVE_MS = 120_000;
@@ -156,6 +159,23 @@ function still(video: HTMLVideoElement) {
   }
 }
 
+/** A tiny copy of the picture's pixels, to tell a live feed from a still sent again and again. */
+function sample(image: HTMLImageElement) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 48;
+  canvas.height = 27;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context || !image.naturalWidth) return null;
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  try {
+    return context.getImageData(0, 0, canvas.width, canvas.height).data;
+  } catch {
+    return null;
+  }
+}
+
+const differs = (a: Uint8ClampedArray, b: Uint8ClampedArray) => a.some((value, index) => value !== b[index]);
+
 /** HLS relayed through Hearth: needs only the HTTP path Hearth already uses, so it works where WebRTC cannot connect. */
 async function playHls(base: string, video: HTMLVideoElement, signal: AbortSignal, cleanups: (() => void)[], onDrop: () => void) {
   const response = await fetch(`${base}/hls`, { method: "POST", signal });
@@ -207,6 +227,8 @@ export function IntegrationCameraTile({ camera, call }: IntegrationCameraTilePro
   const [tick, setTick] = useState(0);
   const [poster, setPoster] = useState(true);
   const [held, setHeld] = useState<string | null>(null);
+  const [mjpegShown, setMjpegShown] = useState(false);
+  const mjpeg = useRef<HTMLImageElement>(null);
   const reconnects = useRef(0);
   const pictureFailures = useRef(0);
   const base = `/api/devices/${encodeURIComponent(camera.id)}/camera`;
@@ -261,6 +283,7 @@ export function IntegrationCameraTile({ camera, call }: IntegrationCameraTilePro
         }
       }
       setNotes(failures);
+      setMjpegShown(false);
       setView({ kind: "connecting", stage: "mjpeg" });
     };
     void run();
@@ -271,13 +294,36 @@ export function IntegrationCameraTile({ camera, call }: IntegrationCameraTilePro
   }, [base, camera.name, camera.streamable, attempt, twoWay]);
 
   useEffect(() => {
-    if (view.kind !== "connecting" || view.stage !== "mjpeg") return;
+    if (view.kind !== "connecting" || view.stage !== "mjpeg" || mjpegShown) return;
     const timer = setTimeout(() => {
       setNotes(current => [...current, "MJPEG: no picture arrived in 8 seconds."]);
       setView({ kind: "picture" });
     }, MJPEG_FRAME_MS);
     return () => clearTimeout(timer);
-  }, [view]);
+  }, [view, mjpegShown]);
+
+  // Home Assistant sends some cameras' last saved picture as an MJPEG feed; it only counts as live once it moves.
+  useEffect(() => {
+    if (view.kind !== "connecting" || view.stage !== "mjpeg" || !mjpegShown) return;
+    let first: Uint8ClampedArray | null = null;
+    const started = Date.now();
+    const check = setInterval(() => {
+      const now = mjpeg.current ? sample(mjpeg.current) : null;
+      if (!now) return;
+      if (!first) first = now;
+      else if (differs(first, now)) {
+        clearInterval(check);
+        setView({ kind: "live", stage: "mjpeg" });
+        return;
+      }
+      if (Date.now() - started >= MJPEG_MOTION_MS) {
+        clearInterval(check);
+        setNotes(current => [...current, "MJPEG: Home Assistant only sends the camera's last saved picture, which has not changed."]);
+        setView({ kind: "picture" });
+      }
+    }, MJPEG_SAMPLE_MS);
+    return () => clearInterval(check);
+  }, [view, mjpegShown]);
 
   useEffect(() => {
     if (view.kind !== "picture") return;
@@ -295,6 +341,7 @@ export function IntegrationCameraTile({ camera, call }: IntegrationCameraTilePro
 
   const retry = () => {
     reconnects.current = 0;
+    setMjpegShown(false);
     pictureFailures.current = 0;
     setPoster(true);
     setNotes([]);
@@ -314,8 +361,8 @@ export function IntegrationCameraTile({ camera, call }: IntegrationCameraTilePro
       <video ref={video} className={styles.media} autoPlay muted playsInline hidden={!videoShown} aria-label={`Live view from ${camera.name}`} />
       {stage === "mjpeg" && (
         // eslint-disable-next-line @next/next/no-img-element -- a live MJPEG stream that must bypass the image optimiser
-        <img className={styles.media} src={`${base}?attempt=${attempt}`} alt={`Live view from ${camera.name}`} hidden={!live}
-          onLoad={() => setView({ kind: "live", stage: "mjpeg" })}
+        <img ref={mjpeg} className={styles.media} src={`${base}?attempt=${attempt}`} alt={`Live view from ${camera.name}`} hidden={!live && !mjpegShown}
+          onLoad={() => setMjpegShown(true)}
           onError={() => { setNotes(current => [...current, "MJPEG: Home Assistant refused the stream."]); setView({ kind: "picture" }); }} />
       )}
       {view.kind === "picture" && (
@@ -339,7 +386,7 @@ export function IntegrationCameraTile({ camera, call }: IntegrationCameraTilePro
         <span className={styles.dot} aria-hidden="true" />
         <span className={styles.name}>{camera.name}</span>
         <span className={styles.badge} title={live ? `Playing over ${STAGE_NAMES[view.stage]}` : undefined}>
-          {view.kind === "connecting" ? <TextShimmer>{view.stage === "webrtc" ? "Connecting" : `Trying ${STAGE_NAMES[view.stage]}`}</TextShimmer>
+          {view.kind === "connecting" ? <TextShimmer>{view.stage === "webrtc" ? "Connecting" : view.stage === "mjpeg" && mjpegShown ? "Checking" : `Trying ${STAGE_NAMES[view.stage]}`}</TextShimmer>
             : live ? "Live" : view.kind === "picture" ? "Last picture" : "No video"}
         </span>
       </figcaption>
