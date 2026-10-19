@@ -126,6 +126,29 @@
     padding-inline: var(--space-3);
   }
 
+  /* A set of choices goes under its text and spans the row, its options sharing the width, so none is cut off. */
+  .rowActions:has(> [role="group"]) {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+
+  .row :global([role="group"]) {
+    flex: 1 1 100%;
+    display: flex;
+  }
+
+  .row :global([role="group"]) > * {
+    flex: 1;
+  }
+
+  .row :global([role="group"]) button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: var(--space-2);
+    white-space: normal;
+    line-height: 1.2;
+  }
+
   .inline {
     flex-direction: column;
     align-items: stretch;
@@ -217,8 +240,9 @@
 .colorOption[data-color="graphite"],
 .swatch[data-color="graphite"] { --swatch: oklch(45% .01 260); }
 
+/* A grid, not a flex column: a flex column sizes a grid of aspect-ratio swatches too short, and the rows below overlap it. */
 .stacked {
-  flex-direction: column;
+  display: grid;
   align-items: stretch;
   gap: var(--space-4);
 }
