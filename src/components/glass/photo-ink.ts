@@ -14,9 +14,10 @@ const linear = (value: number) => {
 const inkFor = (luminance: number) => (1.05 / (luminance + .05) >= (luminance + .05) / .05 ? "light" : "dark");
 
 /**
- * Over a photo of your own, text sitting on the wallpaper turns light or dark by what is behind it there: the photo
- * is sampled as it is laid out on screen, dimming veil included, and each `[data-on-wall]` block reads the patch
- * under it. A photo dark at the top and bright in the middle gets white headings above and dark ones below.
+ * Over a photo of your own, a title sitting on the wallpaper is light or dark by what is behind it: the photo is
+ * sampled as it is laid out on screen, dimming veil included, and each `[data-on-wall]` block reads the patch under
+ * where it sits on the page. It is decided by the page, not the scroll, so text never changes as it moves; text that
+ * scrolls over the photo sits on its own backing instead (`[data-backed]`, `[data-wall-chip]`) and keeps its colours.
  */
 export function usePhotoInk(photo: PhotoBackground | null, theme: "light" | "dark") {
   useEffect(() => {
@@ -52,10 +53,13 @@ export function usePhotoInk(photo: PhotoBackground | null, theme: "light" | "dar
       frame = 0;
       if (!grid) return;
       for (const element of document.querySelectorAll<HTMLElement>("[data-on-wall]")) {
+        if (element.closest("[data-backed], [data-wall-chip]")) continue;
         const box = element.getBoundingClientRect();
-        if (box.bottom < 0 || box.top > innerHeight || !box.width) continue;
+        if (!box.width) continue;
+        const offset = pinned(element) ? 0 : scrollY;
+        const pageTop = box.top + offset, pageBottom = box.bottom + offset;
         const left = Math.max(0, Math.floor(box.left / innerWidth * COLS)), right = Math.min(COLS - 1, Math.floor(box.right / innerWidth * COLS));
-        const top = Math.max(0, Math.floor(box.top / innerHeight * rows)), bottom = Math.min(rows - 1, Math.floor(box.bottom / innerHeight * rows));
+        const top = Math.min(rows - 1, Math.max(0, Math.floor(pageTop / innerHeight * rows))), bottom = Math.min(rows - 1, Math.max(0, Math.floor(pageBottom / innerHeight * rows)));
         let total = 0, count = 0;
         for (let row = top; row <= bottom; row++) for (let col = left; col <= right; col++) { total += grid[row * COLS + col]; count++; }
         if (count) element.dataset.ink = inkFor(total / count);
@@ -65,7 +69,6 @@ export function usePhotoInk(photo: PhotoBackground | null, theme: "light" | "dar
     const resize = () => { sample(); schedule(); };
 
     image.onload = resize;
-    addEventListener("scroll", schedule, { passive: true });
     addEventListener("resize", resize);
     // Text moves without a scroll too: a section opens, a list loads, a panel folds away.
     const changes = new MutationObserver(schedule);
@@ -74,11 +77,18 @@ export function usePhotoInk(photo: PhotoBackground | null, theme: "light" | "dar
     layout.observe(document.body);
     return () => {
       cancelAnimationFrame(frame);
-      removeEventListener("scroll", schedule);
       removeEventListener("resize", resize);
       changes.disconnect();
       layout.disconnect();
       for (const element of document.querySelectorAll<HTMLElement>("[data-ink]")) delete element.dataset.ink;
     };
   }, [photo, theme]);
+}
+
+function pinned(element: HTMLElement) {
+  for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+    const { position } = getComputedStyle(node);
+    if (position === "fixed" || position === "sticky") return true;
+  }
+  return false;
 }

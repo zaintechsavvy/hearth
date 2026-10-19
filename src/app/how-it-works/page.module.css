@@ -74,6 +74,7 @@
   display: grid;
   gap: var(--space-5);
   scroll-margin-top: var(--space-6);
+  container-type: inline-size;
 }
 
 .heading {
@@ -89,14 +90,4 @@
   line-height: 1.6;
 }
 
-.figure {
-  margin: 0;
-}
 
-.image {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: clamp(16px, 2vw, 28px);
-  box-shadow: 0 30px 60px -36px oklch(20% .03 260 / .45), 0 0 0 1px oklch(20% .02 260 / .06);
-}

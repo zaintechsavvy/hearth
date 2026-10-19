@@ -52,7 +52,7 @@ export function SettingsShell({ items, children }: { items: SettingsNavItem[]; c
             </a>
           ))}
         </nav>
-        <div className={styles.sections}>{children}</div>
+        <div className={styles.sections} data-backed>{children}</div>
       </div>
     </SettingsFoldingContext.Provider>
   );

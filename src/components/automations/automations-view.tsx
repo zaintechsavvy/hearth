@@ -113,7 +113,7 @@ export function AutomationsView() {
 
       {templates.length > 0 && (
         <section className={styles.ideas} aria-labelledby="ideas-title">
-          <h2 id="ideas-title" className={styles.groupTitle} data-on-wall>Ideas</h2>
+          <h2 id="ideas-title" className={styles.groupTitle} data-on-wall data-wall-chip>Ideas</h2>
           <Glass shape="panel" className={styles.panel}>
             <ul className={styles.rows}>
               {ideas.map(({ template, rule }) => (
@@ -131,7 +131,7 @@ export function AutomationsView() {
         </section>
       )}
 
-      {(data?.location || usesSun) && <div className={styles.location} data-on-wall>
+      {(data?.location || usesSun) && <div className={styles.location} data-on-wall data-wall-chip>
         <MapPin size={16} strokeWidth={1.75} aria-hidden="true" />
         <span className={styles.locationText}>
           {data?.location ? (

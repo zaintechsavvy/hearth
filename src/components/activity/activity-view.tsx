@@ -117,7 +117,7 @@ export function ActivityView() {
       ) : (
         [...days].map(([key, list]) => (
           <section key={key} className={styles.day} aria-label={dayLabel(new Date(key))}>
-            <h2 className={styles.dayTitle} data-on-wall>{dayLabel(new Date(key))}</h2>
+            <h2 className={styles.dayTitle} data-on-wall data-wall-chip>{dayLabel(new Date(key))}</h2>
             <Glass shape="panel" className={styles.group}>
               <ol className={styles.list}>
                 {list.map(entry => {
