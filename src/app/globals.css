@@ -35,6 +35,28 @@
   color-scheme: dark;
 }
 
+/*
+ * The one surface every resting tile shares, devices and widgets alike, so a lock, the Wi-Fi card, and the weather
+ * sit together. Lit lights, a wet leak sensor, and camera video set their own.
+ */
+:root {
+  --tile-rest: linear-gradient(180deg, oklch(93% .003 260 / .55), oklch(89% .003 260 / .45));
+  --tile-rest-border: oklch(100% 0 0 / .45);
+  --tile-rest-shadow: inset 0 1px 0 oklch(100% 0 0 / .6), 0 1px 2px oklch(25% .02 260 / .05), 0 18px 50px -12px oklch(30% .04 260 / .16);
+}
+
+:root[data-glass="clear"] { --tile-rest: linear-gradient(180deg, oklch(93% .003 260 / .3), oklch(89% .003 260 / .2)); }
+:root[data-glass="solid"] { --tile-rest: oklch(93.5% .003 260); --tile-rest-shadow: inset 0 1px 0 oklch(100% 0 0 / .7), 0 1px 2px oklch(25% .02 260 / .05), 0 18px 50px -12px oklch(30% .04 260 / .16); }
+
+:root[data-theme="dark"] {
+  --tile-rest: linear-gradient(180deg, oklch(30% .004 260 / .5), oklch(22% .004 260 / .45));
+  --tile-rest-border: oklch(100% 0 0 / .08);
+  --tile-rest-shadow: inset 0 1px 0 oklch(100% 0 0 / .1), 0 1px 2px oklch(0% 0 0 / .3), 0 24px 60px -16px oklch(0% 0 0 / .55);
+}
+
+:root[data-theme="dark"][data-glass="clear"] { --tile-rest: linear-gradient(180deg, oklch(30% .004 260 / .28), oklch(22% .004 260 / .2)); }
+:root[data-theme="dark"][data-glass="solid"] { --tile-rest: oklch(25% .006 260); }
+
 /* The canvas colour behind the wallpaper, matched to its lower edge, which shows when a page overscrolls. */
 :root { --page-floor: oklch(93.2% .003 260); }
 :root[data-wallpaper="linen"] { --page-floor: oklch(92.8% .011 75); }

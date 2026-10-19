@@ -38,6 +38,13 @@
   min-height: 0;
 }
 
+/* Every tile at rest wears the shared surface, whatever kind it is; ones that are on, wet, or video keep their own. */
+.content.content > :not([data-on]):not([data-wet]):not(figure) {
+  background: var(--tile-rest);
+  border-color: var(--tile-rest-border);
+  box-shadow: var(--tile-rest-shadow);
+}
+
 /* Tiles size their insides from the cell they were given, through `@container cell (...)`. */
 .content {
   width: 100%;

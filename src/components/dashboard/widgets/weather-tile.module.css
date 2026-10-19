@@ -10,28 +10,6 @@
   container-type: size;
 }
 
-/* A faint sky behind the glass: warm by day, cool at night, grey when it is wet. */
-.tile::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  opacity: .5;
-  background: radial-gradient(90% 90% at 85% 0%, var(--sky, transparent), transparent 70%);
-}
-
-.tile[data-day][data-sky="clear"],
-.tile[data-day][data-sky="partly"] { --sky: oklch(88% .09 85 / .8); }
-.tile:not([data-day])[data-sky="clear"],
-.tile:not([data-day])[data-sky="partly"] { --sky: oklch(55% .08 270 / .6); }
-.tile[data-sky="rain"],
-.tile[data-sky="drizzle"],
-.tile[data-sky="storm"] { --sky: oklch(70% .05 240 / .7); }
-.tile[data-sky="snow"],
-.tile[data-sky="fog"],
-.tile[data-sky="cloudy"] { --sky: oklch(85% .01 250 / .7); }
-
 .setup {
   place-content: center;
   justify-items: center;
