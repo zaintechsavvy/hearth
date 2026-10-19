@@ -287,6 +287,19 @@
   margin-top: clamp(16px, 3vh, 32px);
 }
 
+/* Or in the middle, low enough that the photo still reads above it. */
+.glance[data-frame][data-align="center"] {
+  right: 0;
+  left: 0;
+  margin-inline: auto;
+  justify-items: center;
+  text-align: center;
+}
+
+.glance[data-frame][data-align="center"] .cards {
+  justify-content: center;
+}
+
 /* The pages as one row of icons, so the menu stays short. */
 .pages {
   display: grid;

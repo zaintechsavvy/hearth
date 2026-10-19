@@ -92,6 +92,11 @@
   min-width: 0;
 }
 
+/* A label beside a set of choices lines up with its middle, not its bottom edge. */
+.inline:has(> [role="group"]) {
+  align-items: center;
+}
+
 .help {
   color: var(--text-secondary);
   font-size: var(--text-sm);

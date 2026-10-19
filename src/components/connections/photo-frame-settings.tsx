@@ -50,7 +50,7 @@ export function PhotoFrameSettings({ settings, set }: { settings: WallSettings; 
     <div className={`${styles.row} ${styles.stacked}`}>
       <div className={styles.rowText}>
         <span className={styles.rowTitle}>Photo frame</span>
-        <span className={styles.rowMeta}>Rest on your photos, drifting slowly from one to the next, with the clock in the corner.</span>
+        <span className={styles.rowMeta}>Rest on your photos, drifting slowly from one to the next, with the clock over them.</span>
       </div>
       <Switch label="Show photos while resting" checked={settings.frame} onCheckedChange={frame => set({ frame })} />
       {settings.frame && (
@@ -72,6 +72,11 @@ export function PhotoFrameSettings({ settings, set }: { settings: WallSettings; 
           ) : <ImmichForm onSaved={() => void mutate("/api/home")} />}
           <Alert tone="danger" title="Could not add a photo" open={Boolean(problem)}>{problem ?? ""}</Alert>
           <Slider label="Each photo" value={settings.frameSeconds} min={10} max={120} step={5} format={value => `${value} s`} onValueChange={frameSeconds => set({ frameSeconds })} />
+          <div className={styles.inline}>
+            <span className={styles.rowMeta}>Clock over photos</span>
+            <SegmentedControl label="Clock over photos" value={settings.frameClock} onValueChange={value => set({ frameClock: value as WallSettings["frameClock"] })}
+              options={[{ value: "corner", label: "Lower left" }, { value: "center", label: "Centre" }]} />
+          </div>
           <Switch label="Photos at night too" checked={settings.frameAtNight} onCheckedChange={frameAtNight => set({ frameAtNight })} />
         </>
       )}

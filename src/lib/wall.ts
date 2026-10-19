@@ -27,6 +27,8 @@ export interface WallSettings {
   frameSeconds: number;
   /** Keep showing photos in the night window; otherwise the screen rests on the clock alone. */
   frameAtNight: boolean;
+  /** Where the date, clock, and weather sit over photos: the lower left corner, or the middle. */
+  frameClock: "corner" | "center";
 }
 
 export type PhotoSource = "uploads" | "immich";
@@ -47,7 +49,7 @@ export const WALL_KEY = "hearth-wall";
 export const DEFAULT_WALL: WallSettings = {
   enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: true, showAssistant: true,
   clockColor: "white", clockBrightness: 0.85, nightRed: true, openReminder: true, openMinutes: 15,
-  frame: false, frameSource: "uploads", frameSeconds: 20, frameAtNight: false,
+  frame: false, frameSource: "uploads", frameSeconds: 20, frameAtNight: false, frameClock: "corner",
 };
 
 const minutes = (time: string) => {

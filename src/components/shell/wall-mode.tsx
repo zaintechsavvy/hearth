@@ -222,7 +222,7 @@ function Glance({ now, night, settings, leftOpen }: { now: number; night: boolea
   return (
     <>
       {photos && <PhotoFrame source={settings.frameSource} seconds={settings.frameSeconds} onEmpty={setFrameEmpty} />}
-      <span className={styles.glance} style={offset} data-frame={(photos && !frameEmpty) || undefined}>
+      <span className={styles.glance} style={offset} data-frame={(photos && !frameEmpty) || undefined} data-align={settings.frameClock}>
         <span className={styles.date}>{now ? date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : ""}</span>
         <span className={styles.clock}>
           <span className={styles.time}>{clock.time}</span>
