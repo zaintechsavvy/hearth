@@ -141,6 +141,13 @@
       "when": 1792439946195,
       "tag": "0019_activity_dedupe",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792443668323,
+      "tag": "0020_device_quiet",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "device_override" ADD COLUMN "quiet" boolean DEFAULT false NOT NULL;

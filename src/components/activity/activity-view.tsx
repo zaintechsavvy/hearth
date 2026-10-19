@@ -1,7 +1,8 @@
 "use client";
 
-import { BellRing, Cpu, DoorOpen, Droplets, Flame, History, Lightbulb, Lock, LockOpen, Thermometer, Workflow, type LucideIcon } from "lucide-react";
+import { BellOff, BellRing, Cpu, DoorOpen, Droplets, Flame, History, Lightbulb, Lock, LockOpen, Thermometer, Workflow, X, type LucideIcon } from "lucide-react";
 import { useState } from "react";
+import { useSWRConfig } from "swr";
 import useSWRInfinite from "swr/infinite";
 import { Button } from "@/components/arc/button/button";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
@@ -13,9 +14,10 @@ import { TILE_ICON_COMPONENTS } from "@/components/dashboard/tiles/tile-icons";
 import type { ActivityCategory, ActivityEntry } from "@/lib/activity-types";
 import { defaultStyle } from "@/lib/dashboard/style";
 import type { Device } from "@/lib/devices/types";
+import { updateDevice } from "@/lib/actions";
 import styles from "./activity-view.module.css";
 
-type Page = { entries: ActivityEntry[]; more: boolean; next?: string; missing?: string[] };
+type Page = { entries: ActivityEntry[]; more: boolean; next?: string };
 const ALL = "all";
 const ANY_ROOM = "__any";
 const FILTERS: { value: ActivityCategory | typeof ALL; label: string }[] = [
@@ -69,7 +71,12 @@ export function ActivityView() {
   const entries = data?.flatMap(page => page.entries) ?? [];
   const devices = new Map((home?.devices ?? []).map(device => [device.id, device]));
   const more = data?.at(-1)?.more ?? false;
-  const missing = [...new Set(data?.flatMap(page => page.missing ?? []) ?? [])];
+  const { mutate: mutateKey } = useSWRConfig();
+  const muted = (home?.devices ?? []).filter(device => device.quiet);
+  const setQuiet = async (deviceId: string, quiet: boolean) => {
+    await updateDevice(deviceId, { quiet });
+    await Promise.all([mutate(), mutateKey("/api/home")]);
+  };
   const days = new Map<string, ActivityEntry[]>();
   for (const entry of entries) {
     const key = new Date(entry.at).toDateString();
@@ -88,11 +95,16 @@ export function ActivityView() {
           <DropdownMenu label={room === ANY_ROOM ? "Every room" : room} items={[{ label: "Every room", onSelect: () => setRoom(ANY_ROOM) }, ...home.rooms.map(value => ({ label: value, onSelect: () => setRoom(value) }))]} />
         )}
       </div>
-      {missing.length > 0 && (
-        <Glass shape="panel" className={styles.notice} role="status">
-          <span>{missing.join(" and ")} did not send {missing.length === 1 ? "its" : "their"} history in time, so changes made outside Hearth may be missing.</span>
-          <Button size="sm" variant="ghost" onClick={() => void mutate()}>Try again</Button>
-        </Glass>
+      {muted.length > 0 && (
+        <ul className={styles.muted} aria-label="Muted in Activity">
+          <li className={styles.mutedLabel}>Muted</li>
+          {muted.map(device => (
+            <li key={device.id} className={styles.mutedChip}>
+              <span>{device.name}</span>
+              <button type="button" onClick={() => void setQuiet(device.id, false)} aria-label={`Show ${device.name} in Activity again`} title="Show again"><X size={14} strokeWidth={1.75} aria-hidden="true" /></button>
+            </li>
+          ))}
+        </ul>
       )}
       {isLoading && !data ? (
         <Glass shape="panel" className={styles.group}><Skeleton lines={5} label="Loading activity" /></Glass>
@@ -123,7 +135,14 @@ export function ActivityView() {
                           <img src={entry.picture} alt="" loading="lazy" />
                         </a>
                       )}
-                      <time className={styles.time} dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>
+                      <span className={styles.end}>
+                        <time className={styles.time} dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>
+                        {entry.deviceId && devices.has(entry.deviceId) ? (
+                          <button type="button" className={styles.mute} onClick={() => void setQuiet(entry.deviceId as string, true)} aria-label={`Mute ${entry.name} in Activity`} title="Mute in Activity">
+                            <BellOff size={16} strokeWidth={1.75} aria-hidden="true" />
+                          </button>
+                        ) : <span className={styles.muteSlot} aria-hidden="true" />}
+                      </span>
                     </li>
                   );
                 })}

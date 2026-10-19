@@ -38,11 +38,13 @@ export interface TileIdentity {
   /** For on/off devices: what Hearth shows it as, and what the integration calls it. */
   kind?: SwitchableKind;
   sourceKind?: SwitchableKind;
+  /** Muted in Activity. */
+  quiet?: boolean;
   /** For a doorbell: the camera a ring opens, null when Hearth finds one itself, and the cameras to choose from. */
   doorbellCamera?: { value: string | null; options: { value: string; name: string }[] };
 }
 
-export type IdentityChange = { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null };
+export type IdentityChange = { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean };
 
 export interface EditableTile {
   config: TileConfig;
@@ -324,6 +326,9 @@ function IdentityFields({ identity, rooms, onIdentity }: { identity: TileIdentit
       </div>
       {identity.roomEditable && (
         <RoomPicker rooms={rooms} value={identity.room} sourceRoom={identity.sourceRoom} sourceLabel={identity.source} onChange={room => onIdentity({ room })} />
+      )}
+      {identity.quiet !== undefined && (
+        <Switch label="Show in Activity" checked={!identity.quiet} onCheckedChange={shown => onIdentity({ quiet: !shown })} />
       )}
       {identity.doorbellCamera && (
         <Select label="Camera at the door" value={identity.doorbellCamera.value ?? AUTO_CAMERA}

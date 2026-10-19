@@ -160,6 +160,8 @@ export const deviceOverride = pgTable("device_override", {
   kind: text("kind").$type<SwitchableKind>(),
   /** A doorbell's camera, as a device id; null finds the camera that matches it. */
   camera: text("camera"),
+  /** Left out of Activity, such as an occupancy sensor that fires every minute someone sits in a room. */
+  quiet: boolean("quiet").notNull().default(false),
   updatedAt: updatedAt(),
 }, t => [primaryKey({ columns: [t.userId, t.deviceId] })]);
 

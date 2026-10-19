@@ -1,9 +1,10 @@
 import "server-only";
 import { and, desc, eq, gte, lt, type SQL } from "drizzle-orm";
 import { deviceWords, logbookChange } from "@/lib/activity-diff";
+import { settle } from "@/lib/activity-settle";
 import type { ActivityCategory, ActivityEntry } from "@/lib/activity-types";
 import { db } from "@/lib/db";
-import { activity, integration } from "@/lib/db/schema";
+import { activity, deviceOverride, integration } from "@/lib/db/schema";
 import { deviceId, type Device } from "@/lib/devices/types";
 import { loadHome } from "@/lib/home";
 import { RING_MATCH_MS, ringPicturesBetween } from "@/lib/doorbell";
@@ -46,8 +47,6 @@ export interface ActivityPage {
   more: boolean;
   /** Where the next page starts, when it is not simply the last entry. */
   next?: string;
-  /** Connections whose own history did not load, so changes made outside Hearth may be missing. */
-  missing?: string[];
 }
 
 interface Filter {
@@ -71,15 +70,17 @@ export async function activityPage(homeId: string, filter: Filter): Promise<Acti
       const device = row.deviceId ? known.get(row.deviceId) : undefined;
       return { ...row, at: row.at.toISOString(), name: row.name || device?.name || "A device", room: row.room ?? device?.room ?? null };
     });
-    return { entries: await withPictures(homeId, collapse(entries)), more: page.length === PAGE };
+    return { entries: await withPictures(homeId, settle(collapse(entries), await mutedDevices(homeId))), more: page.length === PAGE };
   }
 
   const home = await loadHome(homeId);
   const devices = new Map(home.devices.map(device => [device.id, device]));
+  const muted = new Set(home.devices.filter(device => device.quiet).map(device => device.id));
   let to = filter.before ?? new Date();
   for (let window = 1; ; window++) {
     const page = await windowPage(filters, sources, devices, { category, room }, to);
-    if (page.entries.length || !page.more || page.missing?.length || window === MAX_WINDOWS) return { ...page, entries: await withPictures(homeId, page.entries) };
+    const entries = settle(page.entries, muted);
+    if (entries.length || !page.more || window === MAX_WINDOWS) return { ...page, entries: await withPictures(homeId, entries) };
     to = new Date(page.next!);
   }
 }
@@ -89,7 +90,6 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
   const page = await db.select().from(activity).where(and(...filters, lt(activity.at, to), gte(activity.at, from))).orderBy(desc(activity.at)).limit(PAGE * 4);
   if (page.length === PAGE * 4) from = page[page.length - 1].at;
 
-  const missing: string[] = [];
   const logged = await Promise.all(sources.map(async ({ row, provider }) => {
     const shown = [...devices.values()].filter(device => device.integrationId === row.id && LOGGED_KINDS.has(device.kind) && !device.auxiliary);
     const nativeIds = shown.map(device => device.id.slice(row.id.length + 1));
@@ -105,7 +105,6 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
         return [{ id: `${row.id}:${entry.at.getTime()}:${index}`, at: entry.at.toISOString(), deviceId: id, name: device.name, room: device.room, by: entry.by, via: entry.via, ...change }];
       });
     } catch {
-      missing.push(row.name);
       return [];
     }
   }));
@@ -129,7 +128,12 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
   const entries = [...mine, ...theirs].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const older = await db.select({ at: activity.at }).from(activity).where(and(...filters, lt(activity.at, from))).limit(1);
   const more = older.length > 0 || from.getTime() > Date.now() - LOGBOOK_DAYS * 86_400_000;
-  return { entries, more, next: from.toISOString(), ...(missing.length ? { missing } : {}) };
+  return { entries, more, next: from.toISOString() };
+}
+
+async function mutedDevices(homeId: string) {
+  const rows = await db.select({ deviceId: deviceOverride.deviceId }).from(deviceOverride).where(and(eq(deviceOverride.userId, homeId), eq(deviceOverride.quiet, true)));
+  return new Set(rows.map(row => row.deviceId));
 }
 
 /** One change written down twice, by the command Hearth sent and by a screen that saw it happen, shows once, with who did it. */

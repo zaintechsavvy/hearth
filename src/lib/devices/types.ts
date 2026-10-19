@@ -20,6 +20,8 @@ interface DeviceBase {
   sourceRoom?: string | null;
   /** When its state last changed, as the integration records it; the same on every screen. */
   changedAt?: string;
+  /** Muted in Activity. */
+  quiet?: boolean;
   /** The integration's kind, when Hearth shows the device as another on/off kind. */
   sourceKind?: SwitchableKind;
 }

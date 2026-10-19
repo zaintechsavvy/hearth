@@ -455,6 +455,8 @@ const deviceChange = z.object({
   kind: z.enum(SWITCHABLE_KINDS).nullable().optional(),
   /** A doorbell's camera; null finds the matching one. */
   camera: z.string().max(300).nullable().optional(),
+  /** Leave it out of Activity. */
+  quiet: z.boolean().optional(),
 });
 
 async function ownsTarget(userId: string, id: string) {
@@ -463,15 +465,16 @@ async function ownsTarget(userId: string, id: string) {
   return Boolean(parsed && await db.query.integration.findFirst({ where: and(eq(integration.id, parsed.integrationId), eq(integration.userId, userId)) }));
 }
 
-async function writeOverride(userId: string, deviceId: string, change: { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null }) {
+async function writeOverride(userId: string, deviceId: string, change: { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean }) {
   const current = await db.query.deviceOverride.findFirst({ where: and(eq(deviceOverride.userId, userId), eq(deviceOverride.deviceId, deviceId)) });
   const next = {
     name: change.name === undefined ? current?.name ?? null : change.name || null,
     room: change.room === undefined ? current?.room ?? null : change.room,
     kind: change.kind === undefined ? current?.kind ?? null : change.kind,
     camera: change.camera === undefined ? current?.camera ?? null : change.camera,
+    quiet: change.quiet ?? current?.quiet ?? false,
   };
-  if (next.name === null && next.room === null && next.kind === null && next.camera === null) {
+  if (next.name === null && next.room === null && next.kind === null && next.camera === null && !next.quiet) {
     await db.delete(deviceOverride).where(and(eq(deviceOverride.userId, userId), eq(deviceOverride.deviceId, deviceId)));
     return;
   }
