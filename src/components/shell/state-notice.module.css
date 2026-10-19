@@ -1,0 +1,105 @@
+/* Over everything on the wall but the doorbell: the change, big enough to read from across the room. */
+.notice {
+  position: fixed;
+  inset: 0;
+  z-index: 94;
+  display: grid;
+  place-items: center;
+  padding: var(--space-8);
+  background: oklch(14% .01 260 / .78);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  backdrop-filter: blur(20px) saturate(120%);
+  color: oklch(98% 0 0);
+  cursor: default;
+  --tone: var(--success);
+}
+
+.notice[data-open] {
+  --tone: var(--warning);
+}
+
+.card {
+  display: grid;
+  justify-items: center;
+  gap: clamp(var(--space-5), 4vh, var(--space-10));
+}
+
+.art {
+  display: grid;
+  place-items: center;
+  width: clamp(160px, 28vmin, 260px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--tone) 30%, transparent), transparent);
+}
+
+.svg {
+  width: 82%;
+  overflow: visible;
+}
+
+.house { fill: oklch(100% 0 0 / .1); stroke: oklch(100% 0 0 / .85); stroke-width: 3; stroke-linejoin: round; }
+.frame { fill: none; stroke: oklch(100% 0 0 / .85); stroke-width: 3; }
+.inside { fill: color-mix(in oklab, var(--tone) 35%, oklch(20% .01 260)); }
+.slat { fill: oklch(96% 0 0); }
+.body { fill: oklch(96% 0 0); }
+.shackle { fill: none; stroke: oklch(96% 0 0); stroke-width: 7; stroke-linecap: round; }
+.keyhole { fill: color-mix(in oklab, var(--tone) 70%, oklch(30% .02 260)); }
+
+/* Each picture plays from the state before to the state after: open runs forwards, closed runs back. */
+.rolling { animation: roll-up 1.6s var(--ease-standard) .25s both; }
+.notice:not([data-open]) .rolling { animation-name: roll-down; }
+@keyframes roll-up { from { transform: translateY(0); } to { transform: translateY(-44px); } }
+@keyframes roll-down { from { transform: translateY(-44px); } to { transform: translateY(0); } }
+
+.lifting { animation: lift .9s var(--ease-spring) .3s both; }
+.notice:not([data-open]) .lifting { animation-name: drop; }
+@keyframes lift { from { transform: translateY(0); } to { transform: translateY(-12px); } }
+@keyframes drop { from { transform: translateY(-12px); } to { transform: translateY(0); } }
+
+.swinging { transform-origin: 38px 52px; transform-box: view-box; animation: swing-open 1.2s var(--ease-standard) .25s both; }
+.notice:not([data-open]) .swinging { animation-name: swing-shut; }
+@keyframes swing-open { from { transform: perspective(300px) rotateY(0); } to { transform: perspective(300px) rotateY(-68deg); } }
+@keyframes swing-shut { from { transform: perspective(300px) rotateY(-68deg); } to { transform: perspective(300px) rotateY(0); } }
+
+.words {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-2xl), 5vw, 3.5rem);
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.1;
+}
+
+.meta {
+  color: oklch(98% 0 0 / .7);
+  font-size: clamp(var(--text-base), 2vw, var(--text-xl));
+}
+
+/* A thin line along the bottom runs out with the notice, so it is clear it will close by itself. */
+.timer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: color-mix(in oklab, var(--tone) 80%, white);
+  transform-origin: left;
+  animation: run-out 5s linear both;
+}
+
+@keyframes run-out { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+.notice[data-still] .rolling,
+.notice[data-still] .lifting,
+.notice[data-still] .swinging,
+.notice[data-still] .timer {
+  animation-duration: 0s;
+  animation-delay: 0s;
+}

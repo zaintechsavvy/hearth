@@ -38,9 +38,11 @@ export interface TileIdentity {
   /** For on/off devices: what Hearth shows it as, and what the integration calls it. */
   kind?: SwitchableKind;
   sourceKind?: SwitchableKind;
+  /** For a doorbell: the camera a ring opens, null when Hearth finds one itself, and the cameras to choose from. */
+  doorbellCamera?: { value: string | null; options: { value: string; name: string }[] };
 }
 
-export type IdentityChange = { name?: string | null; room?: string | null; kind?: SwitchableKind | null };
+export type IdentityChange = { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null };
 
 export interface EditableTile {
   config: TileConfig;
@@ -98,6 +100,7 @@ const SIZE_NOTES: Partial<Record<TileSize, string>> = {
 };
 
 const MANAGE_LABELS: Partial<Record<TileKind, string>> = {
+  departures: "Choose stops",
   appliances: "Edit appliances", bins: "Edit bins", medications: "Edit medications", countdown: "Edit countdown", notes: "Manage notes", wifi: "Edit network", timers: "New timer", plants: "Edit plants",
 };
 
@@ -322,6 +325,12 @@ function IdentityFields({ identity, rooms, onIdentity }: { identity: TileIdentit
       {identity.roomEditable && (
         <RoomPicker rooms={rooms} value={identity.room} sourceRoom={identity.sourceRoom} sourceLabel={identity.source} onChange={room => onIdentity({ room })} />
       )}
+      {identity.doorbellCamera && (
+        <Select label="Camera at the door" value={identity.doorbellCamera.value ?? AUTO_CAMERA}
+          description={identity.doorbellCamera.options.length ? "A ring fills the screen with this camera, with Listen and Talk." : "Connect the doorbell's camera to see who is there when it rings."}
+          onValueChange={value => onIdentity({ camera: value === AUTO_CAMERA ? null : value })}
+          options={[{ value: AUTO_CAMERA, label: "Find it for me" }, ...identity.doorbellCamera.options.map(option => ({ value: option.value, label: option.name }))]} />
+      )}
       {identity.kind && (
         <div className={styles.nameField}>
           <span className={styles.fieldLabel} aria-hidden="true">Shows as</span>
@@ -338,6 +347,7 @@ function IdentityFields({ identity, rooms, onIdentity }: { identity: TileIdentit
   );
 }
 
+const AUTO_CAMERA = "auto";
 const KIND_CHOICES: { value: SwitchableKind; label: string }[] = [{ value: "light", label: "Light" }, { value: "switch", label: "Switch" }, { value: "fan", label: "Fan" }];
 const KIND_WORDS: Record<SwitchableKind, string> = { light: "light", switch: "switch", fan: "fan" };
 

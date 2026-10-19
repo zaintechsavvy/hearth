@@ -1,6 +1,6 @@
 import { parseDeviceId, type Device } from "@/lib/devices/types";
 
-export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "appliances", "announce"] as const;
+export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "appliances", "announce", "departures"] as const;
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
 export type TileKind = Device["kind"] | WidgetKind;
 export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x1" | "4x2" | "4x3";
@@ -21,7 +21,7 @@ export const TILE_ICONS = [
   "car", "baby", "dog", "cat", "bell", "house", "lock-open", "door-closed", "garage", "activity", "thermometer",
   "battery", "gauge", "clapperboard", "play", "shield", "bell-ring", "camera", "calendar", "list-checks", "clock",
   "trash", "recycle", "pill", "hourglass", "sticky-note", "wifi", "timer", "sprout", "package",
-  "user", "users", "circle-dot", "shopping-cart", "megaphone", "siren",
+  "user", "users", "circle-dot", "shopping-cart", "megaphone", "siren", "bus", "train",
 ] as const;
 export type TileIcon = (typeof TILE_ICONS)[number];
 
@@ -53,6 +53,14 @@ export interface TileOptions {
   speakers?: string[];
   /** Timers: the user's own one-tap starts, shown before the plain lengths. */
   presets?: TimerPreset[];
+  /** Departures: the stops whose next buses and trains it lists. */
+  stops?: TransitStop[];
+}
+
+export interface TransitStop {
+  /** Transitland's key for the stop, such as `f-dpz8-ttc:1234` or a Onestop ID. */
+  key: string;
+  name: string;
 }
 
 export interface TimerPreset {
@@ -130,6 +138,7 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   people: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x1", label: "Wide" }],
   appliances: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x1", label: "Wide" }],
   announce: [{ size: "2x2", label: "Card" }, { size: "4x2", label: "Wide" }],
+  departures: [{ size: "2x2", label: "Next few" }, { size: "2x3", label: "List" }, { size: "4x2", label: "Board" }],
 };
 
 /** Kinds whose tiles take an icon and a colour. */
@@ -180,6 +189,8 @@ export function defaultSize(kind: TileKind, adjustable = false): TileSize {
       return "2x1";
     case "wifi":
       return "2x1";
+    case "departures":
+      return "2x2";
     case "medications":
     case "notes":
     case "plants":

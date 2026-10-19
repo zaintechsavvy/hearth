@@ -17,8 +17,18 @@ type View =
   | { kind: "picture" }
   | { kind: "offline" };
 
-const WEBRTC_FRAME_MS = 10_000;
-const HLS_FRAME_MS = 30_000;
+const WEBRTC_FRAME_MS = 6000;
+/** Home is reached directly here, so low-latency HLS's once-a-second requests are cheap; elsewhere each one crosses the internet. */
+const atHome = () => /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|[^.]+\.local$)/.test(location.hostname);
+const hlsFrameMs = () => atHome() ? 30_000 : 45_000;
+/** Which way each camera last played, so the next view starts with it instead of waiting for one that cannot connect from here. */
+const STAGE_KEY = "hearth-camera-stage";
+const rememberedStage = (id: string) => {
+  try { return (JSON.parse(localStorage.getItem(STAGE_KEY) ?? "{}") as Record<string, string>)[id]; } catch { return undefined; }
+};
+const rememberStage = (id: string, stage: Stage) => {
+  try { localStorage.setItem(STAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STAGE_KEY) ?? "{}"), [id]: stage })); } catch { /* storage full or blocked: the next view tries WebRTC first again */ }
+};
 const MJPEG_FRAME_MS = 8000;
 /** How long an MJPEG picture has to change before it counts as live; a camera that only keeps stills repeats one. */
 const MJPEG_MOTION_MS = 10_000;
@@ -138,7 +148,7 @@ async function playWebRtc(base: string, video: HTMLVideoElement, signal: AbortSi
   }));
   const silent = timeout(WEBRTC_FRAME_MS, signal, "no picture arrived").catch(() => {
     const reached = peer.iceConnectionState === "connected" || peer.iceConnectionState === "completed";
-    throw new Error(reached ? "connected, but no picture arrived in 10 seconds" : `this browser could not reach the video at ${hosts.join(", ") || "Home Assistant"} in 10 seconds`);
+    throw new Error(reached ? `connected, but no picture arrived in ${WEBRTC_FRAME_MS / 1000} seconds` : `this browser could not reach the video at ${hosts.join(", ") || "Home Assistant"} in ${WEBRTC_FRAME_MS / 1000} seconds`);
   });
   await Promise.race([firstFrame(video, signal), unreachable, silent]);
   playing = true;
@@ -185,7 +195,8 @@ async function playHls(base: string, video: HTMLVideoElement, signal: AbortSigna
   const { default: Hls } = await import("hls.js");
   let fatal: Promise<never>;
   if (Hls.isSupported()) {
-    const hls = new Hls({ lowLatencyMode: true, liveSyncDurationCount: 2, backBufferLength: 10 });
+    const near = atHome();
+    const hls = new Hls({ lowLatencyMode: near, liveSyncDurationCount: near ? 2 : 3, backBufferLength: 10, manifestLoadingMaxRetry: 4, fragLoadingMaxRetry: 6 });
     cleanups.push(() => hls.destroy());
     let playing = false;
     fatal = new Promise<never>((_, reject) => hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -204,7 +215,8 @@ async function playHls(base: string, video: HTMLVideoElement, signal: AbortSigna
     throw new Error("this browser cannot play it");
   }
   void video.play().catch(() => {});
-  await Promise.race([firstFrame(video, signal), fatal, timeout(HLS_FRAME_MS, signal, "no picture arrived in 30 seconds")]);
+  const wait = hlsFrameMs();
+  await Promise.race([firstFrame(video, signal), fatal, timeout(wait, signal, `no picture arrived in ${wait / 1000} seconds`)]);
 }
 
 interface IntegrationCameraTileProps {
@@ -266,14 +278,17 @@ export function IntegrationCameraTile({ camera, call }: IntegrationCameraTilePro
     const run = async () => {
       const failures: string[] = [];
       const talk = twoWay ? { onTalk: (sender: RTCRtpSender | null) => onTalk.current?.(sender) } : undefined;
-      for (const [next, play] of [["webrtc", playWebRtc], ["hls", playHls]] as const) {
-        if (next === "hls") setView({ kind: "connecting", stage: "hls" });
+      // Start with what played last time, so the picture comes quickly; a doorbell call over HLS cannot talk back.
+      const order = rememberedStage(camera.id) === "hls" ? [["hls", playHls], ["webrtc", playWebRtc]] as const : [["webrtc", playWebRtc], ["hls", playHls]] as const;
+      for (const [index, [next, play]] of order.entries()) {
+        if (index > 0 || next !== "webrtc") setView({ kind: "connecting", stage: next });
         try {
           await play(base, element, controller.signal, cleanups, onDrop, onRenew, talk);
           if (controller.signal.aborted) return;
           setHeld(null);
           setNotes(failures);
           setView({ kind: "live", stage: next });
+          rememberStage(camera.id, next);
           return;
         } catch (error) {
           if (controller.signal.aborted) return;
@@ -291,7 +306,7 @@ export function IntegrationCameraTile({ camera, call }: IntegrationCameraTilePro
       controller.abort();
       reset();
     };
-  }, [base, camera.name, camera.streamable, attempt, twoWay]);
+  }, [base, camera.id, camera.name, camera.streamable, attempt, twoWay]);
 
   useEffect(() => {
     if (view.kind !== "connecting" || view.stage !== "mjpeg" || mjpegShown) return;

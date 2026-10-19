@@ -6,9 +6,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { CameraSource } from "@/lib/cameras/stream-relay";
 import { StreamRelay, relayStreamName } from "@/lib/cameras/stream-relay";
-import { ASSISTANT_PROVIDER_IDS, ASSISTANT_PROVIDERS } from "@/lib/assistant/providers";
+import { ASSISTANT_PROVIDER_IDS, ASSISTANT_PROVIDERS, matchModel, providerOfKey, type AssistantProvider } from "@/lib/assistant/providers";
 import { checkAssistantKey } from "@/lib/assistant/run";
-import { seal } from "@/lib/crypto";
+import { seal, unseal } from "@/lib/crypto";
 import { createTile, HOME_PAGE_ID, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES, withoutOrphanTiles, type TileHold } from "@/lib/dashboard/layout";
 import { tileSources } from "@/lib/dashboard/sources";
 import { db } from "@/lib/db";
@@ -26,6 +26,8 @@ import { MatterProvider } from "@/lib/integrations/matter/provider";
 import { createProvider } from "@/lib/integrations/registry";
 import { INTEGRATION_LABELS, IntegrationError, type IntegrationConfig } from "@/lib/integrations/types";
 import { feedUrl, fetchFeed, forgetCalendar } from "@/lib/widgets/calendar";
+import { checkTransitKey } from "@/lib/transit";
+import { albumId, albumPhotos } from "@/lib/photos";
 import { eventsBetween } from "@/lib/widgets/ical";
 
 export type { ActionResult, CreatedResult } from "@/lib/action-helpers";
@@ -196,6 +198,7 @@ const tileSchema = z.object({
     price: z.number().min(0).max(10).optional(),
     speakers: z.array(z.string().max(300)).max(20).optional(),
     presets: z.array(z.object({ label: z.string().trim().min(1).max(30), minutes: z.number().min(0.25).max(1440) })).max(8).optional(),
+    stops: z.array(z.object({ key: z.string().min(1).max(200), name: z.string().trim().min(1).max(120) })).max(4).optional(),
     hold: z.custom<TileHold>(value => typeof value === "string" && /^(controls|history|none|scene:[\w-]{1,100}|device:[\w.:-]{1,300})$/.test(value)).optional(),
   }).optional(),
 });
@@ -275,25 +278,65 @@ const assistantInput = z.object({
   }
 });
 
-/** Checks the key against the provider before saving. The first assistant becomes the default. */
+/** The model id to save: what was typed when the provider lists it, the listed id it names, or an error with ids to try. */
+function modelFor(provider: AssistantProvider, typed: string, ids: string[]): { model: string } | { error: string } {
+  if (ids.length === 0) return { model: typed };
+  const model = matchModel(typed, ids);
+  if (model) return { model };
+  const close = ids.filter(id => id.toLowerCase().includes(typed.toLowerCase().split(/\s+/)[0] ?? "")).slice(0, 3);
+  const company = ASSISTANT_PROVIDERS[provider].company;
+  return { error: `${company} has no model called "${typed}". ${close.length ? `Try ${close.join(", ")}.` : `Try ${ASSISTANT_PROVIDERS[provider].defaultModel}.`}` };
+}
+
+/** Checks the key and the model against the provider before saving. The first assistant becomes the default. */
 export async function addAssistant(input: unknown): Promise<ActionResult> {
   const denied = await ownerOnly();
   if (denied) return denied;
   const parsed = assistantInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
-  const { provider } = parsed.data;
+  // A Groq key under Grok, or the reverse, goes to the provider the key is for.
+  const chosen = parsed.data.provider;
+  const provider = chosen !== "custom" ? providerOfKey(parsed.data.apiKey) ?? chosen : chosen;
+  const typed = !parsed.data.model || (provider !== chosen && parsed.data.model === ASSISTANT_PROVIDERS[chosen].defaultModel) ? ASSISTANT_PROVIDERS[provider].defaultModel : parsed.data.model;
   return authed(async userId => {
     const baseUrl = provider === "custom" ? parsed.data.baseUrl?.replace(/\/+$/, "") ?? null : null;
-    await checkAssistantKey(provider, parsed.data.apiKey, baseUrl);
+    const found = modelFor(provider, typed, await checkAssistantKey(provider, parsed.data.apiKey, baseUrl));
+    if ("error" in found) return { ok: false, error: found.error };
     const existing = await db.select({ id: assistant.id }).from(assistant).where(eq(assistant.userId, userId)).limit(1);
     await db.insert(assistant).values({
       userId,
       provider,
-      model: parsed.data.model || ASSISTANT_PROVIDERS[provider].defaultModel,
+      model: found.model,
       apiKey: seal(parsed.data.apiKey),
       baseUrl,
       isDefault: existing.length === 0,
     });
+    revalidatePath("/", "layout");
+    return OK;
+  });
+}
+
+const assistantChange = z.object({
+  model: z.string().trim().min(1, "Enter a model.").max(100),
+  apiKey: z.string().trim().max(500).optional(),
+  baseUrl: z.string().trim().optional(),
+});
+
+/** Changes an assistant's model, and its key or server address when new ones are given, checking them with the provider first. */
+export async function updateAssistant(id: string, input: unknown): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
+  const parsed = assistantChange.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  return authed(async userId => {
+    const row = await db.query.assistant.findFirst({ where: and(eq(assistant.id, id), eq(assistant.userId, userId)) });
+    if (!row) return { ok: false, error: "That assistant is no longer connected." };
+    const apiKey = parsed.data.apiKey || unseal<string>(row.apiKey);
+    const baseUrl = row.provider === "custom" ? parsed.data.baseUrl?.replace(/\/+$/, "") || row.baseUrl : null;
+    if (row.provider === "custom" && !httpUrl.safeParse(baseUrl).success) return { ok: false, error: "Enter the server address, like http://localhost:11434/v1" };
+    const found = modelFor(row.provider, parsed.data.model, await checkAssistantKey(row.provider, apiKey, baseUrl));
+    if ("error" in found) return { ok: false, error: found.error };
+    await db.update(assistant).set({ model: found.model, baseUrl, ...(parsed.data.apiKey ? { apiKey: seal(parsed.data.apiKey) } : {}) }).where(eq(assistant.id, id));
     revalidatePath("/", "layout");
     return OK;
   });
@@ -410,6 +453,8 @@ const deviceChange = z.object({
   room: z.union([roomName, z.literal("")]).nullable().optional(),
   /** Null shows it as the integration's own kind. */
   kind: z.enum(SWITCHABLE_KINDS).nullable().optional(),
+  /** A doorbell's camera; null finds the matching one. */
+  camera: z.string().max(300).nullable().optional(),
 });
 
 async function ownsTarget(userId: string, id: string) {
@@ -418,14 +463,15 @@ async function ownsTarget(userId: string, id: string) {
   return Boolean(parsed && await db.query.integration.findFirst({ where: and(eq(integration.id, parsed.integrationId), eq(integration.userId, userId)) }));
 }
 
-async function writeOverride(userId: string, deviceId: string, change: { name?: string | null; room?: string | null; kind?: SwitchableKind | null }) {
+async function writeOverride(userId: string, deviceId: string, change: { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null }) {
   const current = await db.query.deviceOverride.findFirst({ where: and(eq(deviceOverride.userId, userId), eq(deviceOverride.deviceId, deviceId)) });
   const next = {
     name: change.name === undefined ? current?.name ?? null : change.name || null,
     room: change.room === undefined ? current?.room ?? null : change.room,
     kind: change.kind === undefined ? current?.kind ?? null : change.kind,
+    camera: change.camera === undefined ? current?.camera ?? null : change.camera,
   };
-  if (next.name === null && next.room === null && next.kind === null) {
+  if (next.name === null && next.room === null && next.kind === null && next.camera === null) {
     await db.delete(deviceOverride).where(and(eq(deviceOverride.userId, userId), eq(deviceOverride.deviceId, deviceId)));
     return;
   }
@@ -584,6 +630,50 @@ const bedtimeInput = z.object({
   turnOff: z.array(z.string().max(300)).max(100),
   keep: z.array(z.string().max(300)).max(200),
 });
+
+const immichInput = z.object({ url: httpUrl, key: z.string().trim().max(200), album: z.string().trim().max(400) });
+
+/** Connects an Immich album to the wall tablet's photo frame, once Immich opens it with the key. An empty key keeps the saved one. */
+export async function saveImmich(input: unknown): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
+  const parsed = immichInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const album = albumId(parsed.data.album);
+  if (!album) return { ok: false, error: "Paste the album's address from Immich, or its id." };
+  return authed(async userId => {
+    const { photos } = await getPreferences(userId);
+    const key = parsed.data.key || (photos ? unseal<string>(photos.key) : "");
+    if (!key) return { ok: false, error: "Paste an Immich API key." };
+    const url = parsed.data.url.replace(/\/+$/, "");
+    const found = await albumPhotos({ url, key, album });
+    if (found.photos.length === 0) return { ok: false, error: `${found.name} has no photos yet.` };
+    await savePreferences(userId, { photos: { url, key: seal(key), album } });
+    return OK;
+  });
+}
+
+export async function removeImmich(): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
+  return authed(async userId => {
+    await savePreferences(userId, { photos: null });
+    return OK;
+  });
+}
+
+/** Saves the free Transitland key the departures tile uses, once Transitland accepts it. */
+export async function saveTransitKey(key: unknown): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
+  const parsed = z.string().trim().min(10, "Paste the full API key.").max(200).safeParse(key);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  return authed(async userId => {
+    await checkTransitKey(parsed.data);
+    await savePreferences(userId, { transit: { key: seal(parsed.data) } });
+    return OK;
+  });
+}
 
 /** What the good night check does, for the whole household. */
 export async function saveBedtime(input: unknown): Promise<ActionResult> {

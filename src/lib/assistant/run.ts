@@ -124,7 +124,7 @@ export function providerError(provider: AssistantProvider, status: number, data:
   const company = ASSISTANT_PROVIDERS[provider].company;
   if (status === 401 || status === 403 || (status === 400 && /api.?key/i.test(message))) return new IntegrationError(`${company} rejected the API key.`);
   if (status === 429) return new IntegrationError(`${company} is rate limiting requests. Try again in a moment.`);
-  if (status === 404) return new IntegrationError(`${company} does not recognise that model.`);
+  if (status === 404 || /model.*(not found|does not exist|decommissioned)|model_not_found/i.test(message)) return new IntegrationError(`${company} does not recognise that model. Choose Edit beside it in Settings, under AI assistants, to change it.`);
   return new IntegrationError(`${company} returned ${status}${message ? `: ${message.slice(0, 200)}` : ""}.`);
 }
 
@@ -170,18 +170,19 @@ async function runChatCompletions({ provider, model, apiKey, baseUrl, system, hi
     const message = data.choices?.[0]?.message;
     if (!message) throw new IntegrationError(`${ASSISTANT_PROVIDERS[p].company} sent an empty response.`);
     if (!message.tool_calls?.length) return message.content?.trim() || "Done.";
-    messages.push(message);
+    // Gemini needs its reply back exactly, thought signature and all; Groq and others refuse fields such as `reasoning`.
+    messages.push(p === "gemini" ? message : { role: "assistant", content: message.content ?? "", tool_calls: message.tool_calls });
     for (const call of message.tool_calls) messages.push({ role: "tool", tool_call_id: call.id, content: await callTool(call.function.name, call.function.arguments) });
   }
   return "I made several changes. Check the dashboard for the result.";
 }
 
-/** A free request that only succeeds with a working key. */
-export async function checkAssistantKey(provider: AssistantProvider, apiKey: string, baseUrl?: string | null) {
+/** A free request that only succeeds with a working key; returns the model ids the key can use, when the provider lists them. */
+export async function checkAssistantKey(provider: AssistantProvider, apiKey: string, baseUrl?: string | null): Promise<string[]> {
   if (provider === "anthropic") {
     try {
       await new Anthropic({ apiKey, timeout: 10_000, maxRetries: 0 }).models.list({ limit: 1 });
-      return;
+      return [];
     } catch (error) {
       if (error instanceof Anthropic.AuthenticationError || error instanceof Anthropic.PermissionDeniedError) throw new IntegrationError("Anthropic rejected the API key.");
       if (error instanceof Anthropic.APIConnectionError) throw new IntegrationError("Could not reach Anthropic.");
@@ -195,4 +196,6 @@ export async function checkAssistantKey(provider: AssistantProvider, apiKey: str
     throw new IntegrationError(`Could not reach ${ASSISTANT_PROVIDERS[provider].company}.`);
   }
   if (!response.ok) throw providerError(provider, response.status, await response.json().catch(() => null));
+  const body = await response.json().catch(() => null) as { data?: { id?: unknown }[] } | null;
+  return (body?.data ?? []).map(item => item.id).filter((id): id is string => typeof id === "string").map(id => id.replace(/^models\//, ""));
 }

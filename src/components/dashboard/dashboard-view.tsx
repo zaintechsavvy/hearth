@@ -1,6 +1,7 @@
 "use client";
 
 import { Clapperboard, House, LayoutGrid, Plus, QrCode, Sparkles, Sun, Video } from "lucide-react";
+import { askHearth } from "@/components/assistant/assistant-dock";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Alert } from "@/components/arc/alert/alert";
@@ -65,6 +66,8 @@ import { PackagesTile } from "./household/packages-tile";
 import { TimersTile } from "./household/timers-tile";
 import { WidgetEditor, isHousehold, ITEM_KIND_FOR, type WidgetEditorState } from "./household/widget-editor";
 import { WifiShare } from "./household/wifi-share";
+import { DeparturesTile } from "./transit/departures-tile";
+import { StopsDialog } from "./transit/stops-dialog";
 import { WifiTile } from "./household/wifi-tile";
 import { itemsOf } from "@/lib/widgets/items";
 import styles from "./dashboard.module.css";
@@ -115,6 +118,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const [managing, setManaging] = useState<WidgetEditorState | null>(null);
   const [charting, setCharting] = useState<string | null>(null);
   const [sharing, setSharing] = useState<string | null | undefined>(undefined);
+  const [stopsFor, setStopsFor] = useState<string | null>(null);
   const [room, setRoom] = useState(ALL_ROOMS);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const latest = useRef<TileConfig[] | null>(null);
@@ -225,6 +229,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     const source = link ? sourceById.get(link) : undefined;
     const tile = createTile(source?.kind ?? kind, link, source?.adjustable ?? false, options ? { options } : {});
     change([...tiles, tile]);
+    if (kind === "departures") setStopsFor(tile.id);
     if (isHousehold(kind) && (kind === "countdown" || kind === "wifi" || (["bins", "medications", "plants", "packages", "appliances"].includes(kind) && itemsOf(home.widgets, ITEM_KIND_FOR[kind]).length === 0))) {
       setManaging({ kind, tile });
     }
@@ -285,7 +290,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const editable = customizingTile ? editableTile(customizingTile, resolve(customizingTile), nameOf(customizingTile), sourceLabel, [
     ...home.scenes.map(scene => ({ value: `scene:${scene.id}`, name: scene.name })),
     ...home.devices.filter(device => device.kind === "scene").map(device => ({ value: `device:${device.id}`, name: device.name })),
-  ]) : null;
+  ], home.devices.filter(device => device.kind === "camera" && device.streamable).map(device => ({ value: device.id, name: device.name }))) : null;
   const customizingLink = customizingTile ? resolve(customizingTile) : null;
   const customizingScene = customizingLink?.type === "scene" ? customizingLink.scene : null;
 
@@ -322,6 +327,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         return <AnnounceTile tile={tile} devices={home.devices} interactive={interactive} onOptions={patch => change(updateTile(tiles, tile.id, { options: { ...tile.options, ...patch } }))} onCommand={send} />;
       case "appliances":
         return <AppliancesTile tile={tile} items={itemsOf(home.widgets, "appliance")} devices={home.devices} now={minuteNow} interactive={interactive} onManage={() => setManaging({ kind: "appliances", tile })} />;
+      case "departures":
+        return <DeparturesTile tile={tile} ready={home.transitReady} interactive={interactive} onManage={() => setStopsFor(tile.id)} />;
       case "packages":
         return <PackagesTile tile={tile} items={itemsOf(home.widgets, "package")} interactive={interactive} onManage={itemId => setManaging({ kind: "packages", tile, itemId })} />;
     }
@@ -368,6 +375,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       />
       <WidgetEditor state={managing} items={home.widgets} onOpenChange={open => !open && setManaging(null)}
         onLink={(tileId, itemId) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, itemId } } : tile))} />
+      <StopsDialog open={stopsFor !== null} ready={home.transitReady} initial={tiles.find(tile => tile.id === stopsFor)?.options?.stops ?? []} onOpenChange={open => !open && setStopsFor(null)}
+        onSave={stops => stopsFor && change(tiles.map(tile => tile.id === stopsFor ? { ...tile, options: { ...tile.options, stops } } : tile))} />
       <WifiShare items={itemsOf(home.widgets, "wifi")} itemId={sharing} onOpenChange={open => !open && setSharing(undefined)} />
       <HistorySheet device={chartedDevice} onOpenChange={open => !open && setCharting(null)} />
       <LightControls device={controlledLight} onOpenChange={open => !open && setControlling(null)} onCommand={send} />
@@ -391,7 +400,10 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         onRemove={() => { if (customizing) change(removeTile(tiles, customizing)); setCustomizing(null); }}
         onRelink={() => {
           if (!customizingTile) return;
-          if (isHousehold(customizingTile.kind)) {
+          if (customizingTile.kind === "departures") {
+            setStopsFor(customizingTile.id);
+            setCustomizing(null);
+          } else if (isHousehold(customizingTile.kind)) {
             setManaging({ kind: customizingTile.kind, tile: customizingTile, itemId: customizingTile.options?.itemId });
             setCustomizing(null);
           } else {
@@ -430,7 +442,12 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     <div className={styles.dashboard}>
       <header className={styles.intro} data-on-wall>
         <div>
-          <h1 className={styles.title}><Greeting hour={hour} name={userName} /></h1>
+          <div className={styles.titleRow}>
+            <h1 className={styles.title}><Greeting hour={hour} name={userName} /></h1>
+            <button type="button" className={`${glassClass("pill")} ${styles.ask}`} data-wall-only onClick={() => askHearth()} aria-label="Ask Hearth, by typing or out loud" title="Ask Hearth">
+              <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" />
+            </button>
+          </div>
           <p className={styles.summary}>
             {summarize(home.devices)}
             <span className={styles.live} data-live={live || undefined} title={live ? "Updates arrive as they happen" : "Connecting to live updates"}>{live ? "Live" : "Connecting"}</span>
@@ -506,7 +523,7 @@ function mergeFiltered(all: TileConfig[], changed: TileConfig[]) {
   return all.map(tile => ids.has(tile.id) ? queue.shift() ?? tile : tile);
 }
 
-function editableTile(tile: TileConfig, linked: Linked | null, name: string, sourceLabel: (device: Device) => string, scenes: { value: string; name: string }[]): EditableTile {
+function editableTile(tile: TileConfig, linked: Linked | null, name: string, sourceLabel: (device: Device) => string, scenes: { value: string; name: string }[], cameras: { value: string; name: string }[]): EditableTile {
   const info = KIND_INFO[tile.kind];
   const base = { config: tile, kind: tile.kind, name, linkedName: null as string | null, adjustable: true, icon: null, color: null };
   if (isWidget(tile.kind)) return { ...base, linkedName: tile.kind === "weather" ? tile.options?.place?.name ?? null : null };
@@ -520,6 +537,7 @@ function editableTile(tile: TileConfig, linked: Linked | null, name: string, sou
   const identity = {
     id: device.id, name: device.name, sourceName: device.sourceName, room: device.room, sourceRoom: device.sourceRoom, roomEditable: true, source: sourceLabel(device),
     ...(isSwitchableKind(device.kind) ? { kind: device.kind, sourceKind: device.sourceKind } : {}),
+    ...(device.kind === "event" && device.eventClass === "doorbell" ? { doorbellCamera: { value: device.camera ?? null, options: cameras } } : {}),
   };
   const holds = [
     ...(device.kind === "light" && hasControls(device) ? [{ value: "controls", label: "Open colour and brightness" }] : []),

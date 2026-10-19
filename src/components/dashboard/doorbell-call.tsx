@@ -13,6 +13,9 @@ import styles from "./doorbell-call.module.css";
 
 /** Wakes a resting wall tablet, so the call is not hidden behind the clock. */
 export const WAKE_EVENT = "hearth-wake";
+const LOOK_EVENT = "hearth-look-at-door";
+/** Opens the doorbell's view without a ring, to see who is there or talk to them. */
+export const lookAtDoor = (deviceId: string) => window.dispatchEvent(new CustomEvent(LOOK_EVENT, { detail: deviceId }));
 const FRESH_MS = 60_000;
 /** A call nobody answers closes by itself. */
 const UNANSWERED_MS = 90_000;
@@ -29,6 +32,8 @@ export function DoorbellCall() {
   const seen = useRef<Map<string, string | null> | null>(null);
   const mic = useRef<MediaStreamTrack | null>(null);
   const [ring, setRing] = useState<EventDevice | null>(null);
+  /** Opened from the tile rather than by a ring: no flash, and it says so. */
+  const [looking, setLooking] = useState(false);
   const [listen, setListen] = useState(false);
   const [sender, setSender] = useState<RTCRtpSender | null>(null);
   const [talking, setTalking] = useState(false);
@@ -46,6 +51,7 @@ export function DoorbellCall() {
       seen.current.set(doorbell.id, doorbell.last);
       if (!doorbell.last || doorbell.last === previous || Date.now() - Date.parse(doorbell.last) >= FRESH_MS) continue;
       setRing(doorbell);
+      setLooking(false);
       haptic("alert");
       window.dispatchEvent(new Event(WAKE_EVENT));
       void fetch("/api/doorbell", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId: doorbell.id, at: doorbell.last }) }).catch(() => {});
@@ -82,6 +88,17 @@ export function DoorbellCall() {
 
   useEffect(() => () => mic.current?.stop(), []);
 
+  useEffect(() => {
+    const onLook = (event: Event) => {
+      const doorbell = devices?.find((device): device is EventDevice => device.id === (event as CustomEvent<string>).detail && device.kind === "event");
+      if (!doorbell) return;
+      setLooking(true);
+      setRing(doorbell);
+    };
+    window.addEventListener(LOOK_EVENT, onLook);
+    return () => window.removeEventListener(LOOK_EVENT, onLook);
+  }, [devices]);
+
   const toggleTalk = async () => {
     if (talking) return stopTalking();
     if (!sender) return;
@@ -105,11 +122,11 @@ export function DoorbellCall() {
         <motion.div key={ring.id} role="alertdialog" aria-modal="true" aria-labelledby="doorbell-title" aria-describedby="doorbell-where" className={styles.call}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: motionTokens.duration.exit } }}
           transition={{ duration: reduce ? 0 : motionTokens.duration.standard }}>
-          {!reduce && <span key={ring.last} className={styles.flash} aria-hidden="true" />}
+          {!reduce && !looking && <span key={ring.last} className={styles.flash} aria-hidden="true" />}
           <header className={styles.head}>
-            <span className={styles.bell} aria-hidden="true"><BellRing size={26} strokeWidth={1.75} /></span>
+            <span className={styles.bell} data-still={looking || undefined} aria-hidden="true"><BellRing size={26} strokeWidth={1.75} /></span>
             <div className={styles.words}>
-              <h2 id="doorbell-title" className={styles.title}>Someone is at the door</h2>
+              <h2 id="doorbell-title" className={styles.title}>{looking ? "At the door" : "Someone is at the door"}</h2>
               <p id="doorbell-where" className={styles.where}>{ring.name}{ring.room ? ` · ${ring.room}` : ""}</p>
             </div>
           </header>
@@ -127,7 +144,7 @@ export function DoorbellCall() {
           <div className={styles.controls}>
             <CallButton icon={listen ? Volume2 : VolumeX} label={listen ? "Listening" : "Listen"} pressed={listen} disabled={!camera} onClick={() => setListen(value => !value)} />
             <CallButton icon={talking ? Mic : MicOff} label={talking ? "Talking" : "Talk"} pressed={talking} disabled={!sender}
-              note={camera && !sender ? "This camera cannot play your voice" : undefined} onClick={() => void toggleTalk()} />
+              note={camera && !sender ? "Talking needs a direct connection to a camera with a speaker, such as on the home network" : undefined} onClick={() => void toggleTalk()} />
             <CallButton icon={X} label="Close" onClick={close} autoFocus />
           </div>
         </motion.div>

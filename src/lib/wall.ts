@@ -20,7 +20,16 @@ export interface WallSettings {
   /** After dark, point out a door, window, or garage door open for longer than `openMinutes`. */
   openReminder: boolean;
   openMinutes: number;
+  /** Rest on a photo frame instead of a plain clock: photos uploaded to Hearth, or an Immich album. */
+  frame: boolean;
+  frameSource: PhotoSource;
+  /** Seconds each photo shows, 10 to 120. */
+  frameSeconds: number;
+  /** Keep showing photos in the night window; otherwise the screen rests on the clock alone. */
+  frameAtNight: boolean;
 }
+
+export type PhotoSource = "uploads" | "immich";
 
 export const CLOCK_COLORS = {
   white: "oklch(96% 0 0)",
@@ -38,6 +47,7 @@ export const WALL_KEY = "hearth-wall";
 export const DEFAULT_WALL: WallSettings = {
   enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: true, showAssistant: true,
   clockColor: "white", clockBrightness: 0.85, nightRed: true, openReminder: true, openMinutes: 15,
+  frame: false, frameSource: "uploads", frameSeconds: 20, frameAtNight: false,
 };
 
 const minutes = (time: string) => {

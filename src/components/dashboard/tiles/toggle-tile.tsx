@@ -91,6 +91,7 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
               </LevelOverlay>
             )}
           </LevelPill>
+          {swatch}
         </div>
       );
     }

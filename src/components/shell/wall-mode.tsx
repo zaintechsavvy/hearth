@@ -11,8 +11,11 @@ import { useHome } from "@/components/dashboard/use-home";
 import { useTick } from "@/components/dashboard/household/use-tick";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import { WAKE_EVENT } from "@/components/dashboard/doorbell-call";
+import { askHearth } from "@/components/assistant/assistant-dock";
 import { startBedtime } from "@/components/shell/bedtime-check";
 import { LeftOpenBanner, leftOpenWords, useLeftOpen, type LeftOpen } from "@/components/shell/left-open";
+import { PhotoFrame } from "@/components/shell/photo-frame";
+import { StateNotices } from "@/components/shell/state-notice";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { isDark } from "@/lib/left-open";
 import { isWidget, type TileConfig } from "@/lib/dashboard/layout";
@@ -148,6 +151,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           <Moon size={18} strokeWidth={1.75} aria-hidden="true" /> Good night
         </button>
       )}
+      <StateNotices devices={home?.devices} />
       {!resting && <LeftOpenBanner items={leftOpen.items} onClose={device => void send(device, { type: "cover", action: "close" }).catch(() => {})} onQuiet={leftOpen.quietTonight} />}
       <Popover open={menu} onOpenChange={setMenu}>
         <PopoverTrigger asChild>
@@ -161,6 +165,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           </nav>
           <span className={styles.menuDivider} aria-hidden="true" />
           <Link href="/settings#wall" className={styles.menuItem} onClick={() => setMenu(false)}>Wall tablet settings</Link>
+          {settings.showAssistant && <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); askHearth(); }}>Ask Hearth</button>}
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night</button>
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); }}>Rest the screen now</button>
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.documentElement.requestFullscreen?.().catch(() => {}); }}>Full screen</button>
@@ -175,6 +180,8 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
 /** The resting screen: the date over a large clock, the weather, then running timers and what needs doing next as cards. It drifts a little each minute so nothing burns in. */
 function Glance({ now, night, settings, leftOpen }: { now: number; night: boolean; settings: WallSettings; leftOpen: LeftOpen[] }) {
   const { home } = useHome();
+  const [frameEmpty, setFrameEmpty] = useState(false);
+  const photos = settings.frame && !(night && !settings.frameAtNight);
   const date = new Date(now || 0);
   const drift = Math.floor(now / DRIFT_EVERY_MS);
   const red = night && settings.nightRed;
@@ -214,7 +221,8 @@ function Glance({ now, night, settings, leftOpen }: { now: number; night: boolea
   };
   return (
     <>
-      <span className={styles.glance} style={offset}>
+      {photos && <PhotoFrame source={settings.frameSource} seconds={settings.frameSeconds} onEmpty={setFrameEmpty} />}
+      <span className={styles.glance} style={offset} data-frame={(photos && !frameEmpty) || undefined}>
         <span className={styles.date}>{now ? date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : ""}</span>
         <span className={styles.clock}>
           <span className={styles.time}>{clock.time}</span>

@@ -12,6 +12,7 @@ import {
   isSensitive, type BinarySensorDevice, type CoverDevice, type DeviceCommand, type EventDevice, type LockDevice, type SceneDevice, type SensorDevice,
 } from "@/lib/devices/types";
 import type { OpenMethod } from "@/lib/security-types";
+import { lookAtDoor } from "../doorbell-call";
 import { PinPad } from "../pin-pad";
 import { useHome } from "../use-home";
 import { LevelPill } from "./level-pill";
@@ -253,7 +254,6 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
         <div className={`${glassClass("panel")} ${styles.tile} ${styles.tall}`} {...shared}>
           <span className={styles.tallTop}>
             <span className={styles.tallBadge}><span className={styles.icon} aria-hidden="true"><Icon size={large ? 30 : 26} strokeWidth={1.75} /></span></span>
-            {large && device.available && <span className={styles.statusDot} data-tone={active ? "warning" : "success"} aria-hidden="true" />}
           </span>
           {fill}
           <span className={styles.tallText}>
@@ -270,12 +270,14 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   }
 
   const charted = isReading && onOpenHistory && interactive;
-  const Root = command || charted ? "button" : "div";
+  const door = device.kind === "event" && device.eventClass === "doorbell" && interactive && device.available;
+  const Root = command || charted || door ? "button" : "div";
   return (
     <>
       <Root
         {...(command ? { type: "button" as const, onClick: () => { if (!hold.justOpened()) void request(command); }, disabled, "aria-label": `${device.name}${device.room ? ` in ${device.room}` : ""}, ${text}${holdToOpen ? `. Hold to ${holdWords.toLowerCase()}` : ""}` }
           : charted ? { type: "button" as const, onClick: onOpenHistory, "aria-label": `${device.name}, ${text}. Show history` }
+          : door ? { type: "button" as const, onClick: () => lookAtDoor(device.id), "aria-label": `${device.name}, ${text}. Look at the door` }
             : { role: "group", "aria-label": `${device.name}, ${text}` })}
         className={`${glassClass("panel")} ${styles.tile} ${styles.press} ${isReading ? styles.reading : ""}`}
         {...shared}

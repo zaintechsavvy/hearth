@@ -320,15 +320,14 @@
   .pulse { animation: none; }
 }
 
-/* On a wall tablet the assistant waits at the top, beside the menu, so the tiles can run to the bottom edge. */
+/* On a wall tablet the assistant opens from the button beside the greeting, so nothing floats over the tiles or the menu. */
+:global(:root[data-wall]) .anchor:not([data-open]) {
+  display: none;
+}
+
 :global(:root[data-wall]) .anchor {
   top: max(var(--space-3), env(safe-area-inset-top));
   bottom: auto;
   right: calc(max(var(--space-3), env(safe-area-inset-right)) + 56px);
   align-items: flex-start;
-}
-
-:global(:root[data-wall]) .quickMic {
-  top: 0;
-  bottom: auto;
 }

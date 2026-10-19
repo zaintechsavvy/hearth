@@ -55,9 +55,13 @@ export interface HomeSnapshot {
   sun: { sunrise: string; sunset: string } | null;
   /** What the good night check does here. */
   bedtime: BedtimeSettings;
+  /** A Transitland key is saved, so departures tiles can load. */
+  transitReady: boolean;
+  /** An Immich album is set for the wall tablet's photo frame. */
+  photoAlbum: boolean;
 }
 
-type Override = { name: string | null; room: string | null; kind?: SwitchableKind | null };
+type Override = { name: string | null; room: string | null; kind?: SwitchableKind | null; camera?: string | null };
 
 /** Hearth's names and rooms over the integration's, keeping the originals so they can be shown and restored. */
 export function applyOverride<T extends Device>(device: T, override: Override | undefined): T {
@@ -71,6 +75,7 @@ export function applyOverride<T extends Device>(device: T, override: Override | 
     next.sourceRoom = device.room;
     next.room = override.room || null;
   }
+  if (override.camera && next.kind === "event") next.camera = override.camera;
   if (override.kind && override.kind !== device.kind && (next.kind === "light" || next.kind === "switch" || next.kind === "fan")) return showAs(next, override.kind) as T;
   return next;
 }
@@ -106,7 +111,7 @@ export async function getPreferences(userId: string) {
   const row = await db.query.preference.findFirst({ where: eq(preference.userId, userId) });
   const layout = row?.layout ?? [];
   const pages: DashboardPage[] = row?.pages.length ? row.pages : [{ id: HOME_PAGE_ID, name: "Home", layout }];
-  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [], alerts: { ...DEFAULT_ALERTS, ...row?.alerts }, location: row?.location ?? null, security: row?.security ?? DEFAULT_SECURITY, bedtime: { ...DEFAULT_BEDTIME, ...row?.bedtime } };
+  return { streamRelayUrl: row?.streamRelayUrl ?? null, layout, pages, rooms: row?.rooms ?? [], alerts: { ...DEFAULT_ALERTS, ...row?.alerts }, location: row?.location ?? null, security: row?.security ?? DEFAULT_SECURITY, bedtime: { ...DEFAULT_BEDTIME, ...row?.bedtime }, transit: row?.transit ?? null, photos: row?.photos ?? null };
 }
 
 export async function loadHome(userId: string): Promise<HomeSnapshot> {
@@ -141,7 +146,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
   const pages = preferences.pages.map(page => ({ ...page, layout: withoutOrphanTiles(page.layout, connected) }));
   const times = preferences.location ? sunTimes(new Date(), preferences.location.latitude, preferences.location.longitude) : null;
   const sun = times ? { sunrise: times.sunrise.toISOString(), sunset: times.sunset.toISOString() } : null;
-  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, pinLength: preferences.security.method === "pin" ? preferences.security.length ?? null : null, sun, bedtime: preferences.bedtime };
+  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, pinLength: preferences.security.method === "pin" ? preferences.security.length ?? null : null, sun, bedtime: preferences.bedtime, transitReady: Boolean(preferences.transit), photoAlbum: Boolean(preferences.photos) };
 }
 
 /** Sends a device a command. `by` says who, for the activity log: a person, the assistant, a scene, or an automation. */

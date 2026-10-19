@@ -99,6 +99,10 @@ export const preference = pgTable("preference", {
   security: jsonb("security").$type<SecuritySettings>().notNull().default(DEFAULT_SECURITY),
   /** What the good night check does. */
   bedtime: jsonb("bedtime").$type<BedtimeSettings>().notNull().default(DEFAULT_BEDTIME),
+  /** The Transitland key for the departures tile, sealed with `lib/crypto`. */
+  transit: jsonb("transit").$type<{ key: string } | null>(),
+  /** An Immich album for the wall tablet's photo frame; the key is sealed with `lib/crypto`. */
+  photos: jsonb("photos").$type<{ url: string; key: string; album: string } | null>(),
   updatedAt: updatedAt(),
 });
 
@@ -154,6 +158,8 @@ export const deviceOverride = pgTable("device_override", {
   room: text("room"),
   /** What an on/off device shows as in Hearth, such as a light switch Home Assistant files as a fan; null keeps the integration's kind. */
   kind: text("kind").$type<SwitchableKind>(),
+  /** A doorbell's camera, as a device id; null finds the camera that matches it. */
+  camera: text("camera"),
   updatedAt: updatedAt(),
 }, t => [primaryKey({ columns: [t.userId, t.deviceId] })]);
 

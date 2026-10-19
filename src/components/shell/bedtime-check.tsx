@@ -11,6 +11,7 @@ import { useHome } from "@/components/dashboard/use-home";
 import { glassSheetClass } from "@/components/glass/glass";
 import { bedtimePlan, bedtimeSteps, type BedtimeResult } from "@/lib/bedtime";
 import { haptic } from "@/lib/haptics";
+import { markSent } from "@/lib/sent-here";
 import styles from "./bedtime-check.module.css";
 
 const BEDTIME_EVENT = "hearth-bedtime";
@@ -33,6 +34,7 @@ export function BedtimeCheck() {
 
   const run = async () => {
     setState({ kind: "running" });
+    markSent(...steps.map(step => step.deviceId));
     try {
       const response = await fetch("/api/bedtime", { method: "POST" });
       const body = await response.json().catch(() => null);

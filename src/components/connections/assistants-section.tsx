@@ -14,7 +14,7 @@ import { Input } from "@/components/arc/input/input";
 import { PasswordField } from "@/components/arc/password-field/password-field";
 import { RadioCards } from "@/components/arc/radio-cards/radio-cards";
 import { Glass, glassSheetClass } from "@/components/glass/glass";
-import { addAssistant, removeAssistant, setDefaultAssistant } from "@/lib/actions";
+import { addAssistant, removeAssistant, setDefaultAssistant, updateAssistant } from "@/lib/actions";
 import { ASSISTANT_PROVIDERS, ASSISTANT_PROVIDER_IDS, type AssistantProvider } from "@/lib/assistant/providers";
 import { ASSISTANT_INFO_KEY } from "@/components/assistant/assistant-dock";
 import styles from "./connections.module.css";
@@ -36,6 +36,7 @@ export function AssistantsSection({ assistants }: { assistants: AssistantSummary
     void mutate(ASSISTANT_INFO_KEY);
   };
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<AssistantSummary | null>(null);
   const [provider, setProvider] = useState<AssistantProvider>("anthropic");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export function AssistantsSection({ assistants }: { assistants: AssistantSummary
               <span className={styles.rowMeta}>{item.baseUrl ?? ASSISTANT_PROVIDERS[item.provider].company} · {item.model}</span>
             </div>
             <div className={styles.rowActions}>
+              <Button variant="ghost" size="sm" onClick={() => setEditing(item)}>Edit</Button>
               {item.isDefault ? <Badge tone="info" size="sm">Default</Badge> : (
                 <Button variant="ghost" size="sm" onClick={async () => { await setDefaultAssistant(item.id); changed(); }}>Use by default</Button>
               )}
@@ -108,6 +110,43 @@ export function AssistantsSection({ assistants }: { assistants: AssistantSummary
           </form>
         </DialogContent>
       </Dialog>
+      <EditAssistant assistant={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); changed(); }} />
     </SettingsSection>
+  );
+}
+
+/** Changes the model, and the key or server address when new ones are typed; the saved key stays when the field is left empty. */
+function EditAssistant({ assistant, onClose, onSaved }: { assistant: AssistantSummary | null; onClose: () => void; onSaved: () => void }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const info = assistant ? ASSISTANT_PROVIDERS[assistant.provider] : null;
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!assistant) return;
+    const form = new FormData(event.currentTarget);
+    setPending(true);
+    setError(null);
+    const result = await updateAssistant(assistant.id, { model: String(form.get("model") ?? ""), apiKey: String(form.get("apiKey") ?? ""), baseUrl: String(form.get("baseUrl") ?? "") });
+    setPending(false);
+    if (!result.ok) return setError(result.error);
+    onSaved();
+  }
+  return (
+    <Dialog open={Boolean(assistant)} onOpenChange={open => { if (!open) { setError(null); onClose(); } }}>
+      {assistant && info && (
+        <DialogContent className={glassSheetClass} title={`Edit ${info.label}`} description="Hearth checks the model and key with the provider before saving.">
+          <form key={assistant.id} className={styles.form} onSubmit={submit}>
+            <Input label="Model" name="model" defaultValue={assistant.model} required autoComplete="off" description={`The model's id, such as ${info.defaultModel}. A name like the one on the provider's site works too.`} />
+            {assistant.provider === "custom" && <Input label="Server address" name="baseUrl" type="url" defaultValue={assistant.baseUrl ?? ""} autoComplete="off" />}
+            <PasswordField label="New API key" name="apiKey" autoComplete="off" description="Leave empty to keep the saved key." />
+            <Alert tone="danger" title="Could not save" open={Boolean(error)}>{error ?? ""}</Alert>
+            <div className={styles.formActions}>
+              <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
+              <Button type="submit" loading={pending}>Save</Button>
+            </div>
+          </form>
+        </DialogContent>
+      )}
+    </Dialog>
   );
 }

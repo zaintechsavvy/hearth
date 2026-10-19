@@ -1,0 +1,119 @@
+.tile {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  width: 100%;
+  height: 100%;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in oklab, #16a34a 16%, transparent);
+  color: #15803d;
+}
+
+.title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: start;
+}
+
+.quiet {
+  align-self: center;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.list {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 36px;
+}
+
+.row[data-canceled] {
+  opacity: .55;
+}
+
+.route {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border-radius: 8px;
+  background: var(--route, var(--foreground));
+  color: var(--route-ink, var(--background));
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.where {
+  display: grid;
+  min-width: 0;
+}
+
+.headsign,
+.stop {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headsign {
+  font-size: var(--text-sm);
+}
+
+.stop {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.when {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.live {
+  color: var(--success);
+}
+
+.tile[data-size="4x2"] .list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-6);
+}

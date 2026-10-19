@@ -6,7 +6,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { SlidersHorizontal } from "lucide-react";
-import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { glassClass } from "@/components/glass/glass";
 import { haptic } from "@/lib/haptics";
 import { spanOf, type TileConfig } from "@/lib/dashboard/layout";
@@ -40,7 +40,33 @@ function move(ids: string[], from: string, to: string) {
   return next;
 }
 
+/** On a wall tablet, the height left under the header, so four rows of tiles fit on the screen without scrolling. */
+function useFitHeight() {
+  const frame = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = frame.current;
+    if (!node) return;
+    const measure = () => {
+      const bottom = parseFloat(getComputedStyle(document.querySelector("main") ?? document.body).paddingBottom) || 0;
+      node.style.setProperty("--fit-height", `${Math.max(240, window.innerHeight - (node.getBoundingClientRect().top + window.scrollY) - bottom)}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.body);
+    const wall = new MutationObserver(measure);
+    wall.observe(document.documentElement, { attributes: true, attributeFilter: ["data-wall"] });
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      wall.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+  return frame;
+}
+
 export function HomeGrid({ tiles, editing, renderTile, nameOf, onTilesChange, onCustomize }: HomeGridProps) {
+  const frame = useFitHeight();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -77,7 +103,7 @@ export function HomeGrid({ tiles, editing, renderTile, nameOf, onTilesChange, on
   };
 
   return (
-    <div className={styles.frame}>
+    <div ref={frame} className={styles.frame}>
       <DndContext sensors={sensors} collisionDetection={underPointer} onDragStart={start} onDragOver={over} onDragEnd={end} onDragCancel={cancel}>
         <SortableContext items={shown.map(tile => tile.id)} strategy={noShift} disabled={!editing}>
           <div className={styles.grid} data-editing={editing || undefined}>

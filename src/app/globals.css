@@ -98,13 +98,13 @@ body {
 
 /* Text on a big wall screen grows with it, so it reads from across the room; up to a laptop's width nothing changes. */
 :root[data-wall] {
-  font-size: clamp(16px, calc(.7vw + 7px), 21px);
+  font-size: clamp(16px, calc(.5vw + 9px), 19px);
 }
 
 /* The wall uses the whole screen: no reading width, a small even margin, and the assistant up top beside the menu so tiles reach the bottom. */
 :root[data-wall] main {
   max-width: none;
-  padding-top: calc(max(var(--space-6), env(safe-area-inset-top)) + var(--space-8));
+  padding-top: calc(max(var(--space-3), env(safe-area-inset-top)) + 44px);
   padding-inline: max(var(--space-5), calc(env(safe-area-inset-left) + var(--space-3))) max(var(--space-5), calc(env(safe-area-inset-right) + var(--space-3)));
   padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
   translate: var(--wall-shift-x, 0) var(--wall-shift-y, 0);
@@ -129,6 +129,7 @@ button,
   }
 }
 
-:root[data-wall="assistant"] main {
-  padding-top: calc(max(var(--space-3), env(safe-area-inset-top)) + 72px);
+/* Shown only on a wall tablet with the assistant on, such as the assistant button beside the greeting. */
+:root:not([data-wall="assistant"]) [data-wall-only] {
+  display: none;
 }

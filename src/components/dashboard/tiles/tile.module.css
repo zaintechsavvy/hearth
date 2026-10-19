@@ -1,6 +1,8 @@
 /* Shared by every device tile. Colour presets set --tile-color; "on" tiles turn into a bright, nearly opaque surface like Apple Home. */
 .tile {
   --tile-color: oklch(82% .15 82);
+  /* The same lift as every other glass panel, so a resting lock sits on the page like the weather beside it. */
+  --tile-drop: 0 1px 2px oklch(25% .02 260 / .05), 0 18px 50px -12px oklch(30% .04 260 / .16);
   position: relative;
   container-type: size;
   width: 100%;
@@ -28,13 +30,17 @@
 .tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
   background: linear-gradient(180deg, oklch(93% .003 260 / .55), oklch(89% .003 260 / .45));
   border-color: oklch(100% 0 0 / .45);
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .6), 0 1px 2px oklch(20% .02 260 / .04);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .6), var(--tile-drop);
+}
+
+:root[data-theme="dark"] .tile {
+  --tile-drop: 0 1px 2px oklch(0% 0 0 / .3), 0 24px 60px -16px oklch(0% 0 0 / .55);
 }
 
 :root[data-theme="dark"] .tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
   background: linear-gradient(180deg, oklch(30% .004 260 / .5), oklch(22% .004 260 / .45));
   border-color: oklch(100% 0 0 / .08);
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .1);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .1), var(--tile-drop);
 }
 
 :global(:root[data-glass="clear"]) .tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
@@ -44,7 +50,7 @@
 /* Solid tiles stay opaque but keep off quieter than on, so the state still reads at a glance. */
 :global(:root[data-glass="solid"]) .tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
   background: oklch(93.5% .003 260);
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .7);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .7), var(--tile-drop);
 }
 
 :global(:root[data-theme="dark"][data-glass="clear"]) .tile.tile[data-template]:not([data-template="slider"]):not([data-on]) {
@@ -101,7 +107,8 @@
 }
 
 .tile[data-kind="light"][data-on] .badge {
-  background: oklch(100% 0 0 / .4);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--tile-color) 85%, oklch(98% .08 98)), color-mix(in oklab, var(--tile-color) 100%, oklch(80% .16 80) 20%));
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .6), 0 2px 6px color-mix(in oklab, var(--tile-color) 55%, transparent);
 }
 
 .tile[data-unavailable] {
@@ -377,7 +384,7 @@ div.reading {
   opacity: .5;
 }
 
-/* The large card: the same parts with more room, and a dot that says secure or not from across the room. */
+/* The large card: the same parts with more room. */
 .tall[data-size="2x2"] {
   gap: var(--space-3);
   padding: clamp(14px, 9cqi, 24px);
@@ -402,19 +409,6 @@ div.reading {
   font-size: var(--text-base);
 }
 
-.statusDot {
-  width: 10px;
-  height: 10px;
-  margin: var(--space-2);
-  border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 4px color-mix(in oklab, var(--success) 20%, transparent);
-}
-
-.statusDot[data-tone="warning"] {
-  background: var(--warning);
-  box-shadow: 0 0 0 4px color-mix(in oklab, var(--warning) 22%, transparent);
-}
 
 /* Opening the home from the tile itself: a straight edge sweeps across while it is held, and the command runs once it reaches the far side. */
 .holdFill {

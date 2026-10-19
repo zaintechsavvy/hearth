@@ -1,0 +1,1 @@
+ALTER TABLE "device_override" ADD COLUMN "camera" text;

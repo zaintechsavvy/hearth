@@ -1,0 +1,65 @@
+.frame {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: black;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+}
+
+.fill,
+.photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.fill {
+  object-fit: cover;
+  filter: blur(40px) saturate(1.2) brightness(.6);
+  transform: scale(1.15);
+}
+
+.photo {
+  object-fit: cover;
+  animation: drift-a linear both;
+}
+
+.photo[data-whole] {
+  object-fit: contain;
+}
+
+.photo[data-drift="b"] {
+  animation-name: drift-b;
+}
+
+.photo:not([data-drift]) {
+  animation: none;
+}
+
+@keyframes drift-a {
+  from { transform: scale(1.02) translate(0, 0); }
+  to { transform: scale(1.12) translate(-1.5%, -1%); }
+}
+
+@keyframes drift-b {
+  from { transform: scale(1.12) translate(1.5%, 1%); }
+  to { transform: scale(1.02) translate(0, 0); }
+}
+
+/* A soft darkening where the clock and cards sit, so they read on any photo. */
+.shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, oklch(0% 0 0 / .62), oklch(0% 0 0 / .18) 45%, transparent 70%);
+}
+
+/* In the night window the photos sit back, when they show at all. */
+:global([data-night]) .frame {
+  filter: brightness(.55);
+}

@@ -177,7 +177,7 @@ export function AssistantDock() {
   const configured = info?.configured;
 
   return (
-    <div className={styles.anchor} data-wall-assistant>
+    <div className={styles.anchor} data-wall-assistant data-open={open || undefined}>
       {!open && canListen && (
         <button type="button" className={styles.quickMic} onClick={() => { setOpen(true); if (configured) toggleListening(); }} aria-label="Speak to Hearth">
           <Mic size={18} strokeWidth={1.75} aria-hidden="true" />

@@ -13,6 +13,7 @@ import { installPrompt } from "@/components/shell/service-worker";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { CLOCK_COLORS, DEFAULT_WALL, WALL_KEY, type ClockColor, type WallSettings } from "@/lib/wall";
 import styles from "./connections.module.css";
+import { PhotoFrameSettings } from "./photo-frame-settings";
 import { SettingsSection } from "./settings-section";
 
 const WAKE_CLASSES = new Set(["motion", "occupancy", "door", "opening", "garage"]);
@@ -73,6 +74,7 @@ export function WallSection() {
           <Slider label="Brightness" value={Math.round(settings.clockBrightness * 100)} min={15} max={100} format={value => `${value}%`} onValueChange={value => set({ clockBrightness: value / 100 })} />
           <Switch label="Dim red at night" checked={settings.nightRed} onCheckedChange={nightRed => set({ nightRed })} />
         </div>
+        <PhotoFrameSettings settings={settings} set={set} />
         <div className={`${styles.row} ${styles.stacked}`}>
           <div className={styles.rowText}>
             <span className={styles.rowTitle}>Left open after dark</span>

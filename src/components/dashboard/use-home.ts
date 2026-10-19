@@ -6,6 +6,7 @@ import type { ActionResult } from "@/lib/action-helpers";
 import { deleteWidgetItem, saveWidgetItem } from "@/lib/widget-actions";
 import type { ItemData, ItemKind, WidgetItem } from "@/lib/widgets/items";
 import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/types";
+import { markSent } from "@/lib/sent-here";
 import type { HomeSnapshot, SceneRun } from "@/lib/home";
 import { applyScene, type HearthScene } from "@/lib/scenes/types";
 
@@ -149,6 +150,7 @@ export function useHome() {
   }, [mutate]);
 
   const send = useCallback(async (device: Device, command: DeviceCommand, pin?: string) => {
+    markSent(device.id);
     shared.inFlight++;
     try {
       await mutate(async current => {
@@ -171,6 +173,7 @@ export function useHome() {
   }, [mutate]);
 
   const runScene = useCallback(async (scene: HearthScene): Promise<SceneRun> => {
+    markSent(...scene.actions.map(action => action.deviceId));
     shared.inFlight++;
     try {
       let outcome: SceneRun = { ran: 0, failed: [] };

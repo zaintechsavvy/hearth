@@ -132,6 +132,8 @@ export interface EventDevice extends DeviceBase {
   eventClass: EventClass;
   /** ISO time of the last event. */
   last: string | null;
+  /** The camera chosen for a doorbell in Hearth, as a device id. */
+  camera?: string;
 }
 
 export type SceneVariant = "scene" | "script" | "button";

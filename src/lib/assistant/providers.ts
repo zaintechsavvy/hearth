@@ -9,6 +9,19 @@ export interface ProviderInfo {
   keyHint: string;
 }
 
+const KEY_PREFIXES: [string, AssistantProvider][] = [["gsk_", "groq"], ["xai-", "xai"], ["sk-ant-", "anthropic"]];
+
+/** The provider a key belongs to, when its prefix gives it away: Groq and Grok are easy to mix up. */
+export const providerOfKey = (apiKey: string) => KEY_PREFIXES.find(([prefix]) => apiKey.startsWith(prefix))?.[1] ?? null;
+
+/** A model id from what someone typed, using the provider's own list: "OpenAI GPT OSS 120B" is `openai/gpt-oss-120b` on Groq. */
+export function matchModel(typed: string, ids: string[]) {
+  if (ids.includes(typed)) return typed;
+  const flat = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const wanted = flat(typed);
+  return ids.find(id => flat(id) === wanted) ?? ids.find(id => flat(id.split("/").pop() ?? id) === wanted) ?? null;
+}
+
 /** Default models were current in October 2026; each connection can name its own. */
 export const ASSISTANT_PROVIDERS: Record<AssistantProvider, ProviderInfo> = {
   anthropic: { label: "Claude", company: "Anthropic", defaultModel: "claude-opus-5-5", keyUrl: "https://console.anthropic.com/settings/keys", keyHint: "Starts with sk-ant-" },

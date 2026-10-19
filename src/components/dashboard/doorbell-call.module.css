@@ -50,6 +50,10 @@
   animation: bell 1.2s var(--ease-standard) infinite;
 }
 
+.bell[data-still] {
+  animation: none;
+}
+
 @keyframes bell {
   0%, 60%, 100% { transform: rotate(0); }
   10%, 30% { transform: rotate(-14deg); }

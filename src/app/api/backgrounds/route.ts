@@ -5,7 +5,8 @@ import { background } from "@/lib/db/schema";
 import { getHome } from "@/lib/session";
 
 const MAX_BYTES = 4 * 1024 * 1024;
-const MAX_PHOTOS = 24;
+/** Enough for a photo frame that does not repeat for a while; the same photos double as backgrounds. */
+const MAX_PHOTOS = 60;
 const TYPES = ["image/webp", "image/jpeg", "image/png"] as const;
 const MAX_SIDE = 4096;
 
