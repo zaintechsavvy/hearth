@@ -7,11 +7,14 @@ import { BackgroundPicker } from "@/components/shell/background-picker";
 import { useHtmlPreference } from "@/components/shell/use-html-preference";
 import { useThemePreference } from "@/components/shell/use-theme-preference";
 import { X } from "lucide-react";
+import { useEffect } from "react";
 import { Button } from "@/components/arc/button/button";
 import { Input } from "@/components/arc/input/input";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { Switch } from "@/components/arc/switch/switch";
 import { HAPTICS_KEY } from "@/lib/haptics";
+import { Slider } from "@/components/arc/slider/slider";
+import { TILE_OPACITY_KEY } from "@/lib/theme";
 import { NO_PAGE_RULES, PAGE_SCHEDULE_KEY, type PageRule } from "@/lib/page-schedule";
 import { ACCENTS, ACCENT_KEY, DEFAULT_ACCENT, GLASS_KEY, type Accent, type GlassLevel, type ThemePreference } from "@/lib/theme";
 import styles from "./connections.module.css";
@@ -24,6 +27,13 @@ export function AppearanceSection({ pages }: { pages: { id: string; name: string
   const [theme, setTheme] = useThemePreference();
   const [glass, setGlass] = useHtmlPreference<GlassLevel>(GLASS_KEY, "glass", "frosted");
   const [haptics, setHaptics] = useStoredJson<boolean>(HAPTICS_KEY, true);
+  const [opacity, setOpacity] = useStoredJson<number | null>(TILE_OPACITY_KEY, null);
+  const presetOpacity = glass === "solid" ? 1 : glass === "clear" ? .3 : .55;
+  useEffect(() => {
+    const root = document.documentElement;
+    if (opacity) root.style.setProperty("--tile-opacity", String(opacity));
+    else root.style.removeProperty("--tile-opacity");
+  }, [opacity]);
 
   return (
     <SettingsSection id="appearance" title="Appearance" description={<>Theme, background, and accent.</>}>
@@ -50,8 +60,13 @@ export function AppearanceSection({ pages }: { pages: { id: string; name: string
             <span className={styles.rowMeta}>Clear lets more of the background through; solid is easiest to read.</span>
           </div>
           <div className={styles.rowActions}>
-            <SegmentedControl label="Tiles" value={glass} onValueChange={value => setGlass(value as GlassLevel)} options={[{ value: "frosted", label: "Frosted" }, { value: "clear", label: "Clear" }, { value: "solid", label: "Solid" }]} />
+            <SegmentedControl label="Tiles" value={glass} onValueChange={value => { setGlass(value as GlassLevel); setOpacity(null); }} options={[{ value: "frosted", label: "Frosted" }, { value: "clear", label: "Clear" }, { value: "solid", label: "Solid" }]} />
           </div>
+        </div>
+        <div className={`${styles.row} ${styles.stacked}`}>
+          <Slider label="Tile opacity" value={Math.round((opacity ?? presetOpacity) * 100)} min={10} max={100} step={5} format={value => `${value}%`}
+            onValueChange={value => setOpacity(value / 100)} />
+          <span className={styles.rowMeta}>How much of the background shows through tiles that are off. Picking a style above resets it.</span>
         </div>
         <PageTimes pages={pages} />
         <div className={styles.row}>

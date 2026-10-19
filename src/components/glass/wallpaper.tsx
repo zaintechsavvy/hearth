@@ -11,6 +11,7 @@ import {
   DEFAULT_GRADIENT, DEFAULT_WALLPAPER, GRADIENT_KEY, isMesh, MESH_PALETTES, PHOTO_KEY, WALLPAPER_KEY,
   type CustomGradient, type PhotoBackground, type Wallpaper as WallpaperName,
 } from "@/lib/theme";
+import { usePhotoInk } from "./photo-ink";
 import styles from "./wallpaper.module.css";
 
 const MeshBackdrop = dynamic(() => import("./mesh-backdrop"), { ssr: false });
@@ -27,6 +28,7 @@ export function Wallpaper() {
   const [photo] = useStoredJson<PhotoBackground | null>(PHOTO_KEY, null);
   const theme = useResolvedTheme();
   const still = usePrefersReducedMotion();
+  usePhotoInk(wallpaper === "photo" ? photo : null, theme);
   useEffect(() => {
     if (wallpaper === "gradient") applyGradientVars(gradient, theme);
     else clearGradientState();
