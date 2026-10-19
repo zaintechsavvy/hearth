@@ -589,9 +589,15 @@ export class HomeAssistantProvider implements Provider {
     return logbookEntries(found, people);
   }
 
-  /** HLS through Home Assistant's stream integration: slower to start than WebRTC, but it only needs plain HTTP, which Hearth relays. */
+  /**
+   * HLS through Home Assistant's stream integration: slower to start than WebRTC, but it only needs plain HTTP, which
+   * Hearth relays. Only for cameras Home Assistant itself offers HLS for: a cloud camera with its own WebRTC, such as
+   * Ring, answers a stream request with its last motion recording instead of live video.
+   */
   async cameraHls(entityId: string) {
     if (!entityId.startsWith("camera.")) throw new IntegrationError("That device is not a camera.");
+    const capabilities = await this.live.request<{ frontend_stream_types?: string[] }>({ type: "camera/capabilities", entity_id: entityId }).catch(() => null);
+    if (capabilities && !capabilities.result.frontend_stream_types?.includes("hls")) throw new IntegrationError("Home Assistant does not offer live HLS for this camera.");
     const stream = await this.live.request<{ url: string }>({ type: "camera/stream", entity_id: entityId, format: "hls" }).catch(error => {
       throw new IntegrationError(error instanceof Error ? `Home Assistant could not start a stream: ${error.message}` : "Home Assistant could not start a stream.");
     });

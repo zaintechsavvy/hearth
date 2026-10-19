@@ -4,7 +4,7 @@ import { Maximize2, RotateCw, VideoOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
 import { glassClass } from "@/components/glass/glass";
-import { firstFrame } from "./camera-frames";
+import { firstFrame, watchFrames } from "./camera-frames";
 import styles from "./camera-tile.module.css";
 
 type StreamState = "connecting" | "live" | "snapshot" | "offline";
@@ -64,6 +64,7 @@ export function CameraTile({ camera, fill = false }: { camera: { id: string; nam
         });
         await firstFrame(element, controller.signal);
         setState(current => current === "connecting" ? "live" : current);
+        watchFrames(element, controller.signal, () => setState("snapshot"));
       })
       .catch(() => { if (!controller.signal.aborted) setState("snapshot"); });
     return () => {

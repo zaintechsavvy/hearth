@@ -7,7 +7,7 @@ import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import type { CameraDevice } from "@/lib/devices/types";
 import type { IceCandidate, IceServer } from "@/lib/integrations/types";
-import { candidateHosts, firstFrame, timeout } from "./camera-frames";
+import { candidateHosts, firstFrame, timeout, watchFrames } from "./camera-frames";
 import styles from "./camera-tile.module.css";
 
 type Stage = "webrtc" | "hls" | "mjpeg";
@@ -30,8 +30,14 @@ const rememberStage = (id: string, stage: Stage) => {
   try { localStorage.setItem(STAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STAGE_KEY) ?? "{}"), [id]: stage })); } catch { /* storage full or blocked: the next view tries WebRTC first again */ }
 };
 const MJPEG_FRAME_MS = 8000;
-/** How long an MJPEG picture has to change before it counts as live; a camera that only keeps stills repeats one. */
+/**
+ * MJPEG counts as live once the picture has changed this many times within `MJPEG_MOTION_MS`. Home Assistant sends a
+ * camera that only keeps stills as MJPEG too, repeating its last saved picture, which changes once at most when it refreshes.
+ */
+const MJPEG_CHANGES = 3;
 const MJPEG_MOTION_MS = 10_000;
+/** Once live, MJPEG that stops changing for this long has frozen. */
+const MJPEG_STILL_MS = 15_000;
 const MJPEG_SAMPLE_MS = 1000;
 const PICTURE_MS = 2000;
 /** While only a still is showing, try for live video again this often. */
@@ -153,6 +159,7 @@ async function playWebRtc(base: string, video: HTMLVideoElement, signal: AbortSi
   await Promise.race([firstFrame(video, signal), unreachable, silent]);
   playing = true;
   peer.addEventListener("connectionstatechange", () => { if (peer.connectionState === "failed") onDrop(); });
+  watchFrames(video, call.signal, onDrop);
 }
 
 /** The frame on screen as a picture, held up while a renewed call connects so the view does not flash back to an old still. */
@@ -199,11 +206,15 @@ async function playHls(base: string, video: HTMLVideoElement, signal: AbortSigna
     const hls = new Hls({ lowLatencyMode: near, liveSyncDurationCount: near ? 2 : 3, backBufferLength: 10, manifestLoadingMaxRetry: 4, fragLoadingMaxRetry: 6 });
     cleanups.push(() => hls.destroy());
     let playing = false;
-    fatal = new Promise<never>((_, reject) => hls.on(Hls.Events.ERROR, (_event, data) => {
-      if (!data.fatal) return;
-      if (playing) onDrop();
-      else reject(new Error(`the stream failed (${data.details})`));
-    }));
+    fatal = new Promise<never>((_, reject) => {
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (!data.fatal) return;
+        if (playing) onDrop();
+        else reject(new Error(`the stream failed (${data.details})`));
+      });
+      // A finished playlist is a recording, such as a cloud camera's last motion clip, however recently it played.
+      hls.on(Hls.Events.LEVEL_LOADED, (_event, data) => { if (!data.details.live) reject(new Error("Home Assistant sent a recording, not live video")); });
+    });
     hls.loadSource(playlist);
     hls.attachMedia(video);
     firstFrame(video, signal).then(() => { playing = true; }, () => {});
@@ -217,6 +228,8 @@ async function playHls(base: string, video: HTMLVideoElement, signal: AbortSigna
   void video.play().catch(() => {});
   const wait = hlsFrameMs();
   await Promise.race([firstFrame(video, signal), fatal, timeout(wait, signal, `no picture arrived in ${wait / 1000} seconds`)]);
+  if (Number.isFinite(video.duration) && video.duration > 0 && !Hls.isSupported()) throw new Error("Home Assistant sent a recording, not live video");
+  watchFrames(video, signal, onDrop);
 }
 
 interface IntegrationCameraTileProps {
@@ -317,28 +330,38 @@ export function IntegrationCameraTile({ camera, call }: IntegrationCameraTilePro
     return () => clearTimeout(timer);
   }, [view, mjpegShown]);
 
-  // Home Assistant sends some cameras' last saved picture as an MJPEG feed; it only counts as live once it moves.
+  // Home Assistant sends some cameras' last saved picture as an MJPEG feed; it only counts as live while it keeps moving.
+  const mjpegLive = view.kind === "live" && view.stage === "mjpeg";
+  const mjpegChecking = view.kind === "connecting" && view.stage === "mjpeg" && mjpegShown;
   useEffect(() => {
-    if (view.kind !== "connecting" || view.stage !== "mjpeg" || !mjpegShown) return;
-    let first: Uint8ClampedArray | null = null;
+    if (!mjpegChecking && !mjpegLive) return;
+    let previous: Uint8ClampedArray | null = null;
+    let changes = 0;
     const started = Date.now();
+    let changed = started;
     const check = setInterval(() => {
       const now = mjpeg.current ? sample(mjpeg.current) : null;
       if (!now) return;
-      if (!first) first = now;
-      else if (differs(first, now)) {
+      if (previous && differs(previous, now)) {
+        changes += 1;
+        changed = Date.now();
+      }
+      previous = now;
+      if (mjpegChecking && changes >= MJPEG_CHANGES) {
         clearInterval(check);
         setView({ kind: "live", stage: "mjpeg" });
-        return;
-      }
-      if (Date.now() - started >= MJPEG_MOTION_MS) {
+      } else if (mjpegChecking && Date.now() - started >= MJPEG_MOTION_MS) {
         clearInterval(check);
-        setNotes(current => [...current, "MJPEG: Home Assistant only sends the camera's last saved picture, which has not changed."]);
+        setNotes(current => [...current, "MJPEG: Home Assistant only sends the camera's last saved picture, not live video."]);
+        setView({ kind: "picture" });
+      } else if (mjpegLive && !document.hidden && Date.now() - changed >= MJPEG_STILL_MS) {
+        clearInterval(check);
+        setNotes(current => [...current, "MJPEG: the picture stopped changing."]);
         setView({ kind: "picture" });
       }
     }, MJPEG_SAMPLE_MS);
     return () => clearInterval(check);
-  }, [view, mjpegShown]);
+  }, [mjpegChecking, mjpegLive]);
 
   useEffect(() => {
     if (view.kind !== "picture") return;
