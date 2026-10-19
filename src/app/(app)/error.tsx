@@ -1,6 +1,7 @@
 "use client";
 
 import { TriangleAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/arc/button/button";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { Glass } from "@/components/glass/glass";
@@ -8,6 +9,7 @@ import styles from "./app.module.css";
 
 /** A screen that broke: what went wrong in words that can be passed on, and a way back without losing the session. */
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const router = useRouter();
   return (
     <Glass shape="panel" className={styles.error}>
       <EmptyState
@@ -17,7 +19,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
         action={(
           <div className={styles.errorActions}>
             <Button onClick={reset}>Try again</Button>
-            <Button variant="ghost" onClick={() => location.assign("/dashboard")}>Go home</Button>
+            <Button variant="ghost" onClick={() => { router.push("/dashboard"); reset(); }}>Go home</Button>
           </div>
         )}
       />
