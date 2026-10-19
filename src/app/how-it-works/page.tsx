@@ -52,28 +52,28 @@ function Diagram({ id }: { id: keyof typeof DIAGRAMS }) {
   return <Drawn />;
 }
 
-/** A public tour of how Hearth works, one diagram per idea, everything aligned to one left edge. */
+/**
+ * A public tour of how Hearth works, one diagram per idea, everything aligned to one left edge. Each idea sits on its
+ * own glass card, so its words read in the theme's colours whatever the background behind them.
+ */
 export default async function HowItWorksPage() {
   const signedIn = Boolean(await getUser());
   return (
     <>
       <Wallpaper />
       <div className={styles.page}>
-        <header className={styles.header} data-on-wall>
+        <header className={`${styles.header} ${styles.card}`}>
           <Link href="/" aria-label="Hearth home"><Logo /></Link>
           <Link href={signedIn ? "/dashboard" : "/sign-in"} className={styles.signIn}>{signedIn ? "Open Hearth" : "Sign in"}</Link>
         </header>
         <main className={styles.main}>
-          <div className={styles.intro} data-on-wall>
+          <div className={`${styles.intro} ${styles.card}`}>
             <h1 className={styles.title}>How Hearth works</h1>
             <p className={styles.lede}>How your screens, Hearth, the database, Home Assistant, and your devices fit together.</p>
-            <nav aria-label="On this page" className={styles.contents}>
-              {SECTIONS.map(section => <a key={section.id} href={`#${section.id}`} className={styles.contentsLink}>{section.title}</a>)}
-            </nav>
           </div>
           {SECTIONS.map(section => (
-            <section key={section.id} id={section.id} className={styles.section} aria-labelledby={`${section.id}-title`}>
-              <div className={styles.copy} data-on-wall>
+            <section key={section.id} id={section.id} className={`${styles.section} ${styles.card}`} aria-labelledby={`${section.id}-title`}>
+              <div className={styles.copy}>
                 <h2 id={`${section.id}-title`} className={styles.heading}>{section.title}</h2>
                 <p className={styles.body}>{section.body}</p>
               </div>
