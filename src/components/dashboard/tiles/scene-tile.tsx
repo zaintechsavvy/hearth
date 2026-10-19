@@ -50,6 +50,7 @@ export function SceneTile({ scene, config, onRun, interactive = true }: SceneTil
       data-template="toggle"
       data-on={running || status === "Done" || undefined}
       onClick={run}
+      data-haptic
       disabled={!interactive || running}
       aria-label={`Run ${scene.name}`}
     >

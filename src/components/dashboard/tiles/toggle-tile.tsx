@@ -97,7 +97,7 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
     }
     return (
       <div className={`${glassClass("panel")} ${styles.tile} ${level.large}`} {...shared} {...press} data-template="large" data-on={device.on || undefined}>
-        <button type="button" className={level.largeBody} onClick={toggle} disabled={disabled} aria-pressed={device.on} aria-label={`${device.name}, ${describeDevice(device)}`}>
+        <button type="button" className={level.largeBody} onClick={toggle} disabled={disabled} data-haptic aria-pressed={device.on} aria-label={`${device.name}, ${describeDevice(device)}`}>
           <span className={styles.badge}>{icon(24)}</span>
           <span className={styles.text}>
             <span className={styles.name}>{device.name}</span>
@@ -118,6 +118,7 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
       {...press}
       data-template="toggle"
       data-on={device.on || undefined}
+      data-haptic
       onClick={toggle}
       disabled={disabled}
       aria-pressed={device.on}

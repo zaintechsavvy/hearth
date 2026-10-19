@@ -232,7 +232,7 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
           <div className={`${glassClass("panel")} ${styles.tile} ${level.tall}`} {...shared} data-template="slider" data-on={undefined}>{pill(level.fullPill)}</div>
         ) : (
           <div className={`${glassClass("panel")} ${styles.tile} ${level.large}`} {...shared} data-template="large">
-            <button type="button" className={level.largeBody} onClick={toggle} disabled={disabled} aria-label={`${device.name}, ${text}`}>
+            <button type="button" className={level.largeBody} onClick={toggle} disabled={disabled} data-haptic aria-label={`${device.name}, ${text}`}>
               <span className={styles.badge}><span className={styles.icon} aria-hidden="true"><Icon size={24} strokeWidth={1.75} /></span></span>
               <span className={styles.text}>
                 <span className={styles.name}>{device.name}</span>
