@@ -520,7 +520,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
 
       {tiles.length > 0 ? (
         <div ref={gridWrap} className={styles.swipe} {...swipeHandlers}>
-        <HomeGrid tiles={shownTiles} editing={editing} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(filtering ? mergeFiltered(tiles, next) : next)} onCustomize={setCustomizing} />
+        <HomeGrid tiles={shownTiles} editing={editing} placed={!filtering} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(filtering ? mergeFiltered(tiles, next) : next)} onCustomize={setCustomizing} />
         </div>
       ) : (
         <Glass className={styles.placeholder}>

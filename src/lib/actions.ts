@@ -179,6 +179,8 @@ export async function saveStreamRelay(url: string): Promise<ActionResult> {
 
 const placeSchema = z.object({ name: z.string().max(120), latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) });
 
+const cellSchema = z.object({ column: z.number().int().min(0).max(7), row: z.number().int().min(0).max(999) });
+
 const tileSchema = z.object({
   id: z.string().min(1).max(300),
   kind: z.enum(TILE_KINDS),
@@ -201,6 +203,7 @@ const tileSchema = z.object({
     stops: z.array(z.object({ key: z.string().min(1).max(200), name: z.string().trim().min(1).max(120) })).max(4).optional(),
     hold: z.custom<TileHold>(value => typeof value === "string" && /^(controls|history|none|scene:[\w-]{1,100}|device:[\w.:-]{1,300})$/.test(value)).optional(),
   }).optional(),
+  at: z.object({ 4: cellSchema.optional(), 6: cellSchema.optional(), 8: cellSchema.optional() }).optional(),
 });
 
 /** Saves one page's tiles. The first page also keeps the original `layout` column current. */

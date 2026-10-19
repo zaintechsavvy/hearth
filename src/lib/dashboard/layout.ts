@@ -1,4 +1,5 @@
 import { parseDeviceId, type Device } from "@/lib/devices/types";
+import type { Cell, GridColumns } from "@/lib/dashboard/placement";
 
 export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "appliances", "announce", "departures"] as const;
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
@@ -83,6 +84,8 @@ export interface TileConfig {
   /** The tile's own name: for a tile not linked yet, or to call a linked device something else on this tile only. */
   label?: string;
   options?: TileOptions;
+  /** The cell it was put in at each grid width; a tile with none for a width fills the first gap that fits it. */
+  at?: Partial<Record<GridColumns, Cell>>;
 }
 
 /** Something a tile can link to: a device, a camera, or a scene. */

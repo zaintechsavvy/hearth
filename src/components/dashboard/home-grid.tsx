@@ -1,43 +1,40 @@
 "use client";
 
 import {
-  DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, pointerWithin, useSensor, useSensors,
-  type CollisionDetection, type DragOverEvent, type DragStartEvent,
+  DndContext, DragOverlay, KeyboardSensor, PointerSensor, useDraggable, useSensor, useSensors,
+  type DragMoveEvent, type DragStartEvent, type KeyboardCoordinateGetter,
 } from "@dnd-kit/core";
-import { SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { SlidersHorizontal } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { glassClass } from "@/components/glass/glass";
 import { haptic } from "@/lib/haptics";
 import { spanOf, type TileConfig } from "@/lib/dashboard/layout";
+import { arrange, byPosition, GRID_COLUMNS, moveTo, type Cell, type GridColumns } from "@/lib/dashboard/placement";
 import styles from "./home-grid.module.css";
 
 interface HomeGridProps {
   tiles: TileConfig[];
   editing: boolean;
+  /** Tiles sit in the cells they were put in. Off for a filtered view, which packs what it shows from the top. */
+  placed?: boolean;
   renderTile: (tile: TileConfig) => ReactNode;
   nameOf: (tile: TileConfig) => string;
   onTilesChange: (tiles: TileConfig[]) => void;
   onCustomize: (id: string) => void;
 }
 
-/** Tiles stay where the grid puts them; the order changes while dragging, so the preview is the real layout at real sizes. */
-const noShift = () => null;
-/** Whatever is under the finger, or the nearest tile when it is over a gap. */
-const underPointer: CollisionDetection = args => {
-  const hits = pointerWithin(args);
-  return hits.length ? hits : closestCenter(args);
-};
-/** A tile that just moved needs a moment before it can move again, or two tiles of different sizes swap back and forth. */
-const SETTLE_MS = 120;
+interface Metrics {
+  columns: GridColumns;
+  stepX: number;
+  stepY: number;
+}
 
-function move(ids: string[], from: string, to: string) {
-  const start = ids.indexOf(from);
-  const end = ids.indexOf(to);
-  if (start < 0 || end < 0 || start === end) return ids;
-  const next = [...ids];
-  next.splice(end, 0, ...next.splice(start, 1));
-  return next;
+function measure(grid: HTMLElement): Metrics {
+  const style = getComputedStyle(grid), { width } = grid.getBoundingClientRect();
+  const count = style.gridTemplateColumns.split(" ").length;
+  const columns = GRID_COLUMNS.find(option => option === count) ?? 4;
+  const columnGap = parseFloat(style.columnGap) || 0, rowGap = parseFloat(style.rowGap) || 0;
+  return { columns, stepX: (width + columnGap) / columns, stepY: (parseFloat(style.gridAutoRows) || 0) + rowGap };
 }
 
 /** On a wall tablet, the height left under the header, so four rows of tiles fit on the screen without scrolling. */
@@ -65,56 +62,80 @@ function useFitHeight() {
   return frame;
 }
 
-export function HomeGrid({ tiles, editing, renderTile, nameOf, onTilesChange, onCustomize }: HomeGridProps) {
+export function HomeGrid({ tiles, editing, placed = true, renderTile, nameOf, onTilesChange, onCustomize }: HomeGridProps) {
   const frame = useFitHeight();
+  const grid = useRef<HTMLDivElement>(null);
+  const metrics = useRef<Metrics | null>(null);
+  const byCell: KeyboardCoordinateGetter = (event, { currentCoordinates: { x, y } }) => {
+    const step = metrics.current;
+    if (!step) return undefined;
+    const moves: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    const move = moves[event.code];
+    if (!move) return undefined;
+    event.preventDefault();
+    return { x: x + move[0] * step.stepX, y: y + move[1] * step.stepY };
+  };
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: byCell }),
   );
-  const [order, setOrder] = useState<string[] | null>(null);
   const [active, setActive] = useState<string | null>(null);
-  const moved = useRef(0);
+  const [preview, setPreview] = useState<{ columns: GridColumns; cells: Map<string, Cell> } | null>(null);
+  const target = useRef<string>("");
   const byId = new Map(tiles.map(tile => [tile.id, tile]));
-  const shown = order ? order.flatMap(id => byId.get(id) ?? []) : tiles;
   const dragged = active ? byId.get(active) : undefined;
+  const layouts = useMemo(() => {
+    const ids = tiles.map(tile => tile.id), sizes = new Map(tiles.map(tile => [tile.id, spanOf(tile.size)]));
+    const places = new Map(tiles.map(tile => [tile.id, tile.at]));
+    return new Map(GRID_COLUMNS.map(columns => [columns, arrange(ids, id => sizes.get(id)!, columns, placed ? id => places.get(id)?.[columns] : undefined)]));
+  }, [tiles, placed]);
+  const sizeOf = (id: string) => spanOf(byId.get(id)?.size ?? "1x1");
 
   const start = ({ active: from }: DragStartEvent) => {
+    if (!grid.current) return;
     haptic("press");
+    metrics.current = measure(grid.current);
+    target.current = "";
     setActive(String(from.id));
-    setOrder(tiles.map(tile => tile.id));
   };
-  const over = ({ active: from, over: target }: DragOverEvent) => {
-    if (!target || target.id === from.id || Date.now() - moved.current < SETTLE_MS) return;
-    moved.current = Date.now();
-    setOrder(current => current && move(current, String(from.id), String(target.id)));
+  const move = ({ active: from }: DragMoveEvent) => {
+    const step = metrics.current, box = from.rect.current.translated, origin = grid.current?.getBoundingClientRect();
+    if (!step || !box || !origin) return;
+    const cell = { column: Math.round((box.left - origin.left) / step.stepX), row: Math.round((box.top - origin.top) / step.stepY) };
+    const key = `${cell.column}:${cell.row}`;
+    if (key === target.current) return;
+    target.current = key;
+    setPreview({ columns: step.columns, cells: moveTo(layouts.get(step.columns)!, String(from.id), cell, sizeOf, step.columns) });
   };
   const end = () => {
-    const changed = order && order.some((id, index) => id !== tiles[index]?.id);
-    if (changed) {
-      haptic("tap");
-      onTilesChange(order.flatMap(id => byId.get(id) ?? []));
+    if (preview) {
+      const before = layouts.get(preview.columns)!, { columns, cells } = preview;
+      if ([...cells].some(([id, cell]) => before.get(id)?.column !== cell.column || before.get(id)?.row !== cell.row)) {
+        haptic("tap");
+        onTilesChange(tiles.map(tile => ({ ...tile, at: { ...tile.at, [columns]: cells.get(tile.id) } })).sort((a, b) => byPosition(cells)(a.id, b.id)));
+      }
     }
-    setOrder(null);
-    setActive(null);
+    cancel();
   };
   const cancel = () => {
-    setOrder(null);
+    setPreview(null);
     setActive(null);
+    metrics.current = null;
   };
+
+  const cellsAt = (columns: GridColumns) => preview?.columns === columns ? preview.cells : layouts.get(columns)!;
 
   return (
     <div ref={frame} className={styles.frame}>
-      <DndContext sensors={sensors} collisionDetection={underPointer} onDragStart={start} onDragOver={over} onDragEnd={end} onDragCancel={cancel}>
-        <SortableContext items={shown.map(tile => tile.id)} strategy={noShift} disabled={!editing}>
-          <div className={styles.grid} data-editing={editing || undefined}>
-            {shown.map((tile, index) => (
-              <SortableTile key={tile.id} tile={tile} index={index} editing={editing} name={nameOf(tile)} held={tile.id === active}
-                onCustomize={() => onCustomize(tile.id)}>
-                {renderTile(tile)}
-              </SortableTile>
-            ))}
-          </div>
-        </SortableContext>
+      <DndContext sensors={sensors} onDragStart={start} onDragMove={move} onDragEnd={end} onDragCancel={cancel}>
+        <div ref={grid} className={styles.grid} data-editing={editing || undefined}>
+          {tiles.map((tile, index) => (
+            <GridTile key={tile.id} tile={tile} index={index} cells={GRID_COLUMNS.map(columns => [columns, cellsAt(columns).get(tile.id)!])}
+              editing={editing} name={nameOf(tile)} held={tile.id === active} onCustomize={() => onCustomize(tile.id)}>
+              {renderTile(tile)}
+            </GridTile>
+          ))}
+        </div>
         <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(.2, .8, .2, 1)" }}>
           {dragged && <div className={styles.lifted}><div className={styles.content} inert>{renderTile(dragged)}</div></div>}
         </DragOverlay>
@@ -123,9 +144,11 @@ export function HomeGrid({ tiles, editing, renderTile, nameOf, onTilesChange, on
   );
 }
 
-interface SortableTileProps {
+interface GridTileProps {
   tile: TileConfig;
   index: number;
+  /** Its cell at each grid width; CSS picks the one for the width showing. */
+  cells: [GridColumns, Cell][];
   editing: boolean;
   name: string;
   /** Being dragged: its place in the grid shows where it will land, at its own size. */
@@ -134,10 +157,14 @@ interface SortableTileProps {
   children: ReactNode;
 }
 
-function SortableTile({ tile, index, editing, name, held, onCustomize, children }: SortableTileProps) {
-  const { attributes, listeners, setNodeRef } = useSortable({ id: tile.id, disabled: !editing });
+function GridTile({ tile, index, cells, editing, name, held, onCustomize, children }: GridTileProps) {
+  const { attributes, listeners, setNodeRef } = useDraggable({ id: tile.id, disabled: !editing });
   const { columns, rows } = spanOf(tile.size);
-  const style: CSSProperties = { gridColumn: `span ${columns}`, gridRow: `span ${rows}` };
+  const style = { "--w": columns, "--h": rows } as CSSProperties & Record<string, number>;
+  for (const [count, cell] of cells) {
+    style[`--col-${count}`] = cell.column + 1;
+    style[`--row-${count}`] = cell.row + 1;
+  }
 
   return (
     <div
@@ -146,7 +173,7 @@ function SortableTile({ tile, index, editing, name, held, onCustomize, children 
       className={styles.cell}
       data-held={held || undefined}
       data-wobble={editing && !held ? (index % 2 ? "b" : "a") : undefined}
-      {...(editing ? { ...attributes, ...listeners, "aria-roledescription": "Movable tile", "aria-label": `${name}. Press space to move.` } : {})}
+      {...(editing ? { ...attributes, ...listeners, "aria-roledescription": "Movable tile", "aria-label": `${name}. Press space to move, then the arrow keys.` } : {})}
     >
       <div className={styles.content} inert={editing || undefined}>{children}</div>
       {editing && !held && (
