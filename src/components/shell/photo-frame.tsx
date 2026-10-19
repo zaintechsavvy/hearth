@@ -13,10 +13,18 @@ interface Photo {
   src: string;
 }
 
-const fetchPhotos = async (url: string) => {
+export interface PhotoList {
+  name: string;
+  photos: Photo[];
+}
+
+/** The frame's photos; Settings reads the same key, so both keep the response whole. */
+export const photosKey = (source: PhotoSource) => `/api/photos?source=${source}`;
+export const fetchPhotos = async (url: string): Promise<PhotoList> => {
   const response = await fetch(url);
-  if (!response.ok) throw new Error();
-  return (await response.json() as { photos: Photo[] }).photos;
+  const body = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(body?.error ?? "Photos did not load.");
+  return body as PhotoList;
 };
 
 /** A photo shaped unlike the screen sits whole over a blurred copy of itself, instead of being cropped. */
@@ -28,8 +36,8 @@ const fits = (photo: Photo) => Math.abs(Math.log((photo.width / photo.height) / 
  */
 export function PhotoFrame({ source, seconds, onEmpty }: { source: PhotoSource; seconds: number; onEmpty: (empty: boolean) => void }) {
   const reduce = useReducedMotion();
-  const { data, error } = useSWR(`/api/photos?source=${source}`, fetchPhotos, { refreshInterval: 15 * 60_000, revalidateOnFocus: false });
-  const photos = useMemo(() => data ?? [], [data]);
+  const { data, error } = useSWR(photosKey(source), fetchPhotos, { refreshInterval: 15 * 60_000, revalidateOnFocus: false });
+  const photos = useMemo(() => data?.photos ?? [], [data]);
   const [index, setIndex] = useState(0);
   const empty = Boolean(error) || (data !== undefined && photos.length === 0);
 

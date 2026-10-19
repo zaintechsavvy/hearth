@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   if (!transit) return NextResponse.json({ error: "Add a Transitland key first." }, { status: 409 });
   const query = new URL(request.url).searchParams.get("q")?.trim().slice(0, 80) ?? "";
   try {
-    return NextResponse.json({ stops: await findStops(unseal<string>(transit.key), query, location), near: Boolean(location) });
+    return NextResponse.json({ stops: await findStops(transit.sample ? null : unseal<string>(transit.key), query, location), near: Boolean(location) });
   } catch (error) {
     return NextResponse.json({ error: readableError(error) }, { status: 502 });
   }

@@ -1,7 +1,7 @@
 "use client";
 
-import { Clapperboard, House, LayoutGrid, Plus, QrCode, Sparkles, Sun, Video } from "lucide-react";
-import { askHearth } from "@/components/assistant/assistant-dock";
+import { Clapperboard, House, LayoutGrid, Mic, Plus, QrCode, Sparkles, Sun, Video } from "lucide-react";
+import { listenToHearth } from "@/components/assistant/assistant-dock";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Alert } from "@/components/arc/alert/alert";
@@ -251,6 +251,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     for (const device of home.devices) {
       if (!kinds.includes(device.kind)) continue;
       if (kind === "leak" && (device.kind !== "binary_sensor" || device.sensorClass !== "leak")) continue;
+      // A doorbell can be a binary sensor in Home Assistant, but a leak, door, or motion sensor is never one.
+      if (kind === "event" && device.kind === "binary_sensor" && (device.sensorClass !== "other" || !/bell|ding|chime|ring/i.test(device.name))) continue;
       const style = defaultStyle(device);
       list.push({
         id: device.id, name: device.name, room: device.room, detail: `${kindLabel(device)} · ${statusText(device)}`,
@@ -363,7 +365,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       case "appliances":
         return <AppliancesTile tile={tile} items={itemsOf(home.widgets, "appliance")} devices={home.devices} now={minuteNow} interactive={interactive} onManage={() => setManaging({ kind: "appliances", tile })} />;
       case "departures":
-        return <DeparturesTile tile={tile} ready={home.transitReady} interactive={interactive} onManage={() => setStopsFor(tile.id)} />;
+        return <DeparturesTile tile={tile} ready={home.transitReady} sample={home.transitSample} interactive={interactive} onManage={() => setStopsFor(tile.id)} />;
       case "packages":
         return <PackagesTile tile={tile} items={itemsOf(home.widgets, "package")} interactive={interactive} onManage={itemId => setManaging({ kind: "packages", tile, itemId })} />;
     }
@@ -411,7 +413,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       />
       <WidgetEditor state={managing} items={home.widgets} onOpenChange={open => !open && setManaging(null)}
         onLink={(tileId, itemId) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, itemId } } : tile))} />
-      <StopsDialog open={stopsFor !== null} ready={home.transitReady} initial={tiles.find(tile => tile.id === stopsFor)?.options?.stops ?? []} onOpenChange={open => !open && setStopsFor(null)}
+      <StopsDialog open={stopsFor !== null} ready={home.transitReady} sample={home.transitSample} initial={tiles.find(tile => tile.id === stopsFor)?.options?.stops ?? []} onOpenChange={open => !open && setStopsFor(null)}
         onSave={stops => stopsFor && change(tiles.map(tile => tile.id === stopsFor ? { ...tile, options: { ...tile.options, stops } } : tile))} />
       <WifiShare items={itemsOf(home.widgets, "wifi")} itemId={sharing} onOpenChange={open => !open && setSharing(undefined)} />
       <HistorySheet device={chartedDevice} onOpenChange={open => !open && setCharting(null)} />
@@ -480,8 +482,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         <div>
           <div className={styles.titleRow}>
             <h1 className={styles.title}><Greeting hour={hour} name={userName} /></h1>
-            <button type="button" className={`${glassClass("pill")} ${styles.ask}`} data-wall-only onClick={() => askHearth()} aria-label="Ask Hearth, by typing or out loud" title="Ask Hearth">
-              <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" />
+            <button type="button" className={`${glassClass("pill")} ${styles.ask}`} data-wall-only onClick={() => listenToHearth()} aria-label="Ask Hearth" title="Ask Hearth">
+              <Mic size={18} strokeWidth={1.75} aria-hidden="true" />
             </button>
           </div>
           <p className={styles.summary}>

@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const parsed = stops.safeParse(JSON.parse(new URL(request.url).searchParams.get("stops") ?? "[]"));
   if (!parsed.success) return NextResponse.json({ error: "Choose a stop first." }, { status: 400 });
   try {
-    return NextResponse.json({ departures: await departuresFrom(unseal<string>(transit.key), parsed.data) });
+    return NextResponse.json({ departures: await departuresFrom(transit.sample ? null : unseal<string>(transit.key), parsed.data) });
   } catch (error) {
     return NextResponse.json({ error: readableError(error) }, { status: 502 });
   }

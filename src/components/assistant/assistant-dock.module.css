@@ -320,14 +320,20 @@
   .pulse { animation: none; }
 }
 
-/* On a wall tablet the assistant opens from the button beside the greeting, so nothing floats over the tiles or the menu. */
+/* On a wall tablet the assistant opens from the microphone beside the greeting, lined up under it, so nothing floats over the tiles or the menu. */
 :global(:root[data-wall]) .anchor:not([data-open]) {
   display: none;
 }
 
 :global(:root[data-wall]) .anchor {
-  top: max(var(--space-3), env(safe-area-inset-top));
+  top: calc(max(var(--space-3), env(safe-area-inset-top)) + 132px);
   bottom: auto;
-  right: calc(max(var(--space-3), env(safe-area-inset-right)) + 56px);
+  left: max(var(--space-5), calc(env(safe-area-inset-left) + var(--space-3)));
+  right: auto;
   align-items: flex-start;
+  justify-content: flex-start;
+}
+
+:global(:root[data-wall]) .panel {
+  height: min(560px, calc(100dvh - 172px));
 }

@@ -51,6 +51,9 @@ const fetchInfo = async (url: string) => {
 /** Opens the assistant from anywhere, such as the command palette, optionally with a request to send. */
 export const ASK_EVENT = "hearth-ask";
 export const askHearth = (text = "") => window.dispatchEvent(new CustomEvent(ASK_EVENT, { detail: text }));
+const LISTEN_EVENT = "hearth-listen";
+/** Opens the assistant already listening, when one is connected; it must run inside a tap for the browser to allow the microphone. */
+export const listenToHearth = () => window.dispatchEvent(new Event(LISTEN_EVENT));
 const subscribeTheme = (onChange: () => void) => {
   const observer = new MutationObserver(onChange);
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -142,9 +145,21 @@ export function AssistantDock() {
       const text = (event as CustomEvent<string>).detail;
       if (text) void latestSend.current(text);
     };
+    const onListen = () => latestListen.current();
     window.addEventListener(ASK_EVENT, onAsk);
-    return () => window.removeEventListener(ASK_EVENT, onAsk);
+    window.addEventListener(LISTEN_EVENT, onListen);
+    return () => {
+      window.removeEventListener(ASK_EVENT, onAsk);
+      window.removeEventListener(LISTEN_EVENT, onListen);
+    };
   }, []);
+  const latestListen = useRef(() => {});
+  useEffect(() => {
+    latestListen.current = () => {
+      setOpen(true);
+      if (info?.configured && canListen && !listening) toggleListening();
+    };
+  });
 
   function toggleListening() {
     if (listening) return recognition.current?.stop();

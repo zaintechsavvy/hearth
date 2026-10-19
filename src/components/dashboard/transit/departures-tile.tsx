@@ -33,7 +33,7 @@ function minutesWords(at: string, now: number) {
 }
 
 /** The next buses and trains from the chosen stops, soonest first, with live times marked when the agency shares them. */
-export function DeparturesTile({ tile, ready, interactive, onManage }: { tile: TileConfig; ready: boolean; interactive: boolean; onManage: () => void }) {
+export function DeparturesTile({ tile, ready, sample, interactive, onManage }: { tile: TileConfig; ready: boolean; sample: boolean; interactive: boolean; onManage: () => void }) {
   const stops = tile.options?.stops ?? [];
   const now = useTick(15_000) ?? 0;
   const { data, error } = useSWR(ready && stops.length ? `/api/transit/departures?stops=${encodeURIComponent(JSON.stringify(stops))}` : null, fetchDepartures, { refreshInterval: 30_000 });
@@ -47,6 +47,7 @@ export function DeparturesTile({ tile, ready, interactive, onManage }: { tile: T
       <header className={styles.header}>
         <span className={styles.badge} aria-hidden="true"><Bus size={16} strokeWidth={1.75} /></span>
         <button type="button" className={styles.title} onClick={onManage} disabled={!interactive}>{title}</button>
+        {sample && <span className={styles.sample}>Sample times</span>}
       </header>
       {error && !data ? <p className={styles.quiet}>{error.message}</p>
         : !data ? <p className={styles.quiet}>Checking the timetable</p>

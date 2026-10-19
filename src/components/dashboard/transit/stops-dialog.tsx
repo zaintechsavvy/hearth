@@ -9,7 +9,7 @@ import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dial
 import { PasswordField } from "@/components/arc/password-field/password-field";
 import { SearchField } from "@/components/arc/search-field/search-field";
 import { glassSheetClass } from "@/components/glass/glass";
-import { saveTransitKey } from "@/lib/actions";
+import { chooseSampleTransit, saveTransitKey } from "@/lib/actions";
 import type { TransitStop } from "@/lib/dashboard/layout";
 import type { StopChoice } from "@/lib/transit-types";
 import styles from "./stops-dialog.module.css";
@@ -25,18 +25,25 @@ const fetchStops = async (url: string) => {
 };
 
 /** Picks the stops a departures tile lists, after a one-time free Transitland key. */
-export function StopsDialog({ open, ready, initial, onOpenChange, onSave }: { open: boolean; ready: boolean; initial: TransitStop[]; onOpenChange: (open: boolean) => void; onSave: (stops: TransitStop[]) => void }) {
+export function StopsDialog({ open, ready, sample, initial, onOpenChange, onSave }: { open: boolean; ready: boolean; sample: boolean; initial: TransitStop[]; onOpenChange: (open: boolean) => void; onSave: (stops: TransitStop[]) => void }) {
+  const [addingKey, setAddingKey] = useState(false);
+  const picking = ready && !addingKey;
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={glassSheetClass} title={ready ? "Choose your stops" : "Connect Transitland"}
-        description={ready ? "Pick up to four stops. The tile lists what leaves next from all of them." : "Transitland gathers timetables and live times from transit agencies around the world. Its key is free."}>
-        {open && (ready ? <StopPicker initial={initial} onSave={stops => { onSave(stops); onOpenChange(false); }} /> : <KeyForm />)}
+    <Dialog open={open} onOpenChange={next => { if (!next) setAddingKey(false); onOpenChange(next); }}>
+      <DialogContent className={glassSheetClass} title={picking ? "Choose your stops" : "Connect Transitland"}
+        description={picking ? sample ? "These are sample stops with made-up times, to see how the tile looks." : "Pick up to four stops. The tile lists what leaves next from all of them." : "Transitland gathers timetables and live times from transit agencies around the world. Its key is free."}>
+        {open && (picking ? (
+          <>
+            {sample && <p className={styles.help}>Ready for real ones? <button type="button" className={styles.link} onClick={() => setAddingKey(true)}>Add a Transitland key</button></p>}
+            <StopPicker initial={sample ? initial.filter(stop => stop.key.startsWith("sample:")) : initial.filter(stop => !stop.key.startsWith("sample:"))} onSave={stops => { onSave(stops); onOpenChange(false); }} />
+          </>
+        ) : <KeyForm onSaved={() => setAddingKey(false)} />)}
       </DialogContent>
     </Dialog>
   );
 }
 
-function KeyForm() {
+function KeyForm({ onSaved }: { onSaved: () => void }) {
   const { mutate } = useSWRConfig();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,14 +55,23 @@ function KeyForm() {
     setPending(false);
     if (!result.ok) return setError(result.error);
     await mutate("/api/home");
+    onSaved();
   }
+  const trySample = async () => {
+    setPending(true);
+    const result = await chooseSampleTransit();
+    setPending(false);
+    if (!result.ok) return setError(result.error);
+    await mutate("/api/home");
+    onSaved();
+  };
   return (
     <form className={styles.form} onSubmit={submit}>
       <PasswordField label="Transitland API key" name="key" required autoComplete="off" description="Sign up at transit.land, then copy the key from your account." />
       <p className={styles.help}>Get one at <a href={KEY_URL} target="_blank" rel="noreferrer" className={styles.link}>transit.land</a>. Hearth keeps it encrypted and only uses it for this tile.</p>
       <Alert tone="danger" title="Could not save the key" open={Boolean(error)}>{error ?? ""}</Alert>
       <div className={styles.actions}>
-        <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
+        <Button type="button" variant="ghost" onClick={() => void trySample()} disabled={pending}>Try sample times</Button>
         <Button type="submit" loading={pending}>Continue</Button>
       </div>
     </form>

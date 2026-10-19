@@ -10,3 +10,15 @@
 .page > * {
   min-width: 0;
 }
+
+.error {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  padding: var(--space-8);
+}
+
+.errorActions {
+  display: flex;
+  gap: var(--space-2);
+}

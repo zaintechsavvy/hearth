@@ -13,24 +13,19 @@ import { Slider } from "@/components/arc/slider/slider";
 import { Switch } from "@/components/arc/switch/switch";
 import { useHome } from "@/components/dashboard/use-home";
 import { resizeImage, uploadPhoto } from "@/components/shell/image-tools";
+import { fetchPhotos, photosKey } from "@/components/shell/photo-frame";
 import { removeImmich, saveImmich } from "@/lib/actions";
 import type { PhotoSource, WallSettings } from "@/lib/wall";
 import styles from "./connections.module.css";
 
-const fetchList = async (url: string) => {
-  const response = await fetch(url);
-  const body = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(body?.error ?? "Photos did not load.");
-  return body as { name: string; photos: unknown[] };
-};
 
 /** The resting screen as a photo frame: where the photos come from, how long each shows, and whether they show at night. */
 export function PhotoFrameSettings({ settings, set }: { settings: WallSettings; set: (patch: Partial<WallSettings>) => void }) {
   const { home } = useHome();
   const { mutate } = useSWRConfig();
   const source = settings.frameSource;
-  const listKey = `/api/photos?source=${source}`;
-  const { data, error } = useSWR(settings.frame && (source === "uploads" || home?.photoAlbum) ? listKey : null, fetchList);
+  const listKey = photosKey(source);
+  const { data, error } = useSWR(settings.frame && (source === "uploads" || home?.photoAlbum) ? listKey : null, fetchPhotos);
   const [uploading, setUploading] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);

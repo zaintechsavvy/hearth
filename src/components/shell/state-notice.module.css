@@ -6,9 +6,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-8);
-  background: oklch(14% .01 260 / .78);
-  -webkit-backdrop-filter: blur(20px) saturate(120%);
-  backdrop-filter: blur(20px) saturate(120%);
+  background: radial-gradient(120% 90% at 50% 0%, oklch(22% .01 260), oklch(10% .005 260));
   color: oklch(98% 0 0);
   cursor: default;
   --tone: var(--success);
@@ -107,7 +105,7 @@
 /* A leak is an alarm: the alert colour, and it waits for a tap. */
 .notice[data-alarm] {
   --tone: var(--danger);
-  background: color-mix(in oklab, var(--danger) 30%, oklch(12% .02 20 / .9));
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in oklab, var(--danger) 38%, oklch(16% .02 20)), oklch(10% .02 20));
 }
 
 .puddle { fill: none; stroke: oklch(100% 0 0 / .7); stroke-width: 2.5; }

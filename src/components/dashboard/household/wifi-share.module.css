@@ -10,6 +10,12 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* The dialog's own body fills the rest of the screen, so the code and its words sit in the middle of it. */
+.sheet.sheet > :last-child {
+  display: grid;
+  min-height: 0;
+}
+
 /* The code on the left, what it says on the right; stacked on a narrow screen. */
 .body {
   display: grid;
@@ -18,6 +24,7 @@
   align-content: center;
   gap: clamp(var(--space-6), 5vw, var(--space-16));
   width: min(100%, 1040px);
+  height: 100%;
   margin-inline: auto;
   min-height: 0;
 }

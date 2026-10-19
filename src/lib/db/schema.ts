@@ -100,7 +100,7 @@ export const preference = pgTable("preference", {
   /** What the good night check does. */
   bedtime: jsonb("bedtime").$type<BedtimeSettings>().notNull().default(DEFAULT_BEDTIME),
   /** The Transitland key for the departures tile, sealed with `lib/crypto`. */
-  transit: jsonb("transit").$type<{ key: string } | null>(),
+  transit: jsonb("transit").$type<{ key: string; sample?: boolean } | null>(),
   /** An Immich album for the wall tablet's photo frame; the key is sealed with `lib/crypto`. */
   photos: jsonb("photos").$type<{ url: string; key: string; album: string } | null>(),
   updatedAt: updatedAt(),

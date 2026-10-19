@@ -57,6 +57,8 @@ export interface HomeSnapshot {
   bedtime: BedtimeSettings;
   /** A Transitland key is saved, so departures tiles can load. */
   transitReady: boolean;
+  /** Departures show made-up sample times, until a real key is added. */
+  transitSample: boolean;
   /** An Immich album is set for the wall tablet's photo frame. */
   photoAlbum: boolean;
 }
@@ -146,7 +148,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
   const pages = preferences.pages.map(page => ({ ...page, layout: withoutOrphanTiles(page.layout, connected) }));
   const times = preferences.location ? sunTimes(new Date(), preferences.location.latitude, preferences.location.longitude) : null;
   const sun = times ? { sunrise: times.sunrise.toISOString(), sunset: times.sunset.toISOString() } : null;
-  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, pinLength: preferences.security.method === "pin" ? preferences.security.length ?? null : null, sun, bedtime: preferences.bedtime, transitReady: Boolean(preferences.transit), photoAlbum: Boolean(preferences.photos) };
+  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, pinLength: preferences.security.method === "pin" ? preferences.security.length ?? null : null, sun, bedtime: preferences.bedtime, transitReady: Boolean(preferences.transit), transitSample: Boolean(preferences.transit?.sample), photoAlbum: Boolean(preferences.photos) };
 }
 
 /** Sends a device a command. `by` says who, for the activity log: a person, the assistant, a scene, or an automation. */

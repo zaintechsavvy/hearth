@@ -286,3 +286,32 @@
   justify-content: flex-start;
   margin-top: clamp(16px, 3vh, 32px);
 }
+
+/* The pages as one row of icons, so the menu stays short. */
+.pages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.page {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: var(--space-2) var(--space-1);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.page:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+
+.page[aria-current="page"] {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}

@@ -77,8 +77,9 @@
 }
 
 .tile[data-kind="light"][data-on] .badge {
-  background: linear-gradient(180deg, color-mix(in oklab, var(--tile-color) 85%, oklch(98% .08 98)), color-mix(in oklab, var(--tile-color) 100%, oklch(80% .16 80) 20%));
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .6), 0 2px 6px color-mix(in oklab, var(--tile-color) 55%, transparent);
+  /* The same pale yellow as a large light's level, so the two read as one. */
+  background: linear-gradient(180deg, color-mix(in oklab, var(--tile-color) 22%, oklch(99% .02 95)), color-mix(in oklab, var(--tile-color) 38%, oklch(97% .03 92)));
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .8), 0 1px 2px oklch(30% .05 70 / .12);
 }
 
 .tile[data-unavailable] {

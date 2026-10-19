@@ -23,6 +23,26 @@ async function call<T>(key: string, path: string, params: Record<string, string>
   return response.json() as Promise<T>;
 }
 
+/** Made-up stops and times, for seeing the tile before getting a key. */
+const SAMPLE_STOPS: StopChoice[] = [
+  { key: "sample:maple-5th", name: "Maple St at 5th Ave", code: "2041", distance: 120, routes: ["12", "34"] },
+  { key: "sample:central", name: "Central Station", code: null, distance: 650, routes: ["Line 1", "Line 2", "Express"] },
+  { key: "sample:harbour", name: "Harbour Front", code: "88", distance: 1400, routes: ["509", "Ferry"] },
+];
+const SAMPLE_ROUTES: Record<string, { route: string; color: string; headsign: string; every: number; offset: number }[]> = {
+  "sample:maple-5th": [{ route: "12", color: "#2563EB", headsign: "Downtown", every: 9, offset: 2 }, { route: "34", color: "#DB2777", headsign: "University", every: 14, offset: 6 }],
+  "sample:central": [{ route: "1", color: "#EAB308", headsign: "North Terminal", every: 5, offset: 1 }, { route: "2", color: "#16A34A", headsign: "Airport", every: 12, offset: 4 }, { route: "X", color: "#111827", headsign: "Lakeshore Express", every: 30, offset: 11 }],
+  "sample:harbour": [{ route: "509", color: "#DC2626", headsign: "Exhibition Loop", every: 8, offset: 3 }, { route: "F", color: "#0891B2", headsign: "Island Ferry", every: 25, offset: 9 }],
+};
+
+function sampleDepartures(stops: TransitStop[]): Departure[] {
+  const minute = Math.floor(Date.now() / 60_000);
+  return stops.flatMap(stop => (SAMPLE_ROUTES[stop.key] ?? []).flatMap(line => Array.from({ length: 4 }, (_, index) => {
+    const wait = ((line.offset - minute) % line.every + line.every) % line.every + index * line.every;
+    return { id: `${stop.key}:${line.route}:${minute + wait}`, stop: stop.name, route: line.route, color: line.color, headsign: line.headsign, at: new Date((minute + wait) * 60_000).toISOString(), live: index === 0, delay: index === 0 ? 60 : null, canceled: false };
+  }))).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
+
 export async function checkTransitKey(key: string) {
   await call(key, "feeds", { limit: "1" });
 }
@@ -44,7 +64,8 @@ const metres = (lat: number, lon: number, [toLon, toLat]: [number, number]) => {
 };
 
 /** Stops by name, near home when its location is known, nearest first; platforms of one station share a name. */
-export async function findStops(key: string, query: string, near: { latitude: number; longitude: number } | null): Promise<StopChoice[]> {
+export async function findStops(key: string | null, query: string, near: { latitude: number; longitude: number } | null): Promise<StopChoice[]> {
+  if (key === null) return SAMPLE_STOPS.filter(stop => !query || stop.name.toLowerCase().includes(query.toLowerCase()));
   const params: Record<string, string> = { limit: "40", include_routes: "true" };
   if (query) params.search = query;
   if (near) Object.assign(params, { lat: String(near.latitude), lon: String(near.longitude), radius: query ? "10000" : "1200" });
@@ -68,7 +89,8 @@ interface RawDeparture {
 }
 
 /** The next hour and a half of departures from these stops, soonest first. */
-export async function departuresFrom(key: string, stops: TransitStop[]): Promise<Departure[]> {
+export async function departuresFrom(key: string | null, stops: TransitStop[]): Promise<Departure[]> {
+  if (key === null) return sampleDepartures(stops);
   const lists = await Promise.all(stops.map(async stop => {
     const cached = cache.get(stop.key);
     if (cached && Date.now() - cached.at < CACHE_MS) return cached.departures;

@@ -1,6 +1,6 @@
-/* Dry is a quiet blue on the usual glass; wet turns the whole tile to the alert colour. */
+/* Dry looks like any resting tile; wet turns the whole tile to the alert colour. */
 .tile {
-  --leak: oklch(62% .14 240);
+  --leak: var(--text-secondary);
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -41,7 +41,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: color-mix(in oklab, var(--leak) 16%, transparent);
+  background: oklch(50% 0 0 / .1);
   color: var(--leak);
 }
 
@@ -111,7 +111,7 @@
 }
 
 .dropShape {
-  fill: color-mix(in oklab, var(--leak) 22%, transparent);
+  fill: oklch(50% 0 0 / .08);
   stroke: var(--leak);
   stroke-width: 2.5;
 }

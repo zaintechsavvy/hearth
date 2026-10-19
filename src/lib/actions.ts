@@ -662,6 +662,16 @@ export async function removeImmich(): Promise<ActionResult> {
   });
 }
 
+/** Departures tiles show made-up stops and times until a real Transitland key is added. */
+export async function chooseSampleTransit(): Promise<ActionResult> {
+  const denied = await ownerOnly();
+  if (denied) return denied;
+  return authed(async userId => {
+    await savePreferences(userId, { transit: { key: seal("sample"), sample: true } });
+    return OK;
+  });
+}
+
 /** Saves the free Transitland key the departures tile uses, once Transitland accepts it. */
 export async function saveTransitKey(key: unknown): Promise<ActionResult> {
   const denied = await ownerOnly();

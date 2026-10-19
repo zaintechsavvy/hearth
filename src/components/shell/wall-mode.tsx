@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CalendarDays, DoorOpen, Leaf, Moon, MoreHorizontal, Package, Pill, Recycle, Thermometer } from "lucide-react";
+import { CalendarDays, DoorOpen, History, House, Leaf, Moon, MoreHorizontal, Package, Pill, Recycle, Settings, Thermometer } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -11,7 +11,6 @@ import { useHome } from "@/components/dashboard/use-home";
 import { useTick } from "@/components/dashboard/household/use-tick";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import { WAKE_EVENT } from "@/components/dashboard/doorbell-call";
-import { askHearth } from "@/components/assistant/assistant-dock";
 import { startBedtime } from "@/components/shell/bedtime-check";
 import { LeftOpenBanner, leftOpenWords, useLeftOpen, type LeftOpen } from "@/components/shell/left-open";
 import { PhotoFrame } from "@/components/shell/photo-frame";
@@ -49,7 +48,7 @@ export function WallMode() {
 }
 
 /** The header is hidden on a wall tablet, so its menu carries the way around the app and out of wall tablet mode. */
-const PAGES = [{ href: "/dashboard", label: "Home" }, { href: "/activity", label: "Activity" }, { href: "/automations", label: "Automations" }, { href: "/settings", label: "Settings" }];
+const PAGES = [{ href: "/dashboard", label: "Home", icon: House }, { href: "/activity", label: "Activity", icon: History }, { href: "/settings", label: "Settings", icon: Settings }];
 
 function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => void }) {
   const path = usePathname();
@@ -71,6 +70,8 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
     const wake = () => {
       lastActive.current = Date.now();
       setResting(false);
+      // A touch tablet goes full screen at the first tap, since browsers only allow it from a tap.
+      if (!document.fullscreenElement && matchMedia("(pointer: coarse)").matches) void document.documentElement.requestFullscreen?.().catch(() => {});
     };
     for (const type of ACTIVITY) window.addEventListener(type, wake, { passive: true });
     window.addEventListener(WAKE_EVENT, wake);
@@ -158,17 +159,16 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><MoreHorizontal size={18} strokeWidth={1.75} aria-hidden="true" /></button>
         </PopoverTrigger>
         <PopoverContent align="end" className={`${glassSheetClass} ${styles.menuContent}`}>
-          <nav aria-label="Pages" className={styles.menuGroup}>
-            {PAGES.map(page => (
-              <Link key={page.href} href={page.href} className={styles.menuItem} aria-current={path.startsWith(page.href) ? "page" : undefined} onClick={() => setMenu(false)}>{page.label}</Link>
+          <nav aria-label="Pages" className={styles.pages}>
+            {PAGES.map(({ href, label, icon: Icon }) => (
+              <Link key={href} href={href} className={styles.page} aria-current={path.startsWith(href) ? "page" : undefined} onClick={() => setMenu(false)}>
+                <Icon size={18} strokeWidth={1.75} aria-hidden="true" />{label}
+              </Link>
             ))}
           </nav>
           <span className={styles.menuDivider} aria-hidden="true" />
-          <Link href="/settings#wall" className={styles.menuItem} onClick={() => setMenu(false)}>Wall tablet settings</Link>
-          {settings.showAssistant && <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); askHearth(); }}>Ask Hearth</button>}
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night</button>
-          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); }}>Rest the screen now</button>
-          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.documentElement.requestFullscreen?.().catch(() => {}); }}>Full screen</button>
+          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); }}>Rest the screen</button>
           <span className={styles.menuDivider} aria-hidden="true" />
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.exitFullscreen?.().catch(() => {}); onLeave(); }}>Leave wall tablet mode</button>
         </PopoverContent>
