@@ -8,6 +8,7 @@ import { DEFAULT_SECURITY, type SecuritySettings } from "@/lib/security-types";
 import { DEFAULT_BEDTIME, type BedtimeSettings } from "@/lib/bedtime";
 import type { Action, Condition, HomeLocation, Trigger } from "@/lib/automations/types";
 import type { SceneAction } from "@/lib/scenes/types";
+import type { SyncedBackground } from "@/lib/theme";
 
 const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataType: () => "bytea" });
 const timestamp = (name: string) => pgTimestamp(name, { withTimezone: true, mode: "date" });
@@ -103,6 +104,8 @@ export const preference = pgTable("preference", {
   transit: jsonb("transit").$type<{ key: string; sample?: boolean } | null>(),
   /** An Immich album for the wall tablet's photo frame; the key is sealed with `lib/crypto`. */
   photos: jsonb("photos").$type<{ url: string; key: string; album: string } | null>(),
+  /** The background this person picked, kept per person so every device they sign in on shows it. */
+  background: jsonb("background").$type<SyncedBackground | null>(),
   updatedAt: updatedAt(),
 });
 

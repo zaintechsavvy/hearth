@@ -148,6 +148,13 @@
       "when": 1792443668323,
       "tag": "0020_device_quiet",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792445784146,
+      "tag": "0021_background_sync",
+      "breakpoints": true
     }
   ]
 }

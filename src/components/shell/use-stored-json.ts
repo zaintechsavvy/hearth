@@ -2,13 +2,13 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
-const EVENT = "hearth-preference";
+export const PREFERENCE_EVENT = "hearth-preference";
 
 function subscribe(onChange: () => void) {
-  window.addEventListener(EVENT, onChange);
+  window.addEventListener(PREFERENCE_EVENT, onChange);
   window.addEventListener("storage", onChange);
   return () => {
-    window.removeEventListener(EVENT, onChange);
+    window.removeEventListener(PREFERENCE_EVENT, onChange);
     window.removeEventListener("storage", onChange);
   };
 }
@@ -26,7 +26,7 @@ export function useStoredJson<T>(key: string, fallback: T) {
   }, [raw, fallback]);
   const set = useCallback((next: T) => {
     localStorage.setItem(key, JSON.stringify(next));
-    window.dispatchEvent(new Event(EVENT));
+    window.dispatchEvent(new Event(PREFERENCE_EVENT));
   }, [key]);
   return [value, set] as const;
 }

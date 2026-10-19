@@ -43,6 +43,15 @@ export interface PhotoBackground {
   dim: number;
 }
 
+/** The background as one device saved it for the others; `savedAt` is the server's clock, so the newest wins. */
+export interface SyncedBackground {
+  wallpaper: Wallpaper;
+  gradient: CustomGradient | null;
+  gradients: CustomGradient[];
+  photo: PhotoBackground | null;
+  savedAt: number;
+}
+
 export const MAX_GRADIENT_COLORS = 3;
 export const GRADIENT_KEY = "hearth-gradient";
 export const GRADIENTS_KEY = "hearth-gradients";
