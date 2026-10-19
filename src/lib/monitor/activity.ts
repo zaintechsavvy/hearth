@@ -47,6 +47,22 @@ export async function logActivity({ userId, before, after, at }: HomeChange) {
   }
 }
 
+/**
+ * For hosts with no monitor: what an open screen's live stream sees change, written down once however many screens
+ * see it, so a garage opened at its wall button still reaches Activity. Who did it comes from the integration's
+ * logbook when Activity is read; alerts and automations stay with the monitor.
+ */
+export async function logSeenChanges(userId: string, before: Map<string, Device>, after: Device[], at: Date) {
+  const rows = after.flatMap(device => {
+    const previous = before.get(device.id);
+    const change = previous ? describeChange(previous, device) : null;
+    if (!change) return [];
+    const when = device.changedAt ?? new Date(Math.floor(at.getTime() / 30_000) * 30_000).toISOString();
+    return [{ userId, at: device.changedAt ? new Date(device.changedAt) : at, deviceId: device.id, name: device.name, room: device.room, ...change, by: null, dedupe: `${device.id}|${change.what}|${when}` }];
+  });
+  if (rows.length) await db.insert(activity).values(rows).onConflictDoNothing();
+}
+
 /** For things the monitor notices itself, such as an alert it sent. */
 export async function logEntry(userId: string, entry: { name: string; room?: string | null; what: string; category: Change["category"]; tone: Change["tone"]; deviceId?: string; by?: string }) {
   await db.insert(activity).values({ userId, at: new Date(), deviceId: entry.deviceId ?? null, name: entry.name, room: entry.room ?? null, what: entry.what, category: entry.category, tone: entry.tone, by: entry.by ?? null });

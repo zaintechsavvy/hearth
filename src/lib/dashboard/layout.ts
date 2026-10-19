@@ -2,11 +2,12 @@ import { parseDeviceId, type Device } from "@/lib/devices/types";
 
 export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "appliances", "announce", "departures"] as const;
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
-export type TileKind = Device["kind"] | WidgetKind;
+/** `leak` is a leak sensor's own tile: a binary sensor, shown as dry or wet with an alarm. */
+export type TileKind = Device["kind"] | WidgetKind | "leak";
 export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x1" | "4x2" | "4x3";
 
 export const TILE_KINDS = [
-  "light", "switch", "fan", "thermostat", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", "media_player",
+  "light", "switch", "fan", "thermostat", "lock", "cover", "binary_sensor", "leak", "sensor", "camera", "event", "scene", "media_player",
   "person", "vacuum", "alarm", "todo", ...WIDGET_KINDS,
 ] as const satisfies readonly TileKind[];
 export const TILE_SIZES = ["1x1", "2x1", "1x2", "2x2", "2x3", "2x4", "3x3", "4x1", "4x2", "4x3"] as const satisfies readonly TileSize[];
@@ -112,6 +113,7 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   switch: SWITCHABLE,
   lock: [...SWITCHABLE, { size: "1x2", label: "Tall" }, { size: "2x2", label: "Large" }],
   binary_sensor: SWITCHABLE,
+  leak: [{ size: "1x1", label: "Icon" }, { size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }],
   sensor: [...SWITCHABLE, { size: "2x2", label: "Chart" }, { size: "4x2", label: "Wide chart" }],
   person: SWITCHABLE,
   vacuum: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }],
@@ -142,12 +144,12 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
 };
 
 /** Kinds whose tiles take an icon and a colour. */
-const UNSTYLED = new Set<TileKind>(["thermostat", "camera", "media_player", "vacuum", "alarm", "todo"]);
-export type StyledKind = Exclude<TileKind, "thermostat" | "camera" | "media_player" | "vacuum" | "alarm" | "todo" | WidgetKind>;
+const UNSTYLED = new Set<TileKind>(["thermostat", "camera", "media_player", "vacuum", "alarm", "todo", "leak"]);
+export type StyledKind = Exclude<TileKind, "thermostat" | "camera" | "media_player" | "vacuum" | "alarm" | "todo" | "leak" | WidgetKind>;
 export const isStyled = (kind: TileKind): kind is StyledKind => !UNSTYLED.has(kind) && !isWidget(kind);
 export const isWidget = (kind: TileKind): kind is WidgetKind => (WIDGET_KINDS as readonly string[]).includes(kind);
 
-const KIND_ORDER: TileKind[] = ["thermostat", "alarm", "media_player", "vacuum", "todo", "person", "scene", "light", "fan", "switch", "lock", "cover", "binary_sensor", "sensor", "event", "camera"];
+const KIND_ORDER: TileKind[] = ["thermostat", "alarm", "media_player", "vacuum", "todo", "person", "scene", "light", "fan", "switch", "lock", "cover", "leak", "binary_sensor", "sensor", "event", "camera"];
 
 export const cameraTileId = (cameraId: string) => `camera:${cameraId}`;
 
@@ -202,6 +204,8 @@ export function defaultSize(kind: TileKind, adjustable = false): TileSize {
     case "sensor":
     case "binary_sensor":
       return "1x1";
+    case "leak":
+      return "2x1";
     default:
       return adjustable ? "1x2" : "1x1";
   }

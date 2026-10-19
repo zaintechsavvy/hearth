@@ -71,7 +71,7 @@ export async function activityPage(homeId: string, filter: Filter): Promise<Acti
       const device = row.deviceId ? known.get(row.deviceId) : undefined;
       return { ...row, at: row.at.toISOString(), name: row.name || device?.name || "A device", room: row.room ?? device?.room ?? null };
     });
-    return { entries: await withPictures(homeId, entries), more: page.length === PAGE };
+    return { entries: await withPictures(homeId, collapse(entries)), more: page.length === PAGE };
   }
 
   const home = await loadHome(homeId);
@@ -113,9 +113,10 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
   const theirsAll = logged.flat();
   const sameChange = (own: ActivityEntry, entry: ActivityEntry) => own.deviceId !== null && own.deviceId === entry.deviceId && Math.abs(Date.parse(own.at) - Date.parse(entry.at)) < SAME_CHANGE_MS;
   // A change Hearth noticed but did not make takes who and where from the integration's own record of it.
-  const mine: ActivityEntry[] = page.map(row => {
+  const mine: ActivityEntry[] = collapse(page.map(row => {
     const device = row.deviceId ? devices.get(row.deviceId) : undefined;
-    const entry = { ...row, at: row.at.toISOString(), name: row.name || device?.name || "A device", room: row.room ?? device?.room ?? null };
+    return { ...row, at: row.at.toISOString(), name: row.name || device?.name || "A device", room: row.room ?? device?.room ?? null };
+  })).map(entry => {
     const match = entry.by ? undefined : theirsAll.find(other => sameChange(entry, other));
     return match ? { ...entry, by: match.by, via: match.via } : entry;
   });
@@ -129,6 +130,11 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
   const older = await db.select({ at: activity.at }).from(activity).where(and(...filters, lt(activity.at, from))).limit(1);
   const more = older.length > 0 || from.getTime() > Date.now() - LOGBOOK_DAYS * 86_400_000;
   return { entries, more, next: from.toISOString(), ...(missing.length ? { missing } : {}) };
+}
+
+/** One change written down twice, by the command Hearth sent and by a screen that saw it happen, shows once, with who did it. */
+function collapse(entries: ActivityEntry[]) {
+  return entries.filter(entry => entry.by !== null || !entries.some(other => other !== entry && other.by !== null && other.deviceId !== null && other.deviceId === entry.deviceId && other.what === entry.what && Math.abs(Date.parse(other.at) - Date.parse(entry.at)) < SAME_CHANGE_MS));
 }
 
 /** Puts each doorbell ring's kept picture beside it. */

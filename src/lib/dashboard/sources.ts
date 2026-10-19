@@ -14,7 +14,7 @@ export const hasLevel = (device: Device) =>
 /** Everything a tile can link to. `hidden` marks what is not worth suggesting, such as diagnostics and batteries. */
 export function tileSources({ devices, cameras, scenes }: SourceInput): TileSource[] {
   return [
-    ...devices.map(device => ({ id: device.id, kind: device.kind, adjustable: hasLevel(device), hidden: !shownByDefault(device) })),
+    ...devices.map(device => ({ id: device.id, kind: device.kind === "binary_sensor" && device.sensorClass === "leak" ? "leak" as const : device.kind, adjustable: hasLevel(device), hidden: !shownByDefault(device) })),
     ...scenes.map(scene => ({ id: sceneTileId(scene.id), kind: "scene" as const })),
     ...cameras.map(camera => ({ id: cameraTileId(camera.id), kind: "camera" as const })),
   ];

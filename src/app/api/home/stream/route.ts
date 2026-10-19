@@ -7,6 +7,8 @@ import { createProvider } from "@/lib/integrations/registry";
 import { integrationTopic, listen, userTopic } from "@/lib/live/bus";
 import { getHome } from "@/lib/session";
 import { isServerless } from "@/lib/setup-check";
+import { logSeenChanges } from "@/lib/monitor/activity";
+import type { Device } from "@/lib/devices/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -49,6 +51,8 @@ export async function GET(request: Request) {
 
       let timer: ReturnType<typeof setTimeout> | undefined;
       let sending = false;
+      // With no monitor on a serverless host, this stream writes down what it sees change, for Activity.
+      const seen = isServerless() && home.role !== "guest" ? new Map<string, Device>() : null;
       let queued = false;
 
       const send = async () => {
@@ -58,7 +62,13 @@ export async function GET(request: Request) {
         }
         sending = true;
         try {
-          write(`event: snapshot\ndata: ${JSON.stringify(view(await loadHome(home.homeId)))}\n\n`);
+          const snapshot = await loadHome(home.homeId);
+          write(`event: snapshot\ndata: ${JSON.stringify(view(snapshot))}\n\n`);
+          if (seen) {
+            if (seen.size) await logSeenChanges(home.homeId, seen, snapshot.devices, new Date()).catch(error => console.error(error));
+            seen.clear();
+            for (const device of snapshot.devices) seen.set(device.id, device);
+          }
         } catch (error) {
           console.error(error);
         } finally {

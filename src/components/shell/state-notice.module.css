@@ -103,3 +103,22 @@
   animation-duration: 0s;
   animation-delay: 0s;
 }
+
+/* A leak is an alarm: the alert colour, and it waits for a tap. */
+.notice[data-alarm] {
+  --tone: var(--danger);
+  background: color-mix(in oklab, var(--danger) 30%, oklch(12% .02 20 / .9));
+}
+
+.puddle { fill: none; stroke: oklch(100% 0 0 / .7); stroke-width: 2.5; }
+.spreading { transform-box: fill-box; transform-origin: center; animation: spread 1.8s var(--ease-standard) infinite; }
+.falling { animation: fall 1.8s var(--ease-standard) infinite; }
+.notice:not([data-open]) .spreading,
+.notice:not([data-open]) .falling { animation: none; }
+@keyframes spread { from { transform: scale(.6); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+@keyframes fall { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+
+.notice[data-still] .spreading,
+.notice[data-still] .falling {
+  animation: none;
+}

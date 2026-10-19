@@ -11,7 +11,7 @@ const SHOW_MS = 5000;
 const OPENINGS = new Set(["door", "window", "garage", "opening"]);
 const ENTRY_COVERS = new Set(["garage", "gate", "door"]);
 
-type Picture = "garage" | "lock" | "door";
+type Picture = "garage" | "lock" | "door" | "leak";
 
 interface Notice {
   key: string;
@@ -21,11 +21,16 @@ interface Notice {
   picture: Picture;
   /** True for the change that opens the home, which the picture plays forwards. */
   open: boolean;
+  /** A leak: it stays until someone taps it, in the alert colour. */
+  alarm: boolean;
 }
 
 /** The settled state worth announcing for a device, or null for ones the wall stays quiet about. */
-function stateOf(device: Device): { open: boolean; words: string; picture: Picture } | null {
+function stateOf(device: Device): { open: boolean; words: string; picture: Picture; alarm?: boolean } | null {
   if (!device.available) return null;
+  if (device.kind === "binary_sensor" && device.sensorClass === "leak") {
+    return { open: device.active, words: device.active ? "is wet" : "is dry again", picture: "leak", alarm: device.active };
+  }
   if (device.kind === "lock") {
     if (device.state === "locked") return { open: false, words: "locked", picture: "lock" };
     if (device.state === "unlocked" || device.state === "open") return { open: true, words: "unlocked", picture: "lock" };
@@ -60,22 +65,22 @@ export function StateNotices({ devices }: { devices: Device[] | undefined }) {
       if (!state) continue;
       now.set(device.id, state.open);
       const before = last.current?.get(device.id);
-      if (last.current && before !== undefined && before !== state.open && !sentHere(device.id)) {
-        next = { key: `${device.id}:${Date.now()}`, name: device.name, room: device.room, ...state };
+      if (last.current && before !== undefined && before !== state.open && (state.picture === "leak" || !sentHere(device.id))) {
+        next = { key: `${device.id}:${Date.now()}`, name: device.name, room: device.room, ...state, alarm: state.alarm ?? false };
       }
     }
     last.current = new Map([...(last.current ?? []), ...now]);
     if (!next) return;
     const shown = next;
     const timer = setTimeout(() => {
-      setNotice(shown);
-      haptic(shown.open ? "press" : "tap");
+      setNotice(current => current?.alarm && !shown.alarm ? current : shown);
+      haptic(shown.alarm ? "alert" : shown.open ? "press" : "tap");
     }, 0);
     return () => clearTimeout(timer);
   }, [devices]);
 
   useEffect(() => {
-    if (!notice) return;
+    if (!notice || notice.alarm) return;
     const timer = setTimeout(() => setNotice(null), SHOW_MS);
     return () => clearTimeout(timer);
   }, [notice]);
@@ -83,17 +88,17 @@ export function StateNotices({ devices }: { devices: Device[] | undefined }) {
   return (
     <AnimatePresence>
       {notice && (
-        <motion.button type="button" key={notice.key} className={styles.notice} data-open={notice.open || undefined} data-still={reduce || undefined}
+        <motion.button type="button" key={notice.key} className={styles.notice} data-open={notice.open || undefined} data-alarm={notice.alarm || undefined} data-still={reduce || undefined}
           onClick={() => setNotice(null)} aria-label={`${notice.name} ${notice.words}. Tap to close.`}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.35 }}>
           <motion.span className={styles.card} initial={reduce ? false : { y: 16, scale: .97 }} animate={{ y: 0, scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 26 }}>
-            <span className={styles.art} aria-hidden="true">{notice.picture === "garage" ? <Garage /> : notice.picture === "lock" ? <Padlock /> : <Door />}</span>
+            <span className={styles.art} aria-hidden="true">{notice.picture === "garage" ? <Garage /> : notice.picture === "lock" ? <Padlock /> : notice.picture === "leak" ? <Leak /> : <Door />}</span>
             <span className={styles.words}>
-              <span className={styles.title}>{notice.name} {notice.words}</span>
-              <span className={styles.meta}>{[notice.room, "just now"].filter(Boolean).join(" · ")}</span>
+              <span className={styles.title}>{notice.alarm ? "Water leak" : `${notice.name} ${notice.words}`}</span>
+              <span className={styles.meta}>{notice.alarm ? `${[notice.name, notice.room].filter(Boolean).join(" · ")}. Check it now, then tap to close.` : [notice.room, "just now"].filter(Boolean).join(" · ")}</span>
             </span>
           </motion.span>
-          <span className={styles.timer} aria-hidden="true" />
+          {!notice.alarm && <span className={styles.timer} aria-hidden="true" />}
         </motion.button>
       )}
     </AnimatePresence>
@@ -124,6 +129,17 @@ function Padlock() {
       <rect x="34" y="46" width="52" height="42" rx="9" className={styles.body} />
       <circle cx="60" cy="64" r="5" className={styles.keyhole} />
       <rect x="58" y="66" width="4" height="10" rx="2" className={styles.keyhole} />
+    </svg>
+  );
+}
+
+/** A drop of water, with rings spreading out from it while it is wet. */
+function Leak() {
+  return (
+    <svg viewBox="0 0 120 100" className={styles.svg}>
+      <ellipse cx="60" cy="86" rx="30" ry="6" className={styles.puddle} />
+      <ellipse cx="60" cy="86" rx="30" ry="6" className={`${styles.puddle} ${styles.spreading}`} />
+      <path d="M60 12c9 12.5 19 24 19 35.5a19 19 0 0 1-38 0C41 36 51 24.5 60 12Z" className={`${styles.body} ${styles.falling}`} />
     </svg>
   );
 }

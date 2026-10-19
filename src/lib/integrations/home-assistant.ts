@@ -75,6 +75,7 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
     name: str(attributes.friendly_name) ?? entity.entity_id,
     room,
     available: entity.state !== "unavailable",
+    ...(entity.last_changed ? { changedAt: entity.last_changed } : {}),
   };
   const on = entity.state === "on";
   const features = num(attributes.supported_features) ?? 0;

@@ -18,6 +18,8 @@ interface DeviceBase {
   sourceName?: string;
   /** The integration's room, when the room was changed in Hearth. */
   sourceRoom?: string | null;
+  /** When its state last changed, as the integration records it; the same on every screen. */
+  changedAt?: string;
   /** The integration's kind, when Hearth shows the device as another on/off kind. */
   sourceKind?: SwitchableKind;
 }

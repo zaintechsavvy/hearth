@@ -70,6 +70,7 @@ export function seedDemoDevices(integrationId: string): Device[] {
     { ...base("bedroom-temp", "Bedroom", "Bedroom"), kind: "sensor", sensorClass: "temperature", value: 19.8, unit: "°C" },
     { ...base("bedroom-window", "Bedroom window", "Bedroom"), kind: "binary_sensor", sensorClass: "window", active: true },
     { ...base("hall-motion", "Hallway motion", "Entry"), kind: "binary_sensor", sensorClass: "motion", active: false },
+    { ...base("sink-leak", "Under the sink", "Kitchen"), kind: "binary_sensor", sensorClass: "leak", active: false },
     { ...base("home-power", "Home power", null), kind: "sensor", sensorClass: "power", value: 640, unit: "W" },
     { ...base("home-energy", "Home energy", null), kind: "sensor", sensorClass: "energy", value: 1214.4, unit: "kWh" },
     { ...base("washer-power", "Washer power", "Laundry"), kind: "sensor", sensorClass: "power", value: 0, unit: "W" },

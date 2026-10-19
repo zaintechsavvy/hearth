@@ -16,6 +16,7 @@ export const KIND_INFO: Record<TileKind, KindInfo> = {
   lock: { label: "Lock", description: "A front door or gate lock", icon: "lock", color: "blue" },
   cover: { label: "Garage door or blind", description: "Garage doors, gates, blinds, and shades", icon: "garage", color: "graphite" },
   binary_sensor: { label: "Door or motion sensor", description: "Open and closed, motion, leaks, smoke", icon: "door-closed", color: "orange" },
+  leak: { label: "Leak sensor", description: "Dry or wet, with an alarm the moment water shows up", icon: "droplets", color: "blue" },
   sensor: { label: "Reading", description: "Temperature, humidity, battery, and more", icon: "gauge", color: "teal" },
   camera: { label: "Camera", description: "A live view", icon: "camera", color: "graphite" },
   event: { label: "Doorbell", description: "When it last rang, with an alert", icon: "bell-ring", color: "rose" },
@@ -45,13 +46,13 @@ export const KIND_INFO: Record<TileKind, KindInfo> = {
 };
 
 export const ADDABLE_KINDS: TileKind[] = [
-  "light", "switch", "fan", "thermostat", "lock", "cover", "camera", "media_player", "alarm", "vacuum", "todo", "person", "event", "binary_sensor", "sensor", "scene",
+  "light", "switch", "fan", "thermostat", "lock", "cover", "camera", "media_player", "alarm", "vacuum", "todo", "person", "event", "binary_sensor", "leak", "sensor", "scene",
   "weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "appliances", "announce", "departures",
 ];
 
 /** Widgets grouped for the gallery, under the devices. */
 export const GALLERY_SECTIONS: { title: string; kinds: TileKind[] }[] = [
-  { title: "Devices", kinds: ["light", "switch", "fan", "thermostat", "lock", "cover", "camera", "media_player", "alarm", "vacuum", "todo", "person", "event", "binary_sensor", "sensor", "scene"] },
+  { title: "Devices", kinds: ["light", "switch", "fan", "thermostat", "lock", "cover", "camera", "media_player", "alarm", "vacuum", "todo", "person", "event", "binary_sensor", "leak", "sensor", "scene"] },
   { title: "At a glance", kinds: ["energy", "people"] },
   { title: "Everyday", kinds: ["weather", "calendar", "clock", "departures", "countdown", "timers"] },
   { title: "Household", kinds: ["appliances", "announce", "bins", "packages", "medications", "reminders", "notes", "plants", "wifi"] },

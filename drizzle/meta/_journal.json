@@ -134,6 +134,13 @@
       "when": 1792435624829,
       "tag": "0018_transit_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792439946195,
+      "tag": "0019_activity_dedupe",
+      "breakpoints": true
     }
   ]
 }

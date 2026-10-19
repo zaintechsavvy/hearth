@@ -209,7 +209,9 @@ export const activity = pgTable("activity", {
   tone: text("tone", { enum: ["info", "warning", "alert"] }).notNull(),
   /** Who or what did it, when Hearth knows: a person, the assistant, a scene, or an automation. */
   by: text("by"),
-}, t => [index("activity_user_at_idx").on(t.userId, t.at)]);
+  /** One change seen by several screens at once is kept once: the device, what happened, and when the integration says it did. */
+  dedupe: text("dedupe"),
+}, t => [index("activity_user_at_idx").on(t.userId, t.at), uniqueIndex("activity_dedupe_idx").on(t.userId, t.dedupe)]);
 
 /** A picture from the doorbell's camera when it rang, shown beside the ring in Activity. Kept 30 days. */
 export const ringPicture = pgTable("ring_picture", {

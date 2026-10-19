@@ -44,6 +44,7 @@ import { AppliancesTile } from "./glance/appliances-tile";
 import { EnergyTile } from "./glance/energy-tile";
 import { PeopleTile } from "./glance/people-tile";
 import { ChartTile } from "./devices/chart-tile";
+import { LeakTile } from "./devices/leak-tile";
 import { PersonTile } from "./devices/person-tile";
 import { TodoTile } from "./devices/todo-tile";
 import { VacuumTile } from "./devices/vacuum-tile";
@@ -85,6 +86,7 @@ const COMPATIBLE: Partial<Record<TileKind, DeviceKind[]>> = {
   switch: ["switch", "light"],
   fan: ["fan", "switch"],
   event: ["event", "binary_sensor"],
+  leak: ["binary_sensor"],
 };
 
 type Linked =
@@ -147,6 +149,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const pageId = page?.id ?? HOME_PAGE_ID;
   const tiles = useMemo(() => resolveLayout(draft ?? page?.layout ?? [], sources), [draft, page?.layout, sources]);
   const swipe = useRef<{ x: number; y: number } | null>(null);
+  const gridWrap = useRef<HTMLDivElement>(null);
+  const swiped = useRef(0);
 
   useEffect(() => () => clearTimeout(saveTimer.current), []);
   useEffect(() => {
@@ -198,18 +202,6 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     setStoredPage(id);
   };
   const pageIndex = home.pages.findIndex(item => item.id === pageId);
-  const swipeHandlers = home.pages.length > 1 && !editing ? {
-    onPointerDown: (event: React.PointerEvent) => { if (event.pointerType === "touch") swipe.current = { x: event.clientX, y: event.clientY }; },
-    onPointerUp: (event: React.PointerEvent) => {
-      const start = swipe.current;
-      swipe.current = null;
-      if (!start) return;
-      const dx = event.clientX - start.x, dy = event.clientY - start.y;
-      if (Math.abs(dx) < SWIPE_PX || Math.abs(dy) > Math.abs(dx) * 0.6) return;
-      const next = home.pages[pageIndex + (dx < 0 ? 1 : -1)];
-      if (next) selectPage(next.id);
-    },
-  } : {};
 
   const finishEditing = async () => {
     clearTimeout(saveTimer.current);
@@ -227,7 +219,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
 
   const addTile = (kind: TileKind, link: string | null, options?: TileConfig["options"]) => {
     const source = link ? sourceById.get(link) : undefined;
-    const tile = createTile(source?.kind ?? kind, link, source?.adjustable ?? false, options ? { options } : {});
+    const tile = createTile(kind === "leak" ? kind : source?.kind ?? kind, link, source?.adjustable ?? false, options ? { options } : {});
     change([...tiles, tile]);
     if (kind === "departures") setStopsFor(tile.id);
     if (isHousehold(kind) && (kind === "countdown" || kind === "wifi" || (["bins", "medications", "plants", "packages", "appliances"].includes(kind) && itemsOf(home.widgets, ITEM_KIND_FOR[kind]).length === 0))) {
@@ -239,7 +231,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     const source = sourceById.get(link);
     change(tiles.map(tile => {
       if (tile.id !== tileId) return tile;
-      const kind = source?.kind ?? tile.kind;
+      const kind = tile.kind === "leak" ? tile.kind : source?.kind ?? tile.kind;
       return { ...tile, kind, link, size: fitSize(tile, kind, source), label: undefined };
     }));
   };
@@ -258,6 +250,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     }
     for (const device of home.devices) {
       if (!kinds.includes(device.kind)) continue;
+      if (kind === "leak" && (device.kind !== "binary_sensor" || device.sensorClass !== "leak")) continue;
       const style = defaultStyle(device);
       list.push({
         id: device.id, name: device.name, room: device.room, detail: `${kindLabel(device)} · ${statusText(device)}`,
@@ -279,6 +272,48 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     return linked?.type === "device" ? linked.device.room : null;
   };
   const filtering = room !== ALL_ROOMS && !editing && linkedRooms.includes(room);
+  // Like Apple Home, a swipe moves through All and each room, then on to the next page, and the new screen slides in from that side.
+  const screens = linkedRooms.length > 1 ? [ALL_ROOMS, ...linkedRooms] : [ALL_ROOMS];
+  const current = filtering ? room : ALL_ROOMS;
+  const slide = (direction: number) => {
+    if (!direction || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    requestAnimationFrame(() => gridWrap.current?.animate(
+      [{ transform: `translateX(${direction * 48}px)`, opacity: 0 }, { transform: "none", opacity: 1 }],
+      { duration: 320, easing: "cubic-bezier(.2, .8, .2, 1)" },
+    ));
+  };
+  const showRoom = (next: string) => {
+    slide(Math.sign(screens.indexOf(next) - screens.indexOf(current)));
+    setRoom(next);
+  };
+  const step = (direction: 1 | -1) => {
+    const next = screens[screens.indexOf(current) + direction];
+    if (next !== undefined) return showRoom(next);
+    const page = home.pages[pageIndex + direction];
+    if (page) {
+      slide(direction);
+      selectPage(page.id);
+    }
+  };
+  const swipeHandlers = !editing && (screens.length > 1 || home.pages.length > 1) ? {
+    onPointerDown: (event: React.PointerEvent) => { if (event.pointerType === "touch") swipe.current = { x: event.clientX, y: event.clientY }; },
+    onPointerUp: (event: React.PointerEvent) => {
+      const start = swipe.current;
+      swipe.current = null;
+      if (!start) return;
+      const dx = event.clientX - start.x, dy = event.clientY - start.y;
+      if (Math.abs(dx) < SWIPE_PX || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+      swiped.current = event.timeStamp;
+      step(dx < 0 ? 1 : -1);
+    },
+    onPointerCancel: () => { swipe.current = null; },
+    // The finger lifting at the end of a swipe is not a tap on the tile under it.
+    onClickCapture: (event: React.MouseEvent) => {
+      if (event.timeStamp - swiped.current > 400) return;
+      event.preventDefault();
+      event.stopPropagation();
+    },
+  } : {};
   const shownTiles = filtering ? tiles.filter(tile => roomOf(tile) === room) : tiles;
   const failing = home.integrations.filter(integration => !integration.ok);
   const connected = home.integrations.length > 0 || home.cameras.length > 0;
@@ -355,6 +390,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     if (device.kind === "alarm") return <AlarmTile device={device} config={tile} interactive={interactive} openMethod={home.openMethod} onCommand={(command, pin) => send(device, command, pin)} />;
     if (device.kind === "todo") return <TodoTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} />;
     if (device.kind === "person") return <PersonTile device={device} config={tile} now={minuteNow} />;
+    if (device.kind === "binary_sensor" && device.sensorClass === "leak") return <LeakTile device={device} config={tile} />;
     if (device.kind === "sensor" && (tile.size === "2x2" || tile.size === "4x2")) return <ChartTile device={device} config={tile} onOpen={interactive ? () => setCharting(device.id) : undefined} />;
     return <DeviceTile device={device} config={tile} interactive={interactive} openMethod={home.openMethod} onCommand={(command, pin) => send(device, command, pin)} onOpenControls={() => setControlling(device.id)} onOpenHistory={() => setCharting(device.id)} onHold={onHold} />;
   };
@@ -473,7 +509,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       <PageTabs pages={home.pages} current={pageId} editing={editing} onSelect={selectPage} onChanged={refresh} />
 
       {linkedRooms.length > 1 && !editing && (
-        <SegmentedControl label="Room" className={styles.rooms} value={filtering ? room : ALL_ROOMS} onValueChange={setRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} />
+        <SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} />
       )}
 
       {failing.map(integration => (
@@ -481,7 +517,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       ))}
 
       {tiles.length > 0 ? (
-        <div {...swipeHandlers}>
+        <div ref={gridWrap} className={styles.swipe} {...swipeHandlers}>
         <HomeGrid tiles={shownTiles} editing={editing} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(filtering ? mergeFiltered(tiles, next) : next)} onCustomize={setCustomizing} />
         </div>
       ) : (
