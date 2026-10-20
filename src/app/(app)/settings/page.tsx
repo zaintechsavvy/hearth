@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { and, eq, gt } from "drizzle-orm";
 import { AccountSection } from "@/components/connections/account-section";
@@ -21,6 +20,7 @@ import { db } from "@/lib/db";
 import { assistant, calendar, camera, integration, invite, membership, user as users } from "@/lib/db/schema";
 import { getPreferences, streamRelayUrl } from "@/lib/home";
 import { publicConfig } from "@/lib/integrations/registry";
+import { ASSISTANT_PROVIDERS } from "@/lib/assistant/providers";
 import { requireHome } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -55,20 +55,28 @@ export default async function ConnectionsPage() {
     <div className={styles.page}>
       <header data-on-wall>
         <h1 className={styles.title}>Settings</h1>
-        <p className={styles.lede}>Pick a section to open it. Passwords and keys are encrypted before they are stored. <Link href="/how-it-works" className={styles.ledeLink}>How Hearth works</Link></p>
       </header>
-      <SettingsShell items={[
-        ...(owner ? [{ id: "connections", label: "Connections" }] : []),
-        { id: "household", label: "Household" },
-        { id: "rooms", label: "Rooms" },
-        { id: "alerts", label: "Alerts" },
-        { id: "security", label: "Doors and alarm" },
-        { id: "bedtime", label: "Good night" },
-        ...(owner ? [{ id: "assistants", label: "Assistants" }, { id: "cameras", label: "Cameras" }] : []),
-        { id: "calendars", label: "Calendars" },
-        { id: "appearance", label: "Appearance" },
-        { id: "wall", label: "Wall tablet" },
-        { id: "account", label: "Account" },
+      <SettingsShell groups={[
+        { title: "Your home", items: [
+          ...(owner ? [{ id: "connections" as const, label: "Connections", summary: integrations.length ? integrations.map(row => row.name).join(", ") : "Nothing connected yet" }] : []),
+          { id: "rooms", label: "Rooms", summary: "Names and order" },
+          ...(owner ? [{ id: "cameras" as const, label: "Cameras", summary: cameras.length ? `${cameras.length} ${cameras.length === 1 ? "camera" : "cameras"}` : "None added" }] : []),
+          { id: "calendars", label: "Calendars", summary: calendars.length ? `${calendars.length} ${calendars.length === 1 ? "calendar" : "calendars"}` : "None added" },
+          ...(owner ? [{ id: "assistants" as const, label: "Assistants", summary: assistants.length ? assistants.map(row => ASSISTANT_PROVIDERS[row.provider].label).join(", ") : "None added" }] : []),
+        ] },
+        { title: "People", items: [
+          { id: "household", label: "Household", summary: owner ? (members.length ? `You and ${members.length} ${members.length === 1 ? "other" : "others"}` : "Just you") : `${home.ownerName}'s home` },
+          { id: "account", label: "Account", summary: user.email },
+        ] },
+        { title: "Safety", items: [
+          { id: "alerts", label: "Alerts", summary: "Notifications on this device" },
+          { id: "security", label: "Doors and alarm", summary: preferences.security.method === "pin" ? "Opened with the household PIN" : "Opened with a hold" },
+          { id: "bedtime", label: "Good night", summary: "What one hold does at night" },
+        ] },
+        { title: "Look and feel", items: [
+          { id: "appearance", label: "Appearance", summary: "Theme, background, and tiles" },
+          { id: "wall", label: "Wall tablet", summary: "A screen that stays on the wall" },
+        ] },
       ]}>
       {owner && <IntegrationsSection integrations={integrations.map(row => ({ id: row.id, name: row.name, kind: row.kind, ...publicConfig(row) }))} />}
       <HouseholdSection role={owner ? "owner" : "member"} ownerName={home.ownerName} members={members} invites={invites.map(item => ({ ...item, expiresAt: item.expiresAt.toISOString() }))} pages={preferences.pages.map(page => ({ id: page.id, name: page.name }))} shareBackground={preferences.shareBackground} />
