@@ -47,7 +47,7 @@ export function ActivityTile({ tile, devices }: { tile: TileConfig; devices: Dev
                   <li key={entry.id} className={styles.row} data-tone={entry.tone}>
                     <span className={styles.activityIcon}><Icon size={15} strokeWidth={1.75} aria-hidden="true" /></span>
                     <span className={styles.text}>
-                      <span className={styles.rowName}>{entry.name} <span className={styles.activityWhat}>{entry.what}</span></span>
+                      <span className={`${styles.rowName} ${styles.activityLine}`}>{entry.name} <span className={styles.activityWhat}>{entry.what}</span></span>
                       {(entry.by || entry.room) && <span className={styles.meta}>{entry.by ? `by ${entry.by}` : entry.room}</span>}
                     </span>
                     <time className={styles.meta} dateTime={entry.at}>{when(entry.at)}</time>

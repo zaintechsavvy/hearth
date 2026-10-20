@@ -73,14 +73,32 @@ export async function addIntegration(input: unknown): Promise<CreatedResult> {
   return result.ok ? { ok: true, id } : result;
 }
 
-/** A demo home arrives with its devices already on the first page, after whatever is there, so there is something to try straight away. */
+/** Kinds the demo's own widgets already cover, Energy, Who's home, and the thermostat, so each does not take a tile too. */
+const DEMO_LEFT_OUT = new Set(["sensor", "todo", "person"]);
+
+/**
+ * A demo home arrives with its devices already on the first page, after whatever is there, so there is something to
+ * try straight away. On an empty dashboard it also brings the widgets worth seeing, with sample departures.
+ */
 async function placeDemoTiles(userId: string, integrationId: string) {
-  const home = await loadHome(userId);
+  const [home, preferences] = await Promise.all([loadHome(userId), getPreferences(userId)]);
   const placed = new Set(home.layout.map(tile => tile.kind === undefined ? tile.id : tile.link));
-  const fresh = suggestedTiles(tileSources(home).filter(source => source.id.startsWith(`${integrationId}:`) && !placed.has(source.id)));
+  const fresh = suggestedTiles(tileSources(home).filter(source => source.id.startsWith(`${integrationId}:`) && !placed.has(source.id) && !DEMO_LEFT_OUT.has(source.kind)));
   if (!fresh.length) return;
-  const layout = [...(home.layout.length ? home.layout : [createTile("clock")]), ...fresh];
-  await savePreferences(userId, { layout, pages: home.pages.map((page, index) => index === 0 ? { ...page, layout } : page) });
+  const empty = home.layout.length === 0;
+  const widgets = empty ? [
+    createTile("clock"),
+    createTile("departures", null, false, { options: { stops: [{ key: "sample:maple-5th", name: "Maple St at 5th Ave" }, { key: "sample:central", name: "Central Station" }] } }),
+    createTile("energy"),
+    createTile("people"),
+    createTile("activity", null, false, { size: "2x3" }),
+  ] : [];
+  const layout = [...home.layout, ...widgets, ...fresh];
+  await savePreferences(userId, {
+    layout,
+    pages: home.pages.map((page, index) => index === 0 ? { ...page, layout } : page),
+    ...(empty && !preferences.transit ? { transit: { key: seal("sample"), sample: true } } : {}),
+  });
 }
 
 export async function addDemoHome(): Promise<ActionResult> {

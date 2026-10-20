@@ -2,7 +2,7 @@
 
 A calm, self-hosted home dashboard. Hearth brings your thermostat, cameras, lights, locks, speakers, and Matter devices into one grid you arrange yourself, talks to the Home Assistant you already run, and lets you change things by tapping, typing, or saying them.
 
-**Why "Hearth"?** A hearth is the fireplace at the centre of a home, the spot everyone gathers around. The logo is that: a house with a flame inside.
+**Why "Hearth"?** A hearth is the fireplace at the centre of a home, the spot everyone gathers around. The logo keeps it simple: the outline of a house.
 
 The thermostat glows warm from the top when you raise it and cool from the bottom when you lower it, and keeps a softer glow while the system is actually heating or cooling.
 
@@ -10,7 +10,7 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 | --- | --- |
 | ![Thermostat warming](docs/screenshots/thermostat-warm.png) | ![Thermostat cooling](docs/screenshots/thermostat-cool.png) |
 
-**The dashboard**, built from tiles you choose and arrange yourself.
+**The dashboard**, built from tiles you choose and arrange yourself: the next buses and trains, what is drawing power, who is home, what just happened, and your devices.
 
 ![The dashboard](docs/screenshots/dashboard.png)
 
@@ -30,9 +30,13 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 
 ![Customize dialog](docs/screenshots/customize.png)
 
-**Activity**: everything that happened, from Hearth and Home Assistant alike, and who did it.
+**Activity**: everything that happened, from Hearth and Home Assistant alike, and who did it. Devices that change together share one line.
 
 ![Activity](docs/screenshots/activity.png)
+
+**Settings** in four short groups, one section at a time.
+
+![Settings](docs/screenshots/settings.png)
 
 **Automations** you can pause or snooze.
 

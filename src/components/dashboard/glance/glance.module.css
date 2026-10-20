@@ -326,7 +326,8 @@ button.chip:hover:not(:disabled) {
 @container (max-width: 230px) {
   .peopleRow .title { display: none; }
   .emptied { width: 30px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
-  .applianceIcon { display: none; }
+  .applianceIcon,
+  .row .activityIcon { display: none; }
   .row { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); }
   .row:has(> :first-child[class*="avatar"]) { grid-template-columns: auto minmax(0, 1fr) auto; }
   .say { grid-template-columns: 1fr; }
@@ -367,4 +368,13 @@ button.chip:hover:not(:disabled) {
   grid-auto-flow: row;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: var(--space-5);
+}
+
+/* Several devices in one line read in full, over two lines if they need them. */
+.activityLine.activityLine {
+  display: -webkit-box;
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
