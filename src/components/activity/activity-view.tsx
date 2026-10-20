@@ -1,7 +1,7 @@
 "use client";
 
 import { BellOff, BellRing, History } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSWRConfig } from "swr";
 import useSWRInfinite from "swr/infinite";
 import { Button } from "@/components/arc/button/button";
@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { useHome } from "@/components/dashboard/use-home";
-import { Glass } from "@/components/glass/glass";
+import { Glass, glassClass } from "@/components/glass/glass";
 import type { ActivityCategory, ActivityEntry } from "@/lib/activity-types";
 import { updateDevice } from "@/lib/actions";
 import { activityIcon } from "./activity-icon";
@@ -17,6 +17,8 @@ import styles from "./activity-view.module.css";
 
 type Page = { entries: ActivityEntry[]; more: boolean; next?: string };
 const ALL = "all";
+/** How long the chance to undo a mute stays on screen. */
+const UNDO_MS = 6000;
 const ANY_ROOM = "__any";
 const FILTERS: { value: ActivityCategory | typeof ALL; label: string }[] = [
   { value: ALL, label: "Everything" }, { value: "doors", label: "Doors and locks" }, { value: "lights", label: "Lights" },
@@ -59,10 +61,20 @@ export function ActivityView() {
   const more = data?.at(-1)?.more ?? false;
   const { mutate: mutateKey } = useSWRConfig();
   const muted = (home?.devices ?? []).filter(device => device.quiet);
+  const [undo, setUndo] = useState<{ deviceId: string; name: string; quiet: boolean; at: number } | null>(null);
   const setQuiet = async (deviceId: string, quiet: boolean) => {
     await updateDevice(deviceId, { quiet });
     await Promise.all([mutate(), mutateKey("/api/home")]);
   };
+  const changeQuiet = async (deviceId: string, name: string, quiet: boolean) => {
+    await setQuiet(deviceId, quiet);
+    setUndo(previous => ({ deviceId, name, quiet, at: (previous?.at ?? 0) + 1 }));
+  };
+  useEffect(() => {
+    if (!undo) return;
+    const timer = setTimeout(() => setUndo(null), UNDO_MS);
+    return () => clearTimeout(timer);
+  }, [undo]);
   const days = new Map<string, ActivityEntry[]>();
   for (const entry of entries) {
     const key = new Date(entry.at).toDateString();
@@ -83,10 +95,7 @@ export function ActivityView() {
         {muted.length > 0 && (
           <DropdownMenu icon={<BellOff size={15} strokeWidth={1.75} aria-hidden="true" />}
             label={`Muted: ${muted[0].name}${muted.length > 1 ? ` +${muted.length - 1}` : ""}`}
-            items={[
-              ...muted.map(device => ({ label: `Show ${device.name} again`, icon: <BellRing size={15} strokeWidth={1.75} />, onSelect: () => void setQuiet(device.id, false) })),
-              ...(muted.length > 1 ? [{ label: "Show them all again", separatorBefore: true, onSelect: () => void Promise.all(muted.map(device => setQuiet(device.id, false))) }] : []),
-            ]} />
+            items={muted.map(device => ({ label: `Show ${device.name} again`, icon: <BellRing size={15} strokeWidth={1.75} />, onSelect: () => void changeQuiet(device.id, device.name, false) }))} />
         )}
       </div>
       {isLoading && !data ? (
@@ -121,7 +130,7 @@ export function ActivityView() {
                       <span className={styles.end}>
                         <time className={styles.time} dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>
                         {entry.deviceId && devices.has(entry.deviceId) ? (
-                          <button type="button" className={styles.mute} onClick={() => void setQuiet(entry.deviceId as string, true)} aria-label={`Mute ${entry.name} in Activity`} title="Mute in Activity">
+                          <button type="button" className={styles.mute} onClick={() => void changeQuiet(entry.deviceId as string, entry.name, true)} aria-label={`Mute ${entry.name} in Activity`} title="Mute in Activity">
                             <BellOff size={16} strokeWidth={1.75} aria-hidden="true" />
                           </button>
                         ) : <span className={styles.muteSlot} aria-hidden="true" />}
@@ -135,6 +144,12 @@ export function ActivityView() {
         ))
       )}
       {more && <Button variant="secondary" className={styles.more} onClick={() => void setSize(size + 1)}>Show earlier</Button>}
+      {undo && (
+        <div key={undo.at} className={`${glassClass("pill")} ${styles.undo}`} role="status">
+          <span>{undo.name} {undo.quiet ? "muted" : "shown again"}</span>
+          <button type="button" className={styles.undoButton} onClick={() => { setUndo(null); void setQuiet(undo.deviceId, !undo.quiet); }}>Undo</button>
+        </div>
+      )}
     </div>
   );
 }
