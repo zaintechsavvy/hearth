@@ -1,6 +1,6 @@
 "use client";
 
-import { BellOff, BellRing, Cpu, DoorOpen, Droplets, Flame, History, Lightbulb, Lock, LockOpen, Thermometer, Workflow, X, type LucideIcon } from "lucide-react";
+import { BellOff, BellRing, History } from "lucide-react";
 import { useState } from "react";
 import { useSWRConfig } from "swr";
 import useSWRInfinite from "swr/infinite";
@@ -10,11 +10,9 @@ import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { useHome } from "@/components/dashboard/use-home";
 import { Glass } from "@/components/glass/glass";
-import { TILE_ICON_COMPONENTS } from "@/components/dashboard/tiles/tile-icons";
 import type { ActivityCategory, ActivityEntry } from "@/lib/activity-types";
-import { defaultStyle } from "@/lib/dashboard/style";
-import type { Device } from "@/lib/devices/types";
 import { updateDevice } from "@/lib/actions";
+import { activityIcon } from "./activity-icon";
 import styles from "./activity-view.module.css";
 
 type Page = { entries: ActivityEntry[]; more: boolean; next?: string };
@@ -24,18 +22,6 @@ const FILTERS: { value: ActivityCategory | typeof ALL; label: string }[] = [
   { value: ALL, label: "Everything" }, { value: "doors", label: "Doors and locks" }, { value: "lights", label: "Lights" },
   { value: "sensors", label: "Sensors" }, { value: "climate", label: "Climate" }, { value: "automations", label: "Automations" }, { value: "system", label: "System" },
 ];
-const CATEGORY_ICONS: Record<ActivityCategory, LucideIcon> = { doors: DoorOpen, lights: Lightbulb, sensors: BellRing, climate: Thermometer, household: History, automations: Workflow, system: Cpu };
-
-/** The device's own icon where Hearth knows the device, so a television reads as one; otherwise one for what happened. */
-function iconFor(entry: ActivityEntry, devices: Map<string, Device>): LucideIcon {
-  if (entry.what === "unlocked") return LockOpen;
-  if (entry.what === "locked" || entry.what === "jammed") return Lock;
-  if (entry.what.includes("leak") || entry.what === "is dry again") return Droplets;
-  if (entry.what.includes("smoke")) return Flame;
-  if (entry.what === "rang") return BellRing;
-  const device = entry.deviceId ? devices.get(entry.deviceId) : undefined;
-  return device ? TILE_ICON_COMPONENTS[defaultStyle(device).icon] : CATEGORY_ICONS[entry.category];
-}
 
 function dayLabel(date: Date) {
   const today = new Date();
@@ -94,18 +80,15 @@ export function ActivityView() {
         {home && home.rooms.length > 0 && (
           <DropdownMenu label={room === ANY_ROOM ? "Every room" : room} items={[{ label: "Every room", onSelect: () => setRoom(ANY_ROOM) }, ...home.rooms.map(value => ({ label: value, onSelect: () => setRoom(value) }))]} />
         )}
+        {muted.length > 0 && (
+          <DropdownMenu icon={<BellOff size={15} strokeWidth={1.75} aria-hidden="true" />}
+            label={`Muted: ${muted[0].name}${muted.length > 1 ? ` +${muted.length - 1}` : ""}`}
+            items={[
+              ...muted.map(device => ({ label: `Show ${device.name} again`, icon: <BellRing size={15} strokeWidth={1.75} />, onSelect: () => void setQuiet(device.id, false) })),
+              ...(muted.length > 1 ? [{ label: "Show them all again", separatorBefore: true, onSelect: () => void Promise.all(muted.map(device => setQuiet(device.id, false))) }] : []),
+            ]} />
+        )}
       </div>
-      {muted.length > 0 && (
-        <ul className={styles.muted} aria-label="Muted in Activity">
-          <li className={styles.mutedLabel}>Muted</li>
-          {muted.map(device => (
-            <li key={device.id} className={styles.mutedChip}>
-              <span>{device.name}</span>
-              <button type="button" onClick={() => void setQuiet(device.id, false)} aria-label={`Show ${device.name} in Activity again`} title="Show again"><X size={14} strokeWidth={1.75} aria-hidden="true" /></button>
-            </li>
-          ))}
-        </ul>
-      )}
       {isLoading && !data ? (
         <Glass shape="panel" className={styles.group}><Skeleton lines={5} label="Loading activity" /></Glass>
       ) : error ? (
@@ -121,7 +104,7 @@ export function ActivityView() {
             <Glass shape="panel" className={styles.group}>
               <ol className={styles.list}>
                 {list.map(entry => {
-                  const Icon = iconFor(entry, devices);
+                  const Icon = activityIcon(entry, devices);
                   return (
                     <li key={entry.id} className={styles.entry} data-tone={entry.tone} data-picture={entry.picture ? "" : undefined}>
                       <Icon className={styles.icon} size={16} strokeWidth={1.75} aria-hidden="true" />

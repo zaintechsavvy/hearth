@@ -331,3 +331,40 @@ button.chip:hover:not(:disabled) {
   .row:has(> :first-child[class*="avatar"]) { grid-template-columns: auto minmax(0, 1fr) auto; }
   .say { grid-template-columns: 1fr; }
 }
+
+.activityIcon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: oklch(50% 0 0 / .1);
+  color: var(--text-secondary);
+}
+
+.row[data-tone="warning"] .activityIcon {
+  background: color-mix(in oklab, var(--warning) 18%, transparent);
+  color: var(--warning);
+}
+
+.row[data-tone="alert"] .activityIcon {
+  background: color-mix(in oklab, var(--danger) 18%, transparent);
+  color: var(--danger);
+}
+
+.activityWhat {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* However tall the tile, the list fades out at its foot instead of cutting a line in half. */
+.activityRows {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
+}
+
+.rows[data-wide].activityRows {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-5);
+}

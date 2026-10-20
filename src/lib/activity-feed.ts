@@ -94,7 +94,8 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
     const shown = [...devices.values()].filter(device => device.integrationId === row.id && LOGGED_KINDS.has(device.kind) && !device.auxiliary);
     const nativeIds = shown.map(device => device.id.slice(row.id.length + 1));
     try {
-      const entries = await logbookFor(row.id, provider, from, to, nativeIds);
+      // A hosted Hearth reaches home over the internet, where one slow answer is common; one more try before going without.
+      const entries = await logbookFor(row.id, provider, from, to, nativeIds).catch(() => logbookFor(row.id, provider, from, to, nativeIds));
       return entries.flatMap((entry, index): ActivityEntry[] => {
         const id = entry.nativeId ? deviceId(row.id, entry.nativeId) : null;
         const device = id ? devices.get(id) : undefined;
@@ -104,7 +105,8 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
         const change = logbookChange(device, entry.nativeId, what);
         return [{ id: `${row.id}:${entry.at.getTime()}:${index}`, at: entry.at.toISOString(), deviceId: id, name: device.name, room: device.room, by: entry.by, via: entry.via, ...change }];
       });
-    } catch {
+    } catch (error) {
+      console.error(`Activity: ${row.name} did not send its logbook for ${from.toISOString()} to ${to.toISOString()}: ${error instanceof Error ? error.message : error}`);
       return [];
     }
   }));

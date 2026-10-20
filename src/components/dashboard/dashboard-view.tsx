@@ -42,6 +42,7 @@ import { AlarmTile } from "./devices/alarm-tile";
 import { AnnounceTile } from "./glance/announce-tile";
 import { AppliancesTile } from "./glance/appliances-tile";
 import { EnergyTile } from "./glance/energy-tile";
+import { ActivityTile } from "./glance/activity-tile";
 import { PeopleTile } from "./glance/people-tile";
 import { ChartTile } from "./devices/chart-tile";
 import { LeakTile } from "./devices/leak-tile";
@@ -360,6 +361,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         return <EnergyTile tile={tile} devices={home.devices} />;
       case "people":
         return <PeopleTile tile={tile} devices={home.devices} now={minuteNow} />;
+      case "activity":
+        return <ActivityTile tile={tile} devices={home.devices} />;
       case "announce":
         return <AnnounceTile tile={tile} devices={home.devices} interactive={interactive} onOptions={patch => change(updateTile(tiles, tile.id, { options: { ...tile.options, ...patch } }))} onCommand={send} />;
       case "appliances":

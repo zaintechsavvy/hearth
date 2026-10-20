@@ -1,7 +1,7 @@
 import { parseDeviceId, type Device } from "@/lib/devices/types";
 import type { Cell, GridColumns } from "@/lib/dashboard/placement";
 
-export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "appliances", "announce", "departures"] as const;
+export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins", "medications", "countdown", "notes", "wifi", "timers", "plants", "packages", "energy", "people", "appliances", "announce", "departures", "activity"] as const;
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
 /** `leak` is a leak sensor's own tile: a binary sensor, shown as dry or wet with an alarm. */
 export type TileKind = Device["kind"] | WidgetKind | "leak";
@@ -141,6 +141,7 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   packages: [{ size: "2x2", label: "Small" }, { size: "2x3", label: "Tall" }, { size: "4x2", label: "Wide" }],
   energy: [{ size: "2x2", label: "Today" }, { size: "4x2", label: "With chart" }],
   people: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x1", label: "Wide" }],
+  activity: [{ size: "2x2", label: "Card" }, { size: "2x3", label: "Tall" }, { size: "4x2", label: "Wide" }],
   appliances: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "4x1", label: "Wide" }],
   announce: [{ size: "2x2", label: "Card" }, { size: "4x2", label: "Wide" }],
   departures: [{ size: "2x2", label: "Next few" }, { size: "2x3", label: "List" }, { size: "4x2", label: "Board" }],
@@ -195,6 +196,7 @@ export function defaultSize(kind: TileKind, adjustable = false): TileSize {
     case "wifi":
       return "2x1";
     case "departures":
+    case "activity":
       return "2x2";
     case "medications":
     case "notes":
