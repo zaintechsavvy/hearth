@@ -1,0 +1,81 @@
+/* Quiet notes in the corner of the resting screen: small, dim, and out of the clock's way. */
+.notes {
+  position: absolute;
+  right: max(var(--space-6), calc(env(safe-area-inset-right) + var(--space-4)));
+  bottom: max(var(--space-6), calc(env(safe-area-inset-bottom) + var(--space-4)));
+  z-index: 2;
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+  width: min(340px, 44vw);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  opacity: var(--saver-dim, 1);
+  touch-action: none;
+  cursor: grab;
+  transition: transform var(--duration-standard) var(--ease-standard), opacity var(--duration-standard) var(--ease-standard);
+}
+
+.notes[data-dragging] {
+  cursor: grabbing;
+  transition: none;
+}
+
+.note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: oklch(100% 0 0 / .07);
+  box-shadow: inset 0 0 0 1px oklch(100% 0 0 / .08);
+  color: oklch(96% 0 0 / .78);
+  font-size: var(--text-sm);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  animation: note-in var(--duration-spring) var(--ease-spring) both;
+}
+
+.icon {
+  color: oklch(96% 0 0 / .6);
+}
+
+.note[data-lit] .icon {
+  color: oklch(84% .14 86);
+}
+
+.note[data-tone="alert"] .icon {
+  color: oklch(70% .17 25);
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time {
+  color: oklch(96% 0 0 / .5);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes note-in {
+  from { opacity: 0; transform: translateY(-8px); }
+}
+
+/* In the red night light the notes keep to the same dim red as the clock. */
+:global([data-red]) .note,
+:global([data-red]) .icon,
+:global([data-red]) .note[data-lit] .icon,
+:global([data-red]) .time {
+  color: oklch(58% .15 25 / .8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notes { transition: none; }
+  .note { animation: none; }
+}

@@ -24,6 +24,7 @@ import { itemsOf } from "@/lib/widgets/items";
 import { doseSlots, groupPickups, pickupWords, timerColors, timerRemaining, formatDuration } from "@/lib/widgets/schedules";
 import { skyWords } from "@/lib/widgets/weather-codes";
 import type { Forecast } from "@/lib/widgets/weather";
+import { RestActivity } from "./rest-activity";
 import styles from "./wall-mode.module.css";
 
 const SHIFT_EVERY_MS = 10 * 60_000;
@@ -57,6 +58,8 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
   const { home, send } = useHome();
   const now = useTick(1000) ?? 0;
   const [resting, setResting] = useState(false);
+  /** When the screen last went to rest, so its activity notes show only what happened since. */
+  const [restedAt, setRestedAt] = useState(0);
   const [menu, setMenu] = useState(false);
   const lastActive = useRef(0);
   const wasResting = useRef(false);
@@ -83,7 +86,10 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
 
   useEffect(() => {
     if (!settings.idleMinutes || resting || !now) return;
-    if (now - lastActive.current >= settings.idleMinutes * 60_000) setResting(true);
+    if (now - lastActive.current >= settings.idleMinutes * 60_000) {
+      setResting(true);
+      setRestedAt(now);
+    }
   }, [now, resting, settings.idleMinutes]);
 
   useEffect(() => {
@@ -143,6 +149,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.6 }}
             onClick={() => { lastActive.current = Date.now(); setResting(false); }}>
             <Glance now={now} night={night} settings={settings} leftOpen={leftOpen.items} />
+            <RestActivity since={restedAt} />
           </motion.button>
         )}
       </AnimatePresence>
@@ -169,7 +176,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           </nav>
           <span className={styles.menuDivider} aria-hidden="true" />
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night</button>
-          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); }}>Rest the screen</button>
+          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); setRestedAt(now); }}>Rest the screen</button>
           <span className={styles.menuDivider} aria-hidden="true" />
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.exitFullscreen?.().catch(() => {}); onLeave(); }}>Leave wall tablet mode</button>
         </PopoverContent>
