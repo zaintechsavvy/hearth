@@ -286,31 +286,44 @@
   overflow-wrap: anywhere;
 }
 
+/* An invite sits low in the page, closer to the middle than the top, its words and button on one left edge. */
 .join {
   display: grid;
-  justify-items: center;
+  justify-items: start;
   gap: var(--space-3);
-  width: min(100%, 480px);
-  margin: var(--space-8) auto 0;
-  padding: var(--space-8) var(--space-6);
-  text-align: center;
+  width: min(100%, 440px);
+  margin: clamp(var(--space-8), 14vh, 140px) auto 0;
+  padding: var(--space-6);
+  text-align: start;
+}
+
+.join > :global(button) {
+  justify-self: stretch;
+  margin-top: var(--space-3);
 }
 
 .joinIcon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-2);
+  border-radius: 50%;
+  background: oklch(50% 0 0 / .1);
   color: var(--text-secondary);
 }
 
 .joinTitle {
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   font-weight: 500;
+  letter-spacing: var(--tracking-display);
 }
 
 .joinText {
-  max-width: 40ch;
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .alignEnd {

@@ -8,7 +8,9 @@ import { Button } from "@/components/arc/button/button";
 import { Checkbox } from "@/components/arc/checkbox/checkbox";
 import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
+import { Switch } from "@/components/arc/switch/switch";
 import { Glass } from "@/components/glass/glass";
+import { setShareBackground } from "@/lib/background-sync";
 import { createInvite, leaveHome, removeMember, revokeInvite, setGuestPages } from "@/lib/household-actions";
 import styles from "./connections.module.css";
 import { SettingsSection } from "./settings-section";
@@ -27,6 +29,8 @@ interface HouseholdSectionProps {
   members: HouseholdMember[];
   invites: { code: string; role: "member" | "guest"; expiresAt: string }[];
   pages: { id: string; name: string }[];
+  /** Whether the owner's background reaches everyone in the home. */
+  shareBackground: boolean;
 }
 
 function PageChoice({ pages, value, onChange }: { pages: HouseholdSectionProps["pages"]; value: string[]; onChange: (pages: string[]) => void }) {
@@ -38,7 +42,7 @@ function PageChoice({ pages, value, onChange }: { pages: HouseholdSectionProps["
 }
 
 /** Who shares this home. Owners invite members and guests; members can leave. */
-export function HouseholdSection({ role, ownerName, members, invites, pages }: HouseholdSectionProps) {
+export function HouseholdSection({ role, ownerName, members, invites, pages, shareBackground }: HouseholdSectionProps) {
   const router = useRouter();
   const [inviteRole, setInviteRole] = useState<"member" | "guest">("member");
   const [guestPages, setGuestPagesDraft] = useState<string[]>(pages.slice(0, 1).map(page => page.id));
@@ -132,6 +136,15 @@ export function HouseholdSection({ role, ownerName, members, invites, pages }: H
             ))}
           </div>
         )}
+      </Glass>
+      <Glass shape="panel" className={styles.group}>
+        <div className={styles.row}>
+          <div className={styles.rowText}>
+            <span className={styles.rowTitle}>Share my background</span>
+            <span className={styles.rowMeta}>Members and guests see the background you pick, and each change you make to it. They can still pick their own.</span>
+          </div>
+          <Switch aria-label="Share my background" checked={shareBackground} onCheckedChange={async share => { await setShareBackground(share); router.refresh(); }} />
+        </div>
       </Glass>
     </SettingsSection>
   );

@@ -106,6 +106,8 @@ export const preference = pgTable("preference", {
   photos: jsonb("photos").$type<{ url: string; key: string; album: string } | null>(),
   /** The background this person picked, kept per person so every device they sign in on shows it. */
   background: jsonb("background").$type<SyncedBackground | null>(),
+  /** The owner's background reaches everyone in the home, unless they have picked one of their own since. */
+  shareBackground: boolean("share_background").notNull().default(false),
   updatedAt: updatedAt(),
 });
 

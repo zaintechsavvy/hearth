@@ -9,10 +9,6 @@
   flex: none;
 }
 
-.house {
-  stroke: var(--background);
-}
-
 .word {
   font-family: var(--font-display);
   font-size: var(--text-lg);

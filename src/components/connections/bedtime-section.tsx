@@ -10,6 +10,7 @@ import { useHome } from "@/components/dashboard/use-home";
 import { Glass } from "@/components/glass/glass";
 import { saveBedtime } from "@/lib/actions";
 import { DEFAULT_BEDTIME, switchedForBedtime, type BedtimeChoice, type BedtimeSettings } from "@/lib/bedtime";
+import { statusText } from "@/lib/devices/status";
 import type { Device } from "@/lib/devices/types";
 import styles from "./connections.module.css";
 import { SettingsSection } from "./settings-section";
@@ -87,7 +88,7 @@ function DeviceList({ title, meta, ids, devices, disabled, onChange }: { title: 
             const device = byId.get(id) as Device;
             return (
               <li key={id} className={styles.chip}>
-                <span>{device.name}{device.room ? <span className={styles.chipRoom}> · {device.room}</span> : null}</span>
+                <span>{device.name}<span className={styles.chipRoom}>{[device.room, statusText(device)].filter(Boolean).map(part => ` · ${part}`).join("")}</span></span>
                 <button type="button" className={styles.chipRemove} disabled={disabled} onClick={() => onChange(ids.filter(item => item !== id))} aria-label={`Take ${device.name} off ${title.toLowerCase()}`}>
                   <X size={14} strokeWidth={1.75} aria-hidden="true" />
                 </button>
@@ -98,7 +99,7 @@ function DeviceList({ title, meta, ids, devices, disabled, onChange }: { title: 
       )}
       {left.length > 0 && !disabled && (
         <Select label={`Add to ${title.toLowerCase()}`} placeholder="Choose a device" value="" onValueChange={id => id && onChange([...ids, id])}
-          options={left.map(device => ({ value: device.id, label: `${device.name}${device.room ? ` · ${device.room}` : ""}` }))} />
+          options={left.map(device => ({ value: device.id, label: [device.name, device.room, statusText(device)].filter(Boolean).join(" · ") }))} />
       )}
     </div>
   );

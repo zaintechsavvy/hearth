@@ -71,7 +71,7 @@ export default async function ConnectionsPage() {
         { id: "account", label: "Account" },
       ]}>
       {owner && <IntegrationsSection integrations={integrations.map(row => ({ id: row.id, name: row.name, kind: row.kind, ...publicConfig(row) }))} />}
-      <HouseholdSection role={owner ? "owner" : "member"} ownerName={home.ownerName} members={members} invites={invites.map(item => ({ ...item, expiresAt: item.expiresAt.toISOString() }))} pages={preferences.pages.map(page => ({ id: page.id, name: page.name }))} />
+      <HouseholdSection role={owner ? "owner" : "member"} ownerName={home.ownerName} members={members} invites={invites.map(item => ({ ...item, expiresAt: item.expiresAt.toISOString() }))} pages={preferences.pages.map(page => ({ id: page.id, name: page.name }))} shareBackground={preferences.shareBackground} />
       <RoomsSection />
       <AlertsSection alerts={preferences.alerts} />
       <SecuritySection method={preferences.security.method} hasPin={Boolean(preferences.security.hash)} owner={owner} />

@@ -21,7 +21,7 @@ export function JoinCard({ code, ownerName, role, own, current }: { code: string
   const first = ownerName.split(" ")[0];
   return (
     <Glass shape="panel" className={styles.join}>
-      <UserRoundPlus className={styles.joinIcon} size={28} strokeWidth={1.75} aria-hidden="true" />
+      <span className={styles.joinIcon} aria-hidden="true"><UserRoundPlus size={22} strokeWidth={1.75} /></span>
       <h1 className={styles.joinTitle}>{own ? "This is your own invite" : `Join ${first}'s home`}</h1>
       <p className={styles.joinText}>
         {own ? "Send this link to the person you are inviting."

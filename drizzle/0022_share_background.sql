@@ -1,0 +1,1 @@
+ALTER TABLE "preference" ADD COLUMN "share_background" boolean DEFAULT false NOT NULL;
