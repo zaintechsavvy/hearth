@@ -68,27 +68,29 @@ export function SettingsShell({ groups, children }: { groups: SettingsGroup[]; c
     <SettingsFoldingContext.Provider value={{ open, select }}>
       <div className={styles.shell} data-open={chosen ? "" : undefined}>
         <nav className={styles.list} aria-label="Settings sections">
-          {groups.map(group => (
-            <section key={group.title} className={styles.group} aria-label={group.title}>
-              <h2 className={styles.groupTitle}>{group.title}</h2>
-              <div className={styles.items}>
-                {group.items.map(item => {
-                  const Icon = SETTINGS_ICONS[item.id];
-                  return (
-                    <a key={item.id} href={`#${item.id}`} className={styles.item} data-id={item.id} aria-current={item.id === open ? "true" : undefined}
-                      onClick={event => { event.preventDefault(); select(item.id); }}>
-                      <span className={styles.icon} aria-hidden="true"><Icon size={16} strokeWidth={1.9} /></span>
-                      <span className={styles.itemText}>
-                        <span className={styles.itemLabel}>{item.label}</span>
-                        <span className={styles.summary}>{item.summary}</span>
-                      </span>
-                      <ChevronRight className={styles.chevron} size={16} strokeWidth={1.75} aria-hidden="true" />
-                    </a>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+          <div className={styles.pane}>
+            {groups.map(group => (
+              <section key={group.title} className={styles.group} aria-label={group.title}>
+                <h2 className={styles.groupTitle}>{group.title}</h2>
+                <div className={styles.items}>
+                  {group.items.map(item => {
+                    const Icon = SETTINGS_ICONS[item.id];
+                    return (
+                      <a key={item.id} href={`#${item.id}`} className={styles.item} data-id={item.id} aria-current={item.id === open ? "true" : undefined}
+                        onClick={event => { event.preventDefault(); select(item.id); }}>
+                        <span className={styles.icon} aria-hidden="true"><Icon size={16} strokeWidth={1.9} /></span>
+                        <span className={styles.itemText}>
+                          <span className={styles.itemLabel}>{item.label}</span>
+                          <span className={styles.summary}>{item.summary}</span>
+                        </span>
+                        <ChevronRight className={styles.chevron} size={16} strokeWidth={1.75} aria-hidden="true" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
           <Link href="/how-it-works" className={styles.about} data-on-wall>How Hearth works</Link>
         </nav>
         <div className={styles.main}>
