@@ -47,6 +47,7 @@ export const Switch = forwardRef<ElementRef<typeof SwitchPrimitive.Root>, Switch
   return (
     <SwitchPrimitive.Root
       {...props}
+      data-haptic
       ref={ref}
       checked={on}
       onCheckedChange={next => { if (checked === undefined) setInternal(next); onCheckedChange?.(next); }}

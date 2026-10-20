@@ -38,7 +38,6 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
 
   function down(event: PointerEvent<HTMLDivElement>) {
     if (disabled || event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
     gesture.current = { y: event.clientY, from: shown, moved: false, at: event.timeStamp };
   }
 
@@ -47,6 +46,8 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
     if (!current) return;
     const delta = current.y - event.clientY;
     if (!current.moved && Math.abs(delta) < DRAG_THRESHOLD) return;
+    // Held only once it drags: a tap must still land on what is under the finger, such as the switch that ticks on an iPhone.
+    if (!current.moved) event.currentTarget.setPointerCapture(event.pointerId);
     current.moved = true;
     setDrag(clamp(Math.round(current.from + delta / event.currentTarget.clientHeight * 100), 0, 100));
   }
@@ -85,6 +86,7 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
       aria-disabled={disabled || undefined}
       className={[styles.pill, className].filter(Boolean).join(" ")}
       data-dragging={drag !== null || undefined}
+      data-haptic
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
