@@ -98,9 +98,10 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
     }
   }, [home?.devices, settings.wakeSensors]);
 
-  // Waking always lands on Home, so a tablet left on Settings greets the next person with the dashboard.
+  // Waking always lands on Home, so a tablet left on Settings greets the next person with the dashboard. It goes
+  // there as the screen rests, out of sight, so a tap does not show the old page first.
   useEffect(() => {
-    if (wasResting.current && !resting && !path.startsWith("/dashboard")) router.replace("/dashboard");
+    if ((resting || wasResting.current) && !path.startsWith("/dashboard")) router.replace("/dashboard");
     wasResting.current = resting;
   }, [resting, path, router]);
 
@@ -202,16 +203,18 @@ function Glance({ now, night, settings, leftOpen }: { now: number; night: boolea
   const timers = itemsOf(widgets, "timer").filter(item => item.data.endsAt && timerRemaining(item.data, now) > 0)
     .sort((a, b) => timerRemaining(a.data, now) - timerRemaining(b.data, now)).slice(0, 3);
   const colors = timerColors(timers);
-  const pickup = groupPickups(itemsOf(widgets, "bin"), date)[0];
+  // A note only for a widget still on a page: removing the bins tile ends the bin-day reminders, though its bins are kept.
+  const shown = new Set(tiles.map(tile => tile.kind));
+  const pickup = shown.has("bins") ? groupPickups(itemsOf(widgets, "bin"), date)[0] : undefined;
   if (pickup && pickup.days <= 1) notes.push({ key: "bins", icon: <Recycle size={18} strokeWidth={1.75} />, text: `${pickup.bins.map(bin => bin.data.name).join(" and ")} · ${pickupWords(pickup.days, date)}` });
-  const dose = itemsOf(widgets, "medication").flatMap(item => doseSlots(item.data, date, item.createdAt).filter(slot => slot.state === "due" || slot.state === "upcoming").map(slot => ({ item, slot })))
+  const dose = !shown.has("medications") ? undefined : itemsOf(widgets, "medication").flatMap(item => doseSlots(item.data, date, item.createdAt).filter(slot => slot.state === "due" || slot.state === "upcoming").map(slot => ({ item, slot })))
     .sort((a, b) => a.slot.at.getTime() - b.slot.at.getTime())[0];
   if (dose) notes.push({ key: "dose", icon: <Pill size={18} strokeWidth={1.75} />, text: `${dose.item.data.name}${dose.item.data.person ? ` for ${dose.item.data.person}` : ""} at ${dose.slot.at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}` });
   const next = agenda?.events.find(event => event.allDay ? event.start >= date.toISOString().slice(0, 10) : Date.parse(event.end) > now);
   if (next) notes.push({ key: "event", icon: <CalendarDays size={18} strokeWidth={1.75} />, text: `${next.title} · ${next.allDay ? "all day" : new Date(next.start).toLocaleTimeString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}` });
-  const thirsty = itemsOf(widgets, "plant").filter(item => now - Date.parse(item.data.lastWatered) >= item.data.everyDays * 86_400_000).length;
+  const thirsty = !shown.has("plants") ? 0 : itemsOf(widgets, "plant").filter(item => now - Date.parse(item.data.lastWatered) >= item.data.everyDays * 86_400_000).length;
   if (thirsty) notes.push({ key: "plants", icon: <Leaf size={18} strokeWidth={1.75} />, text: `${thirsty} ${thirsty === 1 ? "plant needs" : "plants need"} water` });
-  const waiting = itemsOf(widgets, "package").filter(item => item.data.status === "delivered");
+  const waiting = !shown.has("packages") ? [] : itemsOf(widgets, "package").filter(item => item.data.status === "delivered");
   if (waiting.length) notes.push({ key: "packages", icon: <Package size={18} strokeWidth={1.75} />, text: waiting.length === 1 ? `${waiting[0].data.name} is here, collect it` : `${waiting.length} packages to collect` });
 
   const parts = now ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).formatToParts(date) : [];

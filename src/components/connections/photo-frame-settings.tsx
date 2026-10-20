@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, X } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { Alert } from "@/components/arc/alert/alert";
@@ -43,7 +43,11 @@ export function PhotoFrameSettings({ settings, set }: { settings: WallSettings; 
       setProblem(cause instanceof Error ? cause.message : "A photo did not upload.");
     }
     setUploading(null);
-    await mutate(listKey);
+    await Promise.all([mutate(listKey), mutate("/api/backgrounds")]);
+  };
+  const remove = async (id: string) => {
+    await fetch(`/api/backgrounds/${id}`, { method: "DELETE" });
+    await Promise.all([mutate(listKey), mutate("/api/backgrounds")]);
   };
 
   return (
@@ -63,7 +67,21 @@ export function PhotoFrameSettings({ settings, set }: { settings: WallSettings; 
               <input ref={picker} type="file" accept="image/*" multiple hidden onChange={event => { void upload(event.target.files); event.target.value = ""; }} />
               <Button variant="secondary" loading={Boolean(uploading)} onClick={() => picker.current?.click()}><ImagePlus size={16} strokeWidth={1.75} aria-hidden="true" />Add photos</Button>
             </div>
-          ) : home?.photoAlbum ? (
+          ) : null}
+          {source === "uploads" && data && data.photos.length > 0 ? (
+            <ul className={styles.framePhotos} aria-label="Photos on the frame">
+              {data.photos.map((photo, index) => (
+                <li key={photo.id} className={styles.framePhoto}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- an authenticated upload that must bypass the image optimiser */}
+                  <img src={photo.src} alt={`Photo ${data.photos.length - index}`} loading="lazy" />
+                  <button type="button" className={styles.framePhotoRemove} onClick={() => void remove(photo.id)} aria-label={`Remove photo ${data.photos.length - index}`} title="Remove">
+                    <X size={14} strokeWidth={2} aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {source === "uploads" ? null : home?.photoAlbum ? (
             <div className={styles.inline}>
               <span className={styles.rowMeta}>{error ? error.message : data ? `${data.name} · ${data.photos.length} photos` : "Connected to Immich."}</span>
               <ConfirmMorph label="Disconnect" prompt="Disconnect the Immich album?" confirmLabel="Disconnect" pendingLabel="Disconnecting" doneLabel="Disconnected"

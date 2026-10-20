@@ -47,7 +47,8 @@ export function HouseholdAlerts() {
   const now = useTick(1000) ?? 0;
   const { home, changeItem } = useHome();
   const items = home?.widgets ?? [];
-  const [wall] = useStoredJson<WallSettings>(WALL_KEY, DEFAULT_WALL);
+  const [stored] = useStoredJson<WallSettings>(WALL_KEY, DEFAULT_WALL);
+  const wall = { ...DEFAULT_WALL, ...stored };
   const night = wall.enabled && now > 0 && isNight(wall, new Date(now));
   const press = (timer: WidgetItem<"timer">, control: TimerControl) => void changeItem(timer, data => applyTimerControl(data, control), () => controlTimer(timer.id, control));
   const [later, setLater] = useState<Set<string>>(new Set());
