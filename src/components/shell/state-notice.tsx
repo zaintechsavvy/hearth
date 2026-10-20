@@ -95,7 +95,10 @@ export function StateNotices({ devices }: { devices: Device[] | undefined }) {
             <span className={styles.art} aria-hidden="true">{notice.picture === "garage" ? <Garage /> : notice.picture === "lock" ? <Padlock /> : notice.picture === "leak" ? <Leak /> : <Door />}</span>
             <span className={styles.words}>
               <span className={styles.title}>{notice.alarm ? "Water leak" : `${notice.name} ${notice.words}`}</span>
-              <span className={styles.meta}>{notice.alarm ? `${[notice.name, notice.room].filter(Boolean).join(" · ")}. Check it now, then tap to close.` : [notice.room, "just now"].filter(Boolean).join(" · ")}</span>
+              <span className={styles.meta}>
+                <span className={styles.dot} aria-hidden="true" />
+                {notice.alarm ? `${[notice.name, notice.room].filter(Boolean).join(" · ")}. Check it now, then tap to close.` : [notice.room, "just now"].filter(Boolean).join(" · ")}
+              </span>
             </span>
           </motion.span>
           {!notice.alarm && <span className={styles.timer} aria-hidden="true" />}
@@ -105,16 +108,16 @@ export function StateNotices({ devices }: { devices: Device[] | undefined }) {
   );
 }
 
-/** A garage front whose door slats roll up when it opens and down when it closes. */
+/** A garage whose door rolls up when it opens and down when it closes, drawn in single lines. */
 function Garage() {
   return (
     <svg viewBox="0 0 120 100" className={styles.svg}>
-      <path d="M10 42 L60 12 L110 42 V92 H10 Z" className={styles.house} />
-      <clipPath id="garage-opening"><rect x="26" y="46" width="68" height="46" /></clipPath>
-      <rect x="26" y="46" width="68" height="46" className={styles.inside} />
+      <path d="M14 44 L60 14 L106 44 V90 H14 Z" className={styles.line} />
+      <clipPath id="garage-opening"><rect x="30" y="50" width="60" height="40" /></clipPath>
+      <path d="M30 90 V50 H90 V90" className={styles.line} />
       <g clipPath="url(#garage-opening)">
         <g className={styles.rolling}>
-          {[0, 1, 2, 3].map(index => <rect key={index} x="27" y={47 + index * 11.25} width="66" height="10" rx="1.5" className={styles.slat} />)}
+          {[0, 1, 2, 3].map(index => <path key={index} d={`M34 ${58 + index * 9} H86`} className={styles.thin} />)}
         </g>
       </g>
     </svg>
@@ -125,21 +128,19 @@ function Garage() {
 function Padlock() {
   return (
     <svg viewBox="0 0 120 100" className={styles.svg}>
-      <path d="M44 48 V34 a16 16 0 0 1 32 0 V48" className={`${styles.shackle} ${styles.lifting}`} />
-      <rect x="34" y="46" width="52" height="42" rx="9" className={styles.body} />
-      <circle cx="60" cy="64" r="5" className={styles.keyhole} />
-      <rect x="58" y="66" width="4" height="10" rx="2" className={styles.keyhole} />
+      <path d="M46 46 V34 a14 14 0 0 1 28 0 V46" className={`${styles.line} ${styles.lifting}`} />
+      <rect x="36" y="46" width="48" height="40" rx="8" className={styles.line} />
+      <path d="M60 62 V70" className={styles.line} />
     </svg>
   );
 }
 
-/** A drop of water, with rings spreading out from it while it is wet. */
+/** A drop of water, with a ring spreading out under it while it is wet. */
 function Leak() {
   return (
     <svg viewBox="0 0 120 100" className={styles.svg}>
-      <ellipse cx="60" cy="86" rx="30" ry="6" className={styles.puddle} />
-      <ellipse cx="60" cy="86" rx="30" ry="6" className={`${styles.puddle} ${styles.spreading}`} />
-      <path d="M60 12c9 12.5 19 24 19 35.5a19 19 0 0 1-38 0C41 36 51 24.5 60 12Z" className={`${styles.body} ${styles.falling}`} />
+      <ellipse cx="60" cy="88" rx="26" ry="5" className={`${styles.thin} ${styles.spreading}`} />
+      <path d="M60 14c9 12.5 18 23.5 18 34.5a18 18 0 0 1-36 0C42 37.5 51 26.5 60 14Z" className={`${styles.line} ${styles.falling}`} />
     </svg>
   );
 }
@@ -148,11 +149,11 @@ function Leak() {
 function Door() {
   return (
     <svg viewBox="0 0 120 100" className={styles.svg}>
-      <rect x="36" y="10" width="48" height="82" rx="3" className={styles.frame} />
-      <rect x="38" y="12" width="44" height="80" className={styles.inside} />
+      <path d="M38 90 V12 H82 V90" className={styles.line} />
+      <path d="M28 90 H92" className={styles.line} />
       <g className={styles.swinging}>
-        <rect x="38" y="12" width="44" height="80" rx="2" className={styles.slat} />
-        <circle cx="74" cy="54" r="3" className={styles.keyhole} />
+        <rect x="38" y="12" width="44" height="78" rx="1" className={styles.thin} />
+        <path d="M74 52 V56" className={styles.line} />
       </g>
     </svg>
   );

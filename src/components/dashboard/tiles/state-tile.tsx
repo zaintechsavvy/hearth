@@ -289,6 +289,7 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
           <>
             {isReading ? <span className={styles.value}>{text}</span> : <span className={styles.icon} aria-hidden="true"><Icon size={28} strokeWidth={1.75} /></span>}
             <span className={styles.name}>{holdMeta ?? device.name}</span>
+            {!isReading && !holdMeta && <span className={styles.status}>{error ?? text}</span>}
           </>
         ) : (
           <>

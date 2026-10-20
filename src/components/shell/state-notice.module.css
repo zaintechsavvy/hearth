@@ -1,4 +1,4 @@
-/* Over everything on the wall but the doorbell: the change, big enough to read from across the room. */
+/* Over everything on the wall but the doorbell: the change, drawn in a few lines and named underneath, readable from across the room. */
 .notice {
   position: fixed;
   inset: 0;
@@ -6,8 +6,10 @@
   display: grid;
   place-items: center;
   padding: var(--space-8);
-  background: radial-gradient(120% 90% at 50% 0%, oklch(22% .01 260), oklch(10% .005 260));
-  color: oklch(98% 0 0);
+  background: oklch(9% .003 260 / .9);
+  -webkit-backdrop-filter: blur(28px) saturate(120%);
+  backdrop-filter: blur(28px) saturate(120%);
+  color: oklch(97% 0 0);
   cursor: default;
   --tone: var(--success);
 }
@@ -19,75 +21,86 @@
 .card {
   display: grid;
   justify-items: center;
-  gap: clamp(var(--space-5), 4vh, var(--space-10));
+  gap: clamp(var(--space-6), 5vh, var(--space-12));
 }
 
 .art {
-  display: grid;
-  place-items: center;
-  width: clamp(160px, 28vmin, 260px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, color-mix(in oklab, var(--tone) 30%, transparent), transparent);
+  width: clamp(140px, 24vmin, 220px);
 }
 
 .svg {
-  width: 82%;
+  display: block;
+  width: 100%;
   overflow: visible;
 }
 
-.house { fill: oklch(100% 0 0 / .1); stroke: oklch(100% 0 0 / .85); stroke-width: 3; stroke-linejoin: round; }
-.frame { fill: none; stroke: oklch(100% 0 0 / .85); stroke-width: 3; }
-.inside { fill: color-mix(in oklab, var(--tone) 35%, oklch(20% .01 260)); }
-.slat { fill: oklch(96% 0 0); }
-.body { fill: oklch(96% 0 0); }
-.shackle { fill: none; stroke: oklch(96% 0 0); stroke-width: 7; stroke-linecap: round; }
-.keyhole { fill: color-mix(in oklab, var(--tone) 70%, oklch(30% .02 260)); }
+.line,
+.thin {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.line { stroke-width: 3; }
+.thin { stroke-width: 2; opacity: .55; }
 
 /* Each picture plays from the state before to the state after: open runs forwards, closed runs back. */
-.rolling { animation: roll-up 1.6s var(--ease-standard) .25s both; }
+.rolling { animation: roll-up 1.4s var(--ease-standard) .2s both; }
 .notice:not([data-open]) .rolling { animation-name: roll-down; }
-@keyframes roll-up { from { transform: translateY(0); } to { transform: translateY(-44px); } }
-@keyframes roll-down { from { transform: translateY(-44px); } to { transform: translateY(0); } }
+@keyframes roll-up { from { transform: translateY(0); } to { transform: translateY(-38px); } }
+@keyframes roll-down { from { transform: translateY(-38px); } to { transform: translateY(0); } }
 
-.lifting { animation: lift .9s var(--ease-spring) .3s both; }
+.lifting { animation: lift .8s var(--ease-standard) .25s both; }
 .notice:not([data-open]) .lifting { animation-name: drop; }
-@keyframes lift { from { transform: translateY(0); } to { transform: translateY(-12px); } }
-@keyframes drop { from { transform: translateY(-12px); } to { transform: translateY(0); } }
+@keyframes lift { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+@keyframes drop { from { transform: translateY(-10px); } to { transform: translateY(0); } }
 
-.swinging { transform-origin: 38px 52px; transform-box: view-box; animation: swing-open 1.2s var(--ease-standard) .25s both; }
+.swinging { transform-origin: 38px 52px; transform-box: view-box; animation: swing-open 1.1s var(--ease-standard) .2s both; }
 .notice:not([data-open]) .swinging { animation-name: swing-shut; }
-@keyframes swing-open { from { transform: perspective(300px) rotateY(0); } to { transform: perspective(300px) rotateY(-68deg); } }
-@keyframes swing-shut { from { transform: perspective(300px) rotateY(-68deg); } to { transform: perspective(300px) rotateY(0); } }
+@keyframes swing-open { from { transform: perspective(300px) rotateY(0); } to { transform: perspective(300px) rotateY(-64deg); } }
+@keyframes swing-shut { from { transform: perspective(300px) rotateY(-64deg); } to { transform: perspective(300px) rotateY(0); } }
 
 .words {
   display: grid;
   justify-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   text-align: center;
 }
 
 .title {
   font-family: var(--font-display);
-  font-size: clamp(var(--text-2xl), 5vw, 3.5rem);
+  font-size: clamp(var(--text-2xl), 4.4vw, 3rem);
   font-weight: 500;
   letter-spacing: var(--tracking-display);
   line-height: 1.1;
 }
 
 .meta {
-  color: oklch(98% 0 0 / .7);
-  font-size: clamp(var(--text-base), 2vw, var(--text-xl));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: oklch(97% 0 0 / .6);
+  font-size: clamp(var(--text-base), 1.8vw, var(--text-lg));
 }
 
-/* A thin line along the bottom runs out with the notice, so it is clear it will close by itself. */
+/* The one touch of colour: amber for open, green for shut, red for a leak. */
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+
+/* A hairline along the bottom runs out with the notice, so it is clear it will close by itself. */
 .timer {
   position: absolute;
   left: 0;
   bottom: 0;
-  height: 3px;
+  height: 2px;
   width: 100%;
-  background: color-mix(in oklab, var(--tone) 80%, white);
+  background: oklch(97% 0 0 / .35);
   transform-origin: left;
   animation: run-out 5s linear both;
 }
@@ -102,19 +115,18 @@
   animation-delay: 0s;
 }
 
-/* A leak is an alarm: the alert colour, and it waits for a tap. */
+/* A leak is an alarm: a deep red screen, and it waits for a tap. */
 .notice[data-alarm] {
   --tone: var(--danger);
-  background: radial-gradient(120% 90% at 50% 0%, color-mix(in oklab, var(--danger) 38%, oklch(16% .02 20)), oklch(10% .02 20));
+  background: oklch(17% .06 25 / .94);
 }
 
-.puddle { fill: none; stroke: oklch(100% 0 0 / .7); stroke-width: 2.5; }
 .spreading { transform-box: fill-box; transform-origin: center; animation: spread 1.8s var(--ease-standard) infinite; }
 .falling { animation: fall 1.8s var(--ease-standard) infinite; }
 .notice:not([data-open]) .spreading,
 .notice:not([data-open]) .falling { animation: none; }
-@keyframes spread { from { transform: scale(.6); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
-@keyframes fall { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+@keyframes spread { from { transform: scale(.6); opacity: .8; } to { transform: scale(1.4); opacity: 0; } }
+@keyframes fall { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
 
 .notice[data-still] .spreading,
 .notice[data-still] .falling {
