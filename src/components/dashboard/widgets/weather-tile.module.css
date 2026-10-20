@@ -96,3 +96,40 @@
 @container (max-width: 230px) {
   .where { display: none; }
 }
+
+/* Wide: the week fills the tile under today, each day a soft cell whose icon and numbers grow with the tile's height. */
+.tile[data-size="4x2"] {
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+}
+
+.tile[data-size="4x2"] .temperature {
+  font-size: clamp(var(--text-2xl), 20cqh, 3.25rem);
+}
+
+.tile[data-size="4x2"] .days {
+  gap: var(--space-2);
+}
+
+.tile[data-size="4x2"] .day {
+  align-content: space-evenly;
+  padding: var(--space-2) var(--space-1);
+  border-radius: 14px;
+  background: oklch(50% 0 0 / .06);
+  font-size: clamp(var(--text-sm), 7cqh, var(--text-lg));
+  font-weight: 500;
+}
+
+.tile[data-size="4x2"] .day:first-child {
+  background: oklch(50% 0 0 / .12);
+}
+
+.tile[data-size="4x2"] .day :global(svg) {
+  width: clamp(20px, 12cqh, 34px);
+  height: auto;
+}
+
+.tile[data-size="4x2"] .day .muted {
+  font-size: clamp(var(--text-xs), 5.5cqh, var(--text-sm));
+  font-weight: 400;
+}

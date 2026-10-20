@@ -495,7 +495,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
             <span className={styles.live} data-live={live || undefined} title={live ? "Updates arrive as they happen" : "Connecting to live updates"}>{live ? "Live" : "Connecting"}</span>
           </p>
         </div>
-        <div className={styles.actions}>
+        <div className={styles.actions} data-wall-hide={!editing || undefined}>
           {editing ? (
             <>
               <Button variant="ghost" onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" />Add tile</Button>

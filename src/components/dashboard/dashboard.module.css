@@ -40,13 +40,13 @@
   transform: scale(.94);
 }
 
-/* A wall tablet keeps the header tight so four rows of tiles fit under it. */
+/* A wall tablet keeps the header tight so four rows of tiles fit under it, with the greeting a touch larger for reading across a room. */
 :global(:root[data-wall]) .dashboard {
   gap: var(--space-4);
 }
 
 :global(:root[data-wall]) .title {
-  font-size: var(--text-2xl);
+  font-size: calc(var(--text-2xl) * 1.2);
 }
 
 .summary {
