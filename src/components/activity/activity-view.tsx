@@ -61,14 +61,14 @@ export function ActivityView() {
   const more = data?.at(-1)?.more ?? false;
   const { mutate: mutateKey } = useSWRConfig();
   const muted = (home?.devices ?? []).filter(device => device.quiet);
-  const [undo, setUndo] = useState<{ deviceId: string; name: string; quiet: boolean; at: number } | null>(null);
-  const setQuiet = async (deviceId: string, quiet: boolean) => {
-    await updateDevice(deviceId, { quiet });
+  const [undo, setUndo] = useState<{ deviceIds: string[]; name: string; quiet: boolean; at: number } | null>(null);
+  const setQuiet = async (deviceIds: string[], quiet: boolean) => {
+    await Promise.all(deviceIds.map(id => updateDevice(id, { quiet })));
     await Promise.all([mutate(), mutateKey("/api/home")]);
   };
-  const changeQuiet = async (deviceId: string, name: string, quiet: boolean) => {
-    await setQuiet(deviceId, quiet);
-    setUndo(previous => ({ deviceId, name, quiet, at: (previous?.at ?? 0) + 1 }));
+  const changeQuiet = async (deviceIds: string[], name: string, quiet: boolean) => {
+    await setQuiet(deviceIds, quiet);
+    setUndo(previous => ({ deviceIds, name, quiet, at: (previous?.at ?? 0) + 1 }));
   };
   useEffect(() => {
     if (!undo) return;
@@ -95,7 +95,7 @@ export function ActivityView() {
         {muted.length > 0 && (
           <DropdownMenu icon={<BellOff size={15} strokeWidth={1.75} aria-hidden="true" />}
             label={`Muted: ${muted[0].name}${muted.length > 1 ? ` +${muted.length - 1}` : ""}`}
-            items={muted.map(device => ({ label: `Show ${device.name} again`, icon: <BellRing size={15} strokeWidth={1.75} />, onSelect: () => void changeQuiet(device.id, device.name, false) }))} />
+            items={muted.map(device => ({ label: `Show ${device.name} again`, icon: <BellRing size={15} strokeWidth={1.75} />, onSelect: () => void changeQuiet([device.id], device.name, false) }))} />
         )}
       </div>
       {isLoading && !data ? (
@@ -130,7 +130,7 @@ export function ActivityView() {
                       <span className={styles.end}>
                         <time className={styles.time} dateTime={entry.at}>{new Date(entry.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>
                         {entry.deviceId && devices.has(entry.deviceId) ? (
-                          <button type="button" className={styles.mute} onClick={() => void changeQuiet(entry.deviceId as string, entry.name, true)} aria-label={`Mute ${entry.name} in Activity`} title="Mute in Activity">
+                          <button type="button" className={styles.mute} onClick={() => void changeQuiet(entry.deviceIds ?? [entry.deviceId as string], entry.name, true)} aria-label={`Mute ${entry.name} in Activity`} title="Mute in Activity">
                             <BellOff size={16} strokeWidth={1.75} aria-hidden="true" />
                           </button>
                         ) : <span className={styles.muteSlot} aria-hidden="true" />}
@@ -147,7 +147,7 @@ export function ActivityView() {
       {undo && (
         <div key={undo.at} className={`${glassClass("pill")} ${styles.undo}`} role="status">
           <span>{undo.name} {undo.quiet ? "muted" : "shown again"}</span>
-          <button type="button" className={styles.undoButton} onClick={() => { setUndo(null); void setQuiet(undo.deviceId, !undo.quiet); }}>Undo</button>
+          <button type="button" className={styles.undoButton} onClick={() => { setUndo(null); void setQuiet(undo.deviceIds, !undo.quiet); }}>Undo</button>
         </div>
       )}
     </div>

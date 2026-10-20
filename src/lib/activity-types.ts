@@ -29,4 +29,6 @@ export interface ActivityEntry {
   via?: string | null;
   /** A doorbell ring's picture from its camera, when one was kept. */
   picture?: string;
+  /** Every device in a line that tells of several changing together, such as two lights turned on as one. */
+  deviceIds?: string[];
 }
