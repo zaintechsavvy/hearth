@@ -35,15 +35,23 @@ export function Wallpaper() {
     if (wallpaper === "photo" && photo) applyPhotoVars(photo);
   }, [wallpaper, gradient, photo, theme]);
   return (
-    <div className={styles.wallpaper} aria-hidden="true">
-      {isMesh(wallpaper) && <MeshBackdrop key={`${wallpaper}-${theme}`} colors={MESH_PALETTES[wallpaper][theme]} still={still} />}
-      {wallpaper === "gradient" && styleOf(gradient) === "flowing" && (
-        <MeshBackdrop colors={shownColors(gradient, theme)} still={still || gradient.motion === 0} motion={gradient.motion} swirl={gradient.swirl} distortion={gradient.distortion} grain={gradient.grain} />
+    <>
+      <div className={styles.wallpaper} aria-hidden="true">
+        {isMesh(wallpaper) && <MeshBackdrop key={`${wallpaper}-${theme}`} colors={MESH_PALETTES[wallpaper][theme]} still={still} />}
+        {wallpaper === "gradient" && styleOf(gradient) === "flowing" && (
+          <MeshBackdrop colors={shownColors(gradient, theme)} still={still || gradient.motion === 0} motion={gradient.motion} swirl={gradient.swirl} distortion={gradient.distortion} grain={gradient.grain} />
+        )}
+        {wallpaper === "photo" && photo && <span className={styles.photo} />}
+        <span className={styles.light} />
+        <span className={styles.veil} />
+        <span className={styles.grain} />
+      </div>
+      {wallpaper === "photo" && photo && (
+        <>
+          <span className={`${styles.edge} ${styles.edgeTop}`} aria-hidden="true" />
+          <span className={`${styles.edge} ${styles.edgeBottom}`} aria-hidden="true" />
+        </>
       )}
-      {wallpaper === "photo" && photo && <span className={styles.photo} />}
-      <span className={styles.light} />
-      <span className={styles.veil} />
-      <span className={styles.grain} />
-    </div>
+    </>
   );
 }

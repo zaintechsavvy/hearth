@@ -148,3 +148,27 @@
 :root[data-wallpaper="photo"] .wallpaper {
   background: oklch(50% 0 0);
 }
+
+/*
+ * Safari 26 paints the strip behind its status bar and toolbar from a fixed element touching that edge, at least 3px
+ * tall and most of the width, or else from the page colour. These carry the colours of the photo's top and bottom
+ * edges, so the bars continue the photo; they stay invisible, which Safari still reads. `display: none` would hide them from it.
+ */
+.edge {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 4px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.edgeTop {
+  top: 0;
+  background-color: var(--edge-top, transparent);
+}
+
+.edgeBottom {
+  bottom: 0;
+  background-color: var(--edge-bottom, transparent);
+}

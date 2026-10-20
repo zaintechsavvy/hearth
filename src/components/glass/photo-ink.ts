@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import type { PhotoBackground } from "@/lib/theme";
+import { PHOTO_EDGES_KEY, type PhotoBackground } from "@/lib/theme";
 
 const COLS = 32;
+/** How much of the top and bottom of the photo stands for the colour Safari paints behind its bars. */
+const EDGE_SHARE = .08;
+const EDGE_VARS = ["--edge-top", "--edge-bottom", "--page-floor"];
 
 const linear = (value: number) => {
   const v = value / 255;
@@ -41,6 +44,19 @@ export function usePhotoInk(photo: PhotoBackground | null, theme: "light" | "dar
       context.drawImage(image, (COLS - width) / 2, (rows - height) / 2, width, height);
       const pixels = context.getImageData(0, 0, COLS, rows).data;
       const veil = theme === "light" ? 1 : 0;
+      const band = Math.max(1, Math.round(rows * EDGE_SHARE));
+      const average = (from: number, to: number) => {
+        const sum = [0, 0, 0];
+        for (let cell = from * COLS; cell < to * COLS; cell++) for (let channel = 0; channel < 3; channel++) sum[channel] += pixels[cell * 4 + channel];
+        const count = (to - from) * COLS;
+        return `rgb(${sum.map(total => Math.round(total / count * (1 - photo.dim) + veil * 255 * photo.dim)).join(" ")})`;
+      };
+      const edges = { id: photo.id, dim: photo.dim, theme, top: average(0, band), bottom: average(rows - band, rows) };
+      const root = document.documentElement.style;
+      root.setProperty("--edge-top", edges.top);
+      root.setProperty("--edge-bottom", edges.bottom);
+      root.setProperty("--page-floor", edges.bottom);
+      try { localStorage.setItem(PHOTO_EDGES_KEY, JSON.stringify(edges)); } catch { /* storage full or blocked: the next load samples again */ }
       grid = new Float32Array(COLS * rows);
       for (let cell = 0; cell < grid.length; cell++) {
         const at = cell * 4;
@@ -80,6 +96,7 @@ export function usePhotoInk(photo: PhotoBackground | null, theme: "light" | "dar
       removeEventListener("resize", resize);
       changes.disconnect();
       layout.disconnect();
+      for (const name of EDGE_VARS) document.documentElement.style.removeProperty(name);
       for (const element of document.querySelectorAll<HTMLElement>("[data-ink]")) delete element.dataset.ink;
     };
   }, [photo, theme]);
