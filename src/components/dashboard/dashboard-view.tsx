@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
+import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
 import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
@@ -502,9 +503,13 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
             </>
           ) : (
             <>
-              {canEdit && <Button variant="ghost" className={styles.toolButton} aria-label="New scene" onClick={() => setSceneEditing("new")}><Clapperboard size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.toolLabel}>New scene</span></Button>}
-              {itemsOf(home.widgets, "wifi").length > 0 && <Button variant="ghost" className={styles.toolButton} aria-label="Show the Wi-Fi QR code" onClick={() => setSharing(null)}><QrCode size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.toolLabel}>Wi-Fi</span></Button>}
-              {canEdit && <Button variant="ghost" className={styles.toolButton} aria-label="Add tile" onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" /><span className={styles.toolLabel}>Add tile</span></Button>}
+              {itemsOf(home.widgets, "wifi").length > 0 && <Button variant="secondary" className={styles.toolButton} aria-label="Show the Wi-Fi QR code" title="Guest Wi-Fi" onClick={() => setSharing(null)}><QrCode size={16} strokeWidth={1.75} aria-hidden="true" /></Button>}
+              {canEdit && (
+                <DropdownMenu label="Add" icon={<Plus size={16} strokeWidth={1.75} aria-hidden="true" />} items={[
+                  { label: "A tile", icon: <LayoutGrid size={16} strokeWidth={1.75} />, onSelect: () => setDialog({ mode: "add" }) },
+                  { label: "A scene", icon: <Clapperboard size={16} strokeWidth={1.75} />, onSelect: () => setSceneEditing("new") },
+                ]} />
+              )}
               {canEdit && tiles.length > 0 && <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
             </>
           )}
