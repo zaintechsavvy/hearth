@@ -1,12 +1,39 @@
-/*
- * Diagrams drawn with the app's own parts, on the glass card of the section they explain: cards for things, lines with
- * a slow flowing dash for what passes between them. Only a panel that names a place, such as Hosted on Vercel, is boxed.
- */
+/* Diagrams drawn with the app's own parts: glass for each diagram, cards for things, and lines with a slow flowing dash for what passes between them. */
 .flow {
   display: flex;
   align-items: center;
   gap: 0;
   container-type: inline-size;
+}
+
+.flow,
+.panel,
+.cycle,
+.decision,
+.steps {
+  padding: clamp(16px, 3vw, 28px);
+  border: 1px solid oklch(100% 0 0 / .6);
+  border-radius: clamp(18px, 2vw, 28px);
+  background: linear-gradient(180deg, oklch(100% 0 0 / .62), oklch(100% 0 0 / .4));
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .9), 0 24px 60px -32px oklch(25% .03 260 / .35);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+}
+
+:root[data-theme="dark"] :is(.flow, .panel, .cycle, .decision, .steps) {
+  border-color: oklch(100% 0 0 / .1);
+  background: linear-gradient(180deg, oklch(28% .006 260 / .62), oklch(20% .006 260 / .5));
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .1), 0 24px 60px -32px oklch(0% 0 0 / .6);
+}
+
+/* A flow inside a named panel, such as Hosted on Vercel, sits straight on that panel, in either theme. */
+:root .panel .flow {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .node {
@@ -142,10 +169,6 @@
 .panel {
   display: grid;
   gap: var(--space-4);
-  padding: clamp(14px, 2.5vw, 22px);
-  border: 1px solid var(--border-subtle);
-  border-radius: clamp(16px, 1.8vw, 22px);
-  background: oklch(50% 0 0 / .05);
   container-type: inline-size;
 }
 

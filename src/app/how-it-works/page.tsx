@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
-import { Wallpaper } from "@/components/glass/wallpaper";
 import { getUser } from "@/lib/session";
 import { DIAGRAMS } from "./diagrams";
 import styles from "./page.module.css";
@@ -53,26 +52,29 @@ function Diagram({ id }: { id: keyof typeof DIAGRAMS }) {
 }
 
 /**
- * A public tour of how Hearth works, one diagram per idea, everything aligned to one left edge. Each idea sits on its
- * own glass card, so its words read in the theme's colours whatever the background behind them.
+ * A public tour of how Hearth works, one diagram per idea, everything aligned to one left edge. It always sits on the
+ * plain backdrop, not the person's own photo or gradient, so its words read in the theme's colours with nothing behind them.
  */
 export default async function HowItWorksPage() {
   const signedIn = Boolean(await getUser());
   return (
     <>
-      <Wallpaper />
+      <div className={styles.backdrop} aria-hidden="true">
+        <span className={styles.edgeTop} />
+        <span className={styles.edgeBottom} />
+      </div>
       <div className={styles.page}>
         <header className={`${styles.header} ${styles.card}`}>
           <Link href="/" aria-label="Hearth home"><Logo /></Link>
           <Link href={signedIn ? "/dashboard" : "/sign-in"} className={styles.signIn}>{signedIn ? "Open Hearth" : "Sign in"}</Link>
         </header>
         <main className={styles.main}>
-          <div className={`${styles.intro} ${styles.card}`}>
+          <div className={styles.intro}>
             <h1 className={styles.title}>How Hearth works</h1>
             <p className={styles.lede}>How your screens, Hearth, the database, Home Assistant, and your devices fit together.</p>
           </div>
           {SECTIONS.map(section => (
-            <section key={section.id} id={section.id} className={`${styles.section} ${styles.card}`} aria-labelledby={`${section.id}-title`}>
+            <section key={section.id} id={section.id} className={styles.section} aria-labelledby={`${section.id}-title`}>
               <div className={styles.copy}>
                 <h2 id={`${section.id}-title`} className={styles.heading}>{section.title}</h2>
                 <p className={styles.body}>{section.body}</p>
