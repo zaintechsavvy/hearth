@@ -30,7 +30,7 @@ The thermostat glows warm from the top when you raise it and cool from the botto
 
 ![Customize dialog](docs/screenshots/customize.png)
 
-**Activity**: everything that happened, from Hearth and Home Assistant alike, and who did it. Devices that change together share one line.
+**Activity**: everything that happened, from Hearth and Home Assistant alike, and who did it. Devices that change together share one line, the same ones switched back and forth fold into one you can open ("turned on and off 4 times"), and whatever is on or open shows in warm yellow.
 
 ![Activity](docs/screenshots/activity.png)
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import useSWR from "swr";
-import { activityIcon } from "@/components/activity/activity-icon";
+import { activityIcon, activityLit } from "@/components/activity/activity-icon";
 import { glassClass } from "@/components/glass/glass";
 import type { ActivityEntry } from "@/lib/activity-types";
 import type { TileConfig } from "@/lib/dashboard/layout";
@@ -44,7 +44,7 @@ export function ActivityTile({ tile, devices }: { tile: TileConfig; devices: Dev
               {entries.slice(0, 12).map(entry => {
                 const Icon = activityIcon(entry, known);
                 return (
-                  <li key={entry.id} className={styles.row} data-tone={entry.tone}>
+                  <li key={entry.id} className={styles.row} data-tone={entry.tone} data-lit={activityLit(entry) || undefined}>
                     <span className={styles.activityIcon}><Icon size={15} strokeWidth={1.75} aria-hidden="true" /></span>
                     <span className={styles.text}>
                       <span className={`${styles.rowName} ${styles.activityLine}`}>{entry.name} <span className={styles.activityWhat}>{entry.what}</span></span>

@@ -74,6 +74,8 @@
 .entry[data-tone="info"] { --tone: var(--text-secondary); }
 .entry[data-tone="warning"] { --tone: var(--warning); }
 .entry[data-tone="alert"] { --tone: var(--danger); }
+/* On and open read warm, as a lit tile does; an alert keeps its red. */
+.entry[data-lit]:not([data-tone="alert"]) { --tone: var(--lit-warm); }
 
 .text {
   display: grid;
@@ -185,4 +187,56 @@
 
 @media (prefers-reduced-motion: reduce) {
   .undo { animation: none; }
+}
+
+/* A line that stands for several back and forth: it opens to list each one under it. */
+.expand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  text-align: start;
+}
+
+.expandIcon {
+  flex: none;
+  color: var(--text-secondary);
+  transition: transform var(--duration-standard) var(--ease-standard);
+}
+
+.expand[aria-expanded="true"] .expandIcon {
+  transform: rotate(180deg);
+}
+
+.steps {
+  grid-column: 2 / -1;
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-1) calc(32px + var(--space-3)) 0 0;
+  list-style: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.stepDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.step[data-lit] .stepDot {
+  background: var(--lit-warm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expandIcon { transition: none; }
 }

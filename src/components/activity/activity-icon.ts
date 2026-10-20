@@ -16,3 +16,7 @@ export function activityIcon(entry: ActivityEntry, devices: Map<string, Device>)
   const device = entry.deviceId ? devices.get(entry.deviceId) : undefined;
   return device ? TILE_ICON_COMPONENTS[defaultStyle(device).icon] : CATEGORY_ICONS[entry.category];
 }
+
+/** Something switched on, opened, or set going, which shows in the warm colour a lit tile has; off and shut stay grey. */
+const LIT = /^(turned on|opened|unlocked|started|noticed|came home)/;
+export const activityLit = (entry: ActivityEntry) => LIT.test(entry.group?.[0].what ?? entry.what);

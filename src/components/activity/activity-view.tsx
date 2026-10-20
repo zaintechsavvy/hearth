@@ -1,6 +1,6 @@
 "use client";
 
-import { BellOff, BellRing, History } from "lucide-react";
+import { BellOff, BellRing, ChevronDown, History } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSWRConfig } from "swr";
 import useSWRInfinite from "swr/infinite";
@@ -12,7 +12,7 @@ import { useHome } from "@/components/dashboard/use-home";
 import { Glass, glassClass } from "@/components/glass/glass";
 import type { ActivityCategory, ActivityEntry } from "@/lib/activity-types";
 import { updateDevice } from "@/lib/actions";
-import { activityIcon } from "./activity-icon";
+import { activityIcon, activityLit } from "./activity-icon";
 import styles from "./activity-view.module.css";
 
 type Page = { entries: ActivityEntry[]; more: boolean; next?: string };
@@ -61,6 +61,12 @@ export function ActivityView() {
   const more = data?.at(-1)?.more ?? false;
   const { mutate: mutateKey } = useSWRConfig();
   const muted = (home?.devices ?? []).filter(device => device.quiet);
+  const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (id: string) => setOpened(current => {
+    const next = new Set(current);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  });
   const [undo, setUndo] = useState<{ deviceIds: string[]; name: string; quiet: boolean; at: number } | null>(null);
   const setQuiet = async (deviceIds: string[], quiet: boolean) => {
     await Promise.all(deviceIds.map(id => updateDevice(id, { quiet })));
@@ -115,10 +121,15 @@ export function ActivityView() {
                 {list.map(entry => {
                   const Icon = activityIcon(entry, devices);
                   return (
-                    <li key={entry.id} className={styles.entry} data-tone={entry.tone} data-picture={entry.picture ? "" : undefined}>
+                    <li key={entry.id} className={styles.entry} data-tone={entry.tone} data-lit={activityLit(entry) || undefined} data-picture={entry.picture ? "" : undefined}>
                       <Icon className={styles.icon} size={16} strokeWidth={1.75} aria-hidden="true" />
                       <span className={styles.text}>
-                        <span><b>{entry.name}</b> {entry.what}</span>
+                        {entry.group ? (
+                          <button type="button" className={styles.expand} aria-expanded={opened.has(entry.id)} onClick={() => toggle(entry.id)}>
+                            <span><b>{entry.name}</b> {entry.what}</span>
+                            <ChevronDown className={styles.expandIcon} size={15} strokeWidth={1.75} aria-hidden="true" />
+                          </button>
+                        ) : <span><b>{entry.name}</b> {entry.what}</span>}
                         {(entry.room || entry.by || entry.via) && <span className={styles.meta}>{[entry.room, entry.by && `by ${entry.by}`, entry.via].filter(Boolean).join(" · ")}</span>}
                       </span>
                       {entry.picture && (
@@ -135,6 +146,17 @@ export function ActivityView() {
                           </button>
                         ) : <span className={styles.muteSlot} aria-hidden="true" />}
                       </span>
+                      {entry.group && opened.has(entry.id) && (
+                        <ol className={styles.steps} aria-label={`Each time ${entry.name} changed`}>
+                          {entry.group.map(step => (
+                            <li key={step.id} className={styles.step} data-lit={activityLit(step) || undefined}>
+                              <span className={styles.stepDot} aria-hidden="true" />
+                              <span>{step.what}</span>
+                              <time className={styles.time} dateTime={step.at}>{new Date(step.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
                     </li>
                   );
                 })}

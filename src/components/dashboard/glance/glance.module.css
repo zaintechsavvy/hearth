@@ -348,6 +348,11 @@ button.chip:hover:not(:disabled) {
   color: var(--warning);
 }
 
+.row[data-lit]:not([data-tone="alert"]) .activityIcon {
+  background: color-mix(in oklab, var(--lit-warm) 20%, transparent);
+  color: var(--lit-warm);
+}
+
 .row[data-tone="alert"] .activityIcon {
   background: color-mix(in oklab, var(--danger) 18%, transparent);
   color: var(--danger);

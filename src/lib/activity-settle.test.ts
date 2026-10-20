@@ -39,3 +39,27 @@ describe("settle, together", () => {
     expect(settle(entries, new Set()).map(line => line.name)).toEqual(["Porch", "Siren", "Alarm", "Desk", "Fan", "Lamp"]);
   });
 });
+
+describe("settle, back and forth", () => {
+  const at = (deviceId: string, what: string, minute: number): ActivityEntry => ({
+    id: `${deviceId}:${what}:${minute}`, at: new Date(Date.UTC(2026, 9, 19, 20, minute)).toISOString(), deviceId, name: deviceId, room: null, what, category: "lights", tone: "info", by: "Dana",
+  });
+
+  it("folds the same devices switched back and forth into one line that keeps each time", () => {
+    const entries = [
+      at("Glide", "turned on", 0), at("Bars", "turned on", 0),
+      at("Bars", "turned off", 3), at("Glide", "turned off", 3),
+      at("Glide", "turned on", 6), at("Bars", "turned on", 6),
+      at("Bars", "turned off", 9), at("Glide", "turned off", 9),
+      at("Porch", "turned on", 7),
+    ].reverse();
+    const lines = settle(entries, new Set());
+    expect(lines.map(line => `${line.name} ${line.what}`)).toEqual(["Bars and Glide turned on and off 4 times", "Porch turned on"]);
+    expect(lines[0].group?.map(line => line.what)).toEqual(["turned off", "turned on", "turned off", "turned on"]);
+  });
+
+  it("leaves two changes, or ones far apart, as they are", () => {
+    const lines = settle([at("Lamp", "turned off", 40), at("Lamp", "turned on", 20), at("Lamp", "turned off", 5), at("Lamp", "turned on", 0)], new Set());
+    expect(lines.map(line => line.what)).toEqual(["turned off", "turned on", "turned off", "turned on"]);
+  });
+});

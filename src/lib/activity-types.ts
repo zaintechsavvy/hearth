@@ -31,4 +31,6 @@ export interface ActivityEntry {
   picture?: string;
   /** Every device in a line that tells of several changing together, such as two lights turned on as one. */
   deviceIds?: string[];
+  /** The lines a "turned on and off 4 times" line stands for, newest first, shown when it is opened. */
+  group?: ActivityEntry[];
 }
