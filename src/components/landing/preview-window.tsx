@@ -9,7 +9,7 @@ import { DeviceTile, type TileDevice } from "@/components/dashboard/tiles/device
 import { glassClass } from "@/components/glass/glass";
 import type { TileConfig } from "@/lib/dashboard/layout";
 import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/types";
-import { seedDemoDevices } from "@/lib/integrations/demo";
+import { seedDemoDevices } from "@/lib/integrations/demo-devices";
 import styles from "./preview-window.module.css";
 
 /** Cameras are wide feeds, except on a phone, where a 2x1 tile is too short to make out. */
