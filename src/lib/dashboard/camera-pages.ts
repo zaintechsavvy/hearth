@@ -22,3 +22,8 @@ export function cameraPageTiles(layout: CameraLayout, sources: TileSource[]): Ti
     return { id: newTileId(), kind: "camera", link: source.id, size: slot?.size ?? "2x2", ...(slot ? { at: { 8: slot.at } } : {}) };
   });
 }
+
+/** The layout's tiles added to a page under what is already on it, `below` rows down on the widest grid. */
+export function cameraLayoutTiles(layout: CameraLayout, sources: TileSource[], below: number): TileConfig[] {
+  return cameraPageTiles(layout, sources).map(tile => tile.at?.[8] ? { ...tile, at: { 8: { ...tile.at[8], row: tile.at[8].row + below } } } : tile);
+}

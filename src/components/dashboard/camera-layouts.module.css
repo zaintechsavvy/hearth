@@ -18,9 +18,6 @@
   background: oklch(50% 0 0 / .1);
 }
 
-.layout[aria-busy] {
-  opacity: .6;
-}
 
 /* The layout as it sits on the eight-column grid, four rows tall, each slot a small rounded block. */
 .preview {

@@ -230,8 +230,6 @@ export interface DashboardPage {
   id: string;
   name: string;
   layout: SavedTile[];
-  /** A page made from a camera layout, which the camera button opens. */
-  kind?: "cameras";
 }
 
 export const HOME_PAGE_ID = "home";

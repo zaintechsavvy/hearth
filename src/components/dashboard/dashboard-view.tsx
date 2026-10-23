@@ -14,16 +14,17 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Glass, glassClass } from "@/components/glass/glass";
 import { addDemoHome, deleteScene, saveLayout, updateDevice } from "@/lib/actions";
 import { useStoredJson } from "@/components/shell/use-stored-json";
-import { CameraPageDialog } from "./camera-page-dialog";
 import { PageTabs } from "./page-tabs";
 import { ADD_TILE_EVENT } from "@/components/shell/command-menu";
 import type { HomeCamera } from "@/lib/home";
 import { INTEGRATION_LABELS } from "@/lib/integrations/types";
 import { KIND_INFO } from "@/lib/dashboard/catalog";
 import {
-  cameraTileId, createTile, defaultSize, HOME_PAGE_ID, isStyled, isWidget, removeTile, resolveLayout, SIZE_OPTIONS, updateTile,
+  cameraTileId, createTile, defaultSize, HOME_PAGE_ID, isStyled, isWidget, removeTile, resolveLayout, SIZE_OPTIONS, spanOf, updateTile,
   type TileConfig, type TileKind, type TileSource,
 } from "@/lib/dashboard/layout";
+import { cameraLayoutTiles } from "@/lib/dashboard/camera-pages";
+import { arrange } from "@/lib/dashboard/placement";
 import { hasLevel, tileSources } from "@/lib/dashboard/sources";
 import { defaultStyle } from "@/lib/dashboard/style";
 import { kindLabel, statusText } from "@/lib/devices/status";
@@ -120,7 +121,6 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<TileConfig[] | null>(null);
   const [customizing, setCustomizing] = useState<string | null>(null);
-  const [cameraLayouts, setCameraLayouts] = useState(false);
   const [dialog, setDialog] = useState<TileDialogMode | null>(null);
   const [controlling, setControlling] = useState<string | null>(null);
   const [managing, setManaging] = useState<WidgetEditorState | null>(null);
@@ -440,6 +440,15 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         onAdd={addTile}
         onLink={linkTile}
         onPlace={(tileId, place, units) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, place, units } } : tile))}
+        onAddLayout={layout => {
+          const placed = new Set(tiles.map(tile => tile.link));
+          const cameras = sources.filter(source => source.kind === "camera");
+          const fresh = cameras.filter(source => !placed.has(source.id));
+          const sizes = new Map(tiles.map(tile => [tile.id, spanOf(tile.size)]));
+          const cells = arrange(tiles.map(tile => tile.id), id => sizes.get(id)!, 8, id => tiles.find(tile => tile.id === id)?.at?.[8]);
+          const below = Math.max(0, ...[...cells].map(([id, cell]) => cell.row + sizes.get(id)!.rows));
+          change([...tiles, ...cameraLayoutTiles(layout, fresh.length ? fresh : cameras, below)]);
+        }}
       />
       <WidgetEditor state={managing} items={home.widgets} onOpenChange={open => !open && setManaging(null)}
         onLink={(tileId, itemId) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, itemId } } : tile))} />
@@ -505,10 +514,6 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     );
   }
 
-  const cameraCount = sources.filter(source => source.kind === "camera").length;
-  const cameraPage = home.pages.find(item => item.kind === "cameras");
-  const onCameraPage = cameraPage?.id === pageId;
-  const showCameras = cameraCount > 0 && (Boolean(cameraPage) || canEdit);
   return (
     <div className={styles.dashboard}>
       <header className={styles.intro} data-on-wall>
@@ -546,19 +551,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       </header>
 
       {editing ? <PageTabs pages={home.pages} current={pageId} editing={editing} onSelect={selectPage} onChanged={refresh} />
-        : (home.pages.length > 1 || linkedRooms.length > 1 || showCameras) && (
+        : (home.pages.length > 1 || linkedRooms.length > 1) && (
           <div className={styles.screens}>
-            {showCameras && (
-              <Button variant="secondary" className={styles.toolButton} aria-pressed={onCameraPage} aria-label={onCameraPage ? "Back from the cameras" : "Cameras"} title="Cameras"
-                onClick={() => {
-                  setRoom(ALL_ROOMS);
-                  if (onCameraPage) selectPage(home.pages[0].id);
-                  else if (cameraPage) selectPage(cameraPage.id);
-                  else setCameraLayouts(true);
-                }}>
-                <Video size={16} strokeWidth={1.75} aria-hidden="true" />
-              </Button>
-            )}
             {home.pages.length > 1 && (
               <DropdownMenu icon={<LayoutGrid size={15} strokeWidth={1.75} aria-hidden="true" />} label={page?.name ?? "Home"}
                 items={home.pages.map(item => ({ label: item.name, onSelect: () => { setRoom(ALL_ROOMS); selectPage(item.id); } }))} />
@@ -587,15 +581,12 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
             action={(
               <div className={styles.emptyActions}>
                 <Button onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" />Add a tile</Button>
-                {cameraCount > 0 && <Button variant="secondary" onClick={() => setCameraLayouts(true)}><Video size={16} strokeWidth={1.75} aria-hidden="true" />Camera layout</Button>}
               </div>
             )}
           />
         </Glass>
       )}
       </div>
-      <CameraPageDialog open={cameraLayouts} cameras={cameraCount} into={tiles.length === 0 ? pageId : undefined} onOpenChange={setCameraLayouts}
-        onCreated={async id => { await refresh(); setRoom(ALL_ROOMS); selectPage(id); }} />
 
       {dialogs}
     </div>

@@ -72,6 +72,14 @@
   min-width: 0;
 }
 
+/* The page menu takes the rooms' height, corners, and surface, so the two read as one row of the same kind of control. */
+.screens > button {
+  flex: none;
+  min-height: calc(var(--control-height-sm) + 8px);
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+}
+
 .rooms {
   flex: 0 1 auto;
   min-width: 0;
@@ -232,9 +240,4 @@
   width: 40px;
   padding-inline: 0;
   justify-content: center;
-}
-
-.toolButton[aria-pressed="true"] {
-  background: var(--foreground);
-  color: var(--background);
 }

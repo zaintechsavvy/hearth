@@ -7,6 +7,8 @@ import SegmentedControl from "@/components/arc/segmented-control/segmented-contr
 import { glassSheetClass } from "@/components/glass/glass";
 import { GALLERY_SECTIONS, KIND_INFO } from "@/lib/dashboard/catalog";
 import { isWidget, type TileConfig, type TileKind, type WeatherPlace } from "@/lib/dashboard/layout";
+import type { CameraLayout } from "@/lib/dashboard/camera-pages";
+import { CameraLayouts } from "./camera-layouts";
 import { EntityChooser, type Candidate } from "./entity-chooser";
 import { PlaceSearch } from "./place-search";
 import { TILE_ICON_COMPONENTS } from "./tiles/tile-icons";
@@ -22,12 +24,14 @@ interface TileDialogProps {
   onAdd: (kind: TileKind, link: string | null, options?: TileConfig["options"]) => void;
   onLink: (tileId: string, link: string) => void;
   onPlace: (tileId: string, place: WeatherPlace, units: "C" | "F") => void;
+  /** Several cameras at once, laid out together under what the page already has. */
+  onAddLayout: (layout: CameraLayout) => void;
 }
 
 const defaultUnits = (): "C" | "F" => typeof navigator !== "undefined" && /^en-(US|LR|MM)/.test(navigator.language) ? "F" : "C";
 
 /** Add a tile from the gallery, then link it to a device, pick a city, or add it as is. Also relinks a tile. */
-export function TileDialog({ state, onOpenChange, candidates, onAdd, onLink, onPlace }: TileDialogProps) {
+export function TileDialog({ state, onOpenChange, candidates, onAdd, onLink, onPlace, onAddLayout }: TileDialogProps) {
   const [shown, setShown] = useState(state);
   const [kind, setKind] = useState<TileKind | null>(null);
   if (shown !== state) {
@@ -38,7 +42,7 @@ export function TileDialog({ state, onOpenChange, candidates, onAdd, onLink, onP
   return (
     <Dialog open={Boolean(state)} onOpenChange={onOpenChange}>
       <DialogContent className={`${glassSheetClass} ${styles.dialog}`} title={title} description={description}>
-        {state && <Body key={state.mode === "add" ? "add" : state.tile.id} state={state} kind={kind} setKind={setKind} candidates={candidates} onAdd={onAdd} onLink={onLink} onPlace={onPlace} close={() => onOpenChange(false)} />}
+        {state && <Body key={state.mode === "add" ? "add" : state.tile.id} state={state} kind={kind} setKind={setKind} candidates={candidates} onAdd={onAdd} onLink={onLink} onPlace={onPlace} onAddLayout={onAddLayout} close={() => onOpenChange(false)} />}
       </DialogContent>
     </Dialog>
   );
@@ -59,7 +63,7 @@ interface BodyProps extends Omit<TileDialogProps, "state" | "onOpenChange"> {
   close: () => void;
 }
 
-function Body({ state, kind, setKind, candidates, onAdd, onLink, onPlace, close }: BodyProps) {
+function Body({ state, kind, setKind, candidates, onAdd, onLink, onPlace, onAddLayout, close }: BodyProps) {
   const [units, setUnits] = useState<"C" | "F">(state.mode === "place" ? state.tile.options?.units ?? defaultUnits() : defaultUnits());
 
   if (state.mode === "add" && !kind) {
@@ -111,8 +115,16 @@ function Body({ state, kind, setKind, candidates, onAdd, onLink, onPlace, close 
   }
 
   const current = state.mode === "link" ? state.tile.link : null;
+  const cameras = chosen === "camera" && state.mode === "add" ? candidates("camera").length : 0;
   return (
     <div className={styles.step}>
+      {cameras > 0 && (
+        <section className={styles.section} aria-labelledby="camera-layouts">
+          <h3 id="camera-layouts" className={styles.sectionTitle}>{cameras === 1 ? "As a layout" : `All ${cameras} cameras in a layout`}</h3>
+          <CameraLayouts cameras={cameras} onChoose={layout => { onAddLayout(layout); close(); }} />
+          <h3 className={styles.sectionTitle}>Or one camera</h3>
+        </section>
+      )}
       <EntityChooser
         candidates={candidates(chosen)}
         current={current}

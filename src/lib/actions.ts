@@ -100,7 +100,7 @@ async function placeDemoTiles(userId: string, integrationId: string) {
   const pages = home.pages.map((page, index) => index === 0 ? { ...page, layout } : page);
   await savePreferences(userId, {
     layout,
-    pages: cameras.length && !pages.some(page => page.kind === "cameras") ? [...pages, { id: `page-${crypto.randomUUID()}`, name: "Cameras", layout: cameras, kind: "cameras" as const }] : pages,
+    pages: cameras.length ? [...pages, { id: `page-${crypto.randomUUID()}`, name: "Cameras", layout: cameras }] : pages,
     ...(empty && !preferences.transit ? { transit: { key: seal("sample"), sample: true } } : {}),
   });
 }
@@ -254,33 +254,6 @@ export async function addPage(name: unknown): Promise<CreatedResult> {
     const { pages } = await getPreferences(userId);
     if (pages.length >= 12) throw new IntegrationError("You can have up to 12 pages.");
     await savePreferences(userId, { pages: [...pages, { id, name: parsed.data, layout: [] }] });
-    return OK;
-  });
-  return result.ok ? { ok: true, id } : result;
-}
-
-/**
- * A camera page laid out from one of the camera layouts, with every camera the home has: a new page called Cameras,
- * or an empty page filled in place when `into` names one.
- */
-export async function addCameraPage(layoutId: unknown, into?: unknown): Promise<CreatedResult> {
-  const layout = CAMERA_LAYOUTS.find(item => item.id === layoutId);
-  if (!layout) return { ok: false, error: "Choose a layout." };
-  let id = `page-${crypto.randomUUID()}`;
-  const result = await authed(async userId => {
-    const [home, { pages }] = await Promise.all([loadHome(userId), getPreferences(userId)]);
-    const tiles = cameraPageTiles(layout, tileSources(home));
-    if (!tiles.length) throw new IntegrationError("Add a camera first, in Settings under Cameras or through Home Assistant.");
-    const empty = typeof into === "string" ? pages.find(page => page.id === into && page.layout.length === 0) : undefined;
-    if (empty) {
-      id = empty.id;
-      const next = pages.map(page => page.id === empty.id ? { ...page, layout: tiles, kind: "cameras" as const } : page);
-      await savePreferences(userId, { pages: next, layout: next[0].layout });
-    } else {
-      if (pages.length >= 12) throw new IntegrationError("You can have up to 12 pages.");
-      await savePreferences(userId, { pages: [...pages, { id, name: "Cameras", layout: tiles, kind: "cameras" }] });
-    }
-    revalidatePath("/", "layout");
     return OK;
   });
   return result.ok ? { ok: true, id } : result;
