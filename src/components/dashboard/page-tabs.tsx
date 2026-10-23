@@ -22,7 +22,7 @@ interface PageTabsProps {
   onChanged: () => Promise<unknown>;
 }
 
-/** Pages of the dashboard. Shown once there is more than one, and always while editing so a page can be added. */
+/** Pages of the dashboard while editing, to add, rename, reorder, and delete them; outside editing a small menu picks one. */
 export function PageTabs({ pages, current, editing, onSelect, onChanged }: PageTabsProps) {
   const reduce = useReducedMotion();
   const [adding, setAdding] = useState(false);

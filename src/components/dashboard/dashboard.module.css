@@ -64,8 +64,17 @@
   touch-action: pan-y;
 }
 
+/* Which page and which room, on one row from the left edge: the page as a small menu, the rooms beside it. */
+.screens {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .rooms {
-  justify-self: start;
+  flex: 0 1 auto;
+  min-width: 0;
   max-width: 100%;
   overflow-x: auto;
 }
@@ -206,13 +215,6 @@
   justify-self: center;
 }
 
-.backgroundPopover
-
-.iconButton.iconButton {
-  aspect-ratio: 1;
-  padding-inline: 0;
-}
-
 /* Phones: the greeting, toolbar, and rooms stack tightly so tiles start higher on the screen. */
 @media (max-width: 640px) {
   .dashboard { gap: var(--space-4); }
@@ -230,4 +232,9 @@
   width: 40px;
   padding-inline: 0;
   justify-content: center;
+}
+
+.toolButton[aria-pressed="true"] {
+  background: var(--foreground);
+  color: var(--background);
 }

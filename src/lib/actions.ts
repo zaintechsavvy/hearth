@@ -10,6 +10,7 @@ import { ASSISTANT_PROVIDER_IDS, ASSISTANT_PROVIDERS, matchModel, providerOfKey,
 import { checkAssistantKey } from "@/lib/assistant/run";
 import { seal, unseal } from "@/lib/crypto";
 import { createTile, HOME_PAGE_ID, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES, withoutOrphanTiles, type TileHold } from "@/lib/dashboard/layout";
+import { CAMERA_LAYOUTS, cameraPageTiles } from "@/lib/dashboard/camera-pages";
 import { tileSources } from "@/lib/dashboard/sources";
 import { db } from "@/lib/db";
 import { assistant, automation, calendar, camera, deviceOverride, integration, preference, reminder, scene } from "@/lib/db/schema";
@@ -73,8 +74,8 @@ export async function addIntegration(input: unknown): Promise<CreatedResult> {
   return result.ok ? { ok: true, id } : result;
 }
 
-/** Kinds the demo's own widgets already cover, Energy, Who's home, and the thermostat, so each does not take a tile too. */
-const DEMO_LEFT_OUT = new Set(["sensor", "todo", "person"]);
+/** Kinds the demo's own widgets already cover, Energy, Who's home, and the thermostat, so each does not take a tile too; cameras get a page of their own. */
+const DEMO_LEFT_OUT = new Set(["sensor", "todo", "person", "camera"]);
 
 /**
  * A demo home arrives with its devices already on the first page, after whatever is there, so there is something to
@@ -94,9 +95,12 @@ async function placeDemoTiles(userId: string, integrationId: string) {
     createTile("activity", null, false, { size: "2x3" }),
   ] : [];
   const layout = [...home.layout, ...widgets, ...fresh];
+  const cameras = empty ? cameraPageTiles(CAMERA_LAYOUTS.find(item => item.id === "pair")!, tileSources(home).filter(source => source.id.startsWith(`${integrationId}:`)))
+    .map(tile => ({ ...tile, options: { video: "snapshots" as const, every: 30 } })) : [];
+  const pages = home.pages.map((page, index) => index === 0 ? { ...page, layout } : page);
   await savePreferences(userId, {
     layout,
-    pages: home.pages.map((page, index) => index === 0 ? { ...page, layout } : page),
+    pages: cameras.length && !pages.some(page => page.kind === "cameras") ? [...pages, { id: `page-${crypto.randomUUID()}`, name: "Cameras", layout: cameras, kind: "cameras" as const }] : pages,
     ...(empty && !preferences.transit ? { transit: { key: seal("sample"), sample: true } } : {}),
   });
 }
@@ -219,6 +223,8 @@ const tileSchema = z.object({
     speakers: z.array(z.string().max(300)).max(20).optional(),
     presets: z.array(z.object({ label: z.string().trim().min(1).max(30), minutes: z.number().min(0.25).max(1440) })).max(8).optional(),
     stops: z.array(z.object({ key: z.string().min(1).max(200), name: z.string().trim().min(1).max(120) })).max(4).optional(),
+    video: z.enum(["live", "snapshots"]).optional(),
+    every: z.number().int().min(5).max(900).optional(),
     hold: z.custom<TileHold>(value => typeof value === "string" && /^(controls|history|none|scene:[\w-]{1,100}|device:[\w.:-]{1,300})$/.test(value)).optional(),
   }).optional(),
   at: z.object({ 4: cellSchema.optional(), 6: cellSchema.optional(), 8: cellSchema.optional() }).optional(),
@@ -248,6 +254,33 @@ export async function addPage(name: unknown): Promise<CreatedResult> {
     const { pages } = await getPreferences(userId);
     if (pages.length >= 12) throw new IntegrationError("You can have up to 12 pages.");
     await savePreferences(userId, { pages: [...pages, { id, name: parsed.data, layout: [] }] });
+    return OK;
+  });
+  return result.ok ? { ok: true, id } : result;
+}
+
+/**
+ * A camera page laid out from one of the camera layouts, with every camera the home has: a new page called Cameras,
+ * or an empty page filled in place when `into` names one.
+ */
+export async function addCameraPage(layoutId: unknown, into?: unknown): Promise<CreatedResult> {
+  const layout = CAMERA_LAYOUTS.find(item => item.id === layoutId);
+  if (!layout) return { ok: false, error: "Choose a layout." };
+  let id = `page-${crypto.randomUUID()}`;
+  const result = await authed(async userId => {
+    const [home, { pages }] = await Promise.all([loadHome(userId), getPreferences(userId)]);
+    const tiles = cameraPageTiles(layout, tileSources(home));
+    if (!tiles.length) throw new IntegrationError("Add a camera first, in Settings under Cameras or through Home Assistant.");
+    const empty = typeof into === "string" ? pages.find(page => page.id === into && page.layout.length === 0) : undefined;
+    if (empty) {
+      id = empty.id;
+      const next = pages.map(page => page.id === empty.id ? { ...page, layout: tiles, kind: "cameras" as const } : page);
+      await savePreferences(userId, { pages: next, layout: next[0].layout });
+    } else {
+      if (pages.length >= 12) throw new IntegrationError("You can have up to 12 pages.");
+      await savePreferences(userId, { pages: [...pages, { id, name: "Cameras", layout: tiles, kind: "cameras" }] });
+    }
+    revalidatePath("/", "layout");
     return OK;
   });
   return result.ok ? { ok: true, id } : result;

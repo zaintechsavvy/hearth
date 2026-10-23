@@ -1,0 +1,50 @@
+.layouts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.layout {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-panel);
+  background: oklch(50% 0 0 / .05);
+  text-align: start;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.layout:hover {
+  background: oklch(50% 0 0 / .1);
+}
+
+.layout[aria-busy] {
+  opacity: .6;
+}
+
+/* The layout as it sits on the eight-column grid, four rows tall, each slot a small rounded block. */
+.preview {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  aspect-ratio: 2 / 1;
+}
+
+.slot {
+  border-radius: 6px;
+  background: oklch(50% 0 0 / .16);
+}
+
+.slot[data-filled] {
+  background: color-mix(in oklab, var(--foreground) 70%, transparent);
+}
+
+.name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .layouts { grid-template-columns: minmax(0, 1fr); }
+}

@@ -86,7 +86,7 @@ function sizeNote(kind: TileKind, size: TileSize) {
   if (size === "1x1") return kind === "lock" ? "Tap to lock or unlock" : kind === "cover" ? "Tap to open or close" : kind === "scene" ? "Tap to run" : kind === "sensor" || kind === "binary_sensor" || kind === "event" ? "Just the reading" : SIZE_NOTES["1x1"];
   if (size === "1x2" && kind !== "light" && kind !== "fan") return kind === "lock" || kind === "cover" ? "One big button" : "A tall card";
   if (size === "2x2" && (kind === "lock" || kind === "cover")) return "State, name, and a button";
-  return SIZE_NOTES[size];
+  return kind === "camera" ? CAMERA_SIZE_NOTES[size] : SIZE_NOTES[size];
 }
 
 const SIZE_NOTES: Partial<Record<TileSize, string>> = {
@@ -99,6 +99,15 @@ const SIZE_NOTES: Partial<Record<TileSize, string>> = {
   "3x3": "Room for every control",
   "4x2": "Panoramic",
   "4x3": "Big picture",
+  "4x4": "The biggest square",
+};
+
+const CAMERA_SIZE_NOTES: Partial<Record<TileSize, string>> = {
+  "2x2": "A glance",
+  "3x3": "A closer look",
+  "4x2": "Panoramic",
+  "4x3": "Big picture",
+  "4x4": "The biggest square",
 };
 
 const MANAGE_LABELS: Partial<Record<TileKind, string>> = {
@@ -193,6 +202,22 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
                 <Input label="Price per kWh" type="number" min={0} max={10} step={0.01} defaultValue={tile.config.options?.price ?? ""} placeholder="0.13"
                   description="From your electricity bill, for today's cost. Leave it empty to hide the cost."
                   onBlur={event => { const price = Number(event.target.value); onChange({ options: { ...tile.config.options, price: price > 0 ? price : undefined } }); }} />
+              </section>
+            )}
+            {tile.kind === "camera" && (
+              <section aria-labelledby="tile-video" className={styles.section}>
+                <h3 id="tile-video" className={styles.heading}>Video</h3>
+                <SegmentedControl label="Video" value={tile.config.options?.video ?? "live"}
+                  onValueChange={value => onChange({ options: { ...tile.config.options, video: value === "snapshots" ? "snapshots" : undefined } })}
+                  options={[{ value: "live", label: "Live" }, { value: "snapshots", label: "Snapshots" }]} />
+                <p className={styles.note}>{tile.config.options?.video === "snapshots"
+                  ? "A fresh picture every so often, for a screen that stays on. Tap it to watch live for two minutes."
+                  : "Streams the whole time it is on screen."}</p>
+                {tile.config.options?.video === "snapshots" && (
+                  <SegmentedControl label="New picture every" value={String(tile.config.options?.every ?? 30)}
+                    onValueChange={value => onChange({ options: { ...tile.config.options, every: Number(value) } })}
+                    options={[{ value: "10", label: "10 s" }, { value: "30", label: "30 s" }, { value: "60", label: "1 min" }, { value: "300", label: "5 min" }]} />
+                )}
               </section>
             )}
             {tile.kind === "timers" && <PresetsSection presets={tile.config.options?.presets ?? []} onChange={presets => onChange({ options: { ...tile.config.options, presets: presets.length ? presets : undefined } })} />}

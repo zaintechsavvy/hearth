@@ -5,13 +5,13 @@ export const WIDGET_KINDS = ["weather", "calendar", "reminders", "clock", "bins"
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
 /** `leak` is a leak sensor's own tile: a binary sensor, shown as dry or wet with an alarm. */
 export type TileKind = Device["kind"] | WidgetKind | "leak";
-export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x1" | "4x2" | "4x3";
+export type TileSize = "1x1" | "2x1" | "1x2" | "2x2" | "2x3" | "2x4" | "3x3" | "4x1" | "4x2" | "4x3" | "4x4";
 
 export const TILE_KINDS = [
   "light", "switch", "fan", "thermostat", "lock", "cover", "binary_sensor", "leak", "sensor", "camera", "event", "scene", "media_player",
   "person", "vacuum", "alarm", "todo", ...WIDGET_KINDS,
 ] as const satisfies readonly TileKind[];
-export const TILE_SIZES = ["1x1", "2x1", "1x2", "2x2", "2x3", "2x4", "3x3", "4x1", "4x2", "4x3"] as const satisfies readonly TileSize[];
+export const TILE_SIZES = ["1x1", "2x1", "1x2", "2x2", "2x3", "2x4", "3x3", "4x1", "4x2", "4x3", "4x4"] as const satisfies readonly TileSize[];
 export const TILE_COLORS = ["amber", "orange", "rose", "violet", "blue", "teal", "green", "graphite"] as const;
 export type TileColor = (typeof TILE_COLORS)[number];
 
@@ -57,6 +57,9 @@ export interface TileOptions {
   presets?: TimerPreset[];
   /** Departures: the stops whose next buses and trains it lists. */
   stops?: TransitStop[];
+  /** Cameras: stream live, or show a fresh still every `every` seconds and go live only when tapped. */
+  video?: "live" | "snapshots";
+  every?: number;
 }
 
 export interface TransitStop {
@@ -125,7 +128,7 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   event: SWITCHABLE,
   scene: SWITCHABLE,
   thermostat: [{ size: "2x2", label: "Compact" }, { size: "3x3", label: "Large" }],
-  camera: [{ size: "2x2", label: "Square" }, { size: "4x2", label: "Wide" }, { size: "4x3", label: "Large" }],
+  camera: [{ size: "2x2", label: "Square" }, { size: "3x3", label: "Medium" }, { size: "4x2", label: "Wide" }, { size: "4x3", label: "Large" }, { size: "4x4", label: "Big" }],
   media_player: [{ size: "4x1", label: "Bar" }, { size: "4x2", label: "Player" }],
   weather: [{ size: "2x1", label: "Now" }, { size: "2x2", label: "Today" }, { size: "4x2", label: "Week" }],
   calendar: [{ size: "2x2", label: "Next up" }, { size: "2x3", label: "Agenda" }, { size: "2x4", label: "Tall" }, { size: "4x2", label: "Wide" }],
@@ -227,6 +230,8 @@ export interface DashboardPage {
   id: string;
   name: string;
   layout: SavedTile[];
+  /** A page made from a camera layout, which the camera button opens. */
+  kind?: "cameras";
 }
 
 export const HOME_PAGE_ID = "home";

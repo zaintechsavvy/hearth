@@ -14,13 +14,14 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Glass, glassClass } from "@/components/glass/glass";
 import { addDemoHome, deleteScene, saveLayout, updateDevice } from "@/lib/actions";
 import { useStoredJson } from "@/components/shell/use-stored-json";
+import { CameraPageDialog } from "./camera-page-dialog";
 import { PageTabs } from "./page-tabs";
 import { ADD_TILE_EVENT } from "@/components/shell/command-menu";
 import type { HomeCamera } from "@/lib/home";
 import { INTEGRATION_LABELS } from "@/lib/integrations/types";
 import { KIND_INFO } from "@/lib/dashboard/catalog";
 import {
-  cameraTileId, createTile, defaultSize, HOME_PAGE_ID, isStyled, isWidget, removeTile, resolveLayout, SIZE_OPTIONS, suggestedTiles, updateTile,
+  cameraTileId, createTile, defaultSize, HOME_PAGE_ID, isStyled, isWidget, removeTile, resolveLayout, SIZE_OPTIONS, updateTile,
   type TileConfig, type TileKind, type TileSource,
 } from "@/lib/dashboard/layout";
 import { hasLevel, tileSources } from "@/lib/dashboard/sources";
@@ -32,6 +33,7 @@ import { CameraTile } from "./camera-tile";
 import type { Candidate } from "./entity-chooser";
 import { HomeGrid } from "./home-grid";
 import { IntegrationCameraTile } from "./integration-camera-tile";
+import { SnapshotCamera } from "./camera-snapshots";
 import { hasControls, LightControls } from "./light-controls";
 import { HistorySheet } from "./history-sheet";
 import { SceneEditor } from "./scene-editor";
@@ -78,6 +80,7 @@ import styles from "./dashboard.module.css";
 const SAVE_DELAY_MS = 500;
 const PAGE_KEY = "hearth-page";
 const SWIPE_PX = 70;
+const DEFAULT_SNAPSHOT_SECONDS = 30;
 const ALL_ROOMS = "all";
 const LEVEL_SIZES = new Set(["1x2", "2x2"]);
 const subscribeNever = () => () => {};
@@ -117,6 +120,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<TileConfig[] | null>(null);
   const [customizing, setCustomizing] = useState<string | null>(null);
+  const [cameraLayouts, setCameraLayouts] = useState(false);
   const [dialog, setDialog] = useState<TileDialogMode | null>(null);
   const [controlling, setControlling] = useState<string | null>(null);
   const [managing, setManaging] = useState<WidgetEditorState | null>(null);
@@ -150,7 +154,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const page = home?.pages.find(item => item.id === storedPage) ?? home?.pages[0];
   const pageId = page?.id ?? HOME_PAGE_ID;
   const tiles = useMemo(() => resolveLayout(draft ?? page?.layout ?? [], sources), [draft, page?.layout, sources]);
-  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const swipe = useRef<{ id: number; x: number; y: number; lastX: number; lastY: number } | null>(null);
   const gridWrap = useRef<HTMLDivElement>(null);
   const swiped = useRef(0);
 
@@ -290,27 +294,37 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     slide(Math.sign(screens.indexOf(next) - screens.indexOf(current)));
     setRoom(next);
   };
-  const step = (direction: 1 | -1) => {
-    const next = screens[screens.indexOf(current) + direction];
+  /** On a wall tablet a swipe turns the page; elsewhere it moves through the rooms first, then on to the next page. */
+  const step = (direction: 1 | -1, pagesOnly: boolean) => {
+    const next = pagesOnly ? undefined : screens[screens.indexOf(current) + direction];
     if (next !== undefined) return showRoom(next);
     const page = home.pages[pageIndex + direction];
     if (page) {
       slide(direction);
+      setRoom(ALL_ROOMS);
       selectPage(page.id);
     }
   };
+  // Followed from first touch to last, in the capture phase, so a swipe that starts on a tile still counts even when
+  // the tile, or the switch that ticks under it on an iPhone, takes the touch over before the finger lifts.
+  const finishSwipe = (event: React.PointerEvent, x: number, y: number) => {
+    const start = swipe.current;
+    swipe.current = null;
+    if (!start || start.id !== event.pointerId) return;
+    const dx = x - start.x, dy = y - start.y;
+    if (Math.abs(dx) < SWIPE_PX || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+    swiped.current = event.timeStamp;
+    step(dx < 0 ? 1 : -1, document.documentElement.dataset.wall !== undefined && home.pages.length > 1);
+  };
   const swipeHandlers = !editing && (screens.length > 1 || home.pages.length > 1) ? {
-    onPointerDown: (event: React.PointerEvent) => { if (event.pointerType === "touch") swipe.current = { x: event.clientX, y: event.clientY }; },
-    onPointerUp: (event: React.PointerEvent) => {
-      const start = swipe.current;
-      swipe.current = null;
-      if (!start) return;
-      const dx = event.clientX - start.x, dy = event.clientY - start.y;
-      if (Math.abs(dx) < SWIPE_PX || Math.abs(dy) > Math.abs(dx) * 0.6) return;
-      swiped.current = event.timeStamp;
-      step(dx < 0 ? 1 : -1);
+    onPointerDownCapture: (event: React.PointerEvent) => {
+      if (event.pointerType === "touch") swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY };
     },
-    onPointerCancel: () => { swipe.current = null; },
+    onPointerMoveCapture: (event: React.PointerEvent) => {
+      if (swipe.current?.id === event.pointerId) Object.assign(swipe.current, { lastX: event.clientX, lastY: event.clientY });
+    },
+    onPointerUpCapture: (event: React.PointerEvent) => finishSwipe(event, event.clientX, event.clientY),
+    onPointerCancelCapture: (event: React.PointerEvent) => finishSwipe(event, swipe.current?.lastX ?? 0, swipe.current?.lastY ?? 0),
     // The finger lifting at the end of a swipe is not a tap on the tile under it.
     onClickCapture: (event: React.MouseEvent) => {
       if (event.timeStamp - swiped.current > 400) return;
@@ -376,7 +390,13 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     const linked = resolve(tile);
     if (!linked) return <PlaceholderTile tile={tile} missing={tile.link !== null} interactive={interactive} onLink={() => setDialog({ mode: "link", tile })} />;
     if (linked.type === "scene") return <SceneTile scene={linked.scene} config={tile} interactive={interactive} onRun={() => runScene(linked.scene)} />;
-    if (linked.type === "camera") return preview ? <CameraPreview name={linked.camera.name} /> : <CameraTile camera={linked.camera} fill />;
+    if (linked.type === "camera") {
+      if (preview) return <CameraPreview name={linked.camera.name} />;
+      const live = <CameraTile camera={linked.camera} fill />;
+      return tile.options?.video === "snapshots"
+        ? <SnapshotCamera name={linked.camera.name} every={tile.options.every ?? DEFAULT_SNAPSHOT_SECONDS} still={frame => `/api/cameras/${linked.camera.id}/snapshot?frame=${frame}`} live={live} />
+        : live;
+    }
     const source = linked.device;
     // A tile can carry its own name and leave the room off; commands still go to the device itself.
     const device = { ...source, name: tile.label?.trim() || source.name, room: tile.options?.hideRoom ? null : source.room } as typeof source;
@@ -390,7 +410,13 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       : hold === "controls" && source.kind === "light" ? () => setControlling(source.id)
       : null;
     if (device.kind === "thermostat") return <Thermostat device={device} onCommand={command => send(device, command)} onOpenHistory={interactive ? () => setCharting(device.id) : undefined} />;
-    if (device.kind === "camera") return preview ? <CameraPreview name={device.name} /> : <IntegrationCameraTile camera={device} />;
+    if (device.kind === "camera") {
+      if (preview) return <CameraPreview name={device.name} />;
+      const live = <IntegrationCameraTile camera={device} />;
+      return tile.options?.video === "snapshots"
+        ? <SnapshotCamera name={device.name} every={tile.options.every ?? DEFAULT_SNAPSHOT_SECONDS} still={frame => `/api/devices/${encodeURIComponent(device.id)}/camera?mode=snapshot&frame=${frame}`} live={live} />
+        : live;
+    }
     if (device.kind === "media_player") return <MediaTile tileId={tile.id} device={device} layout={tile.size === "4x2" ? "player" : "bar"} interactive={interactive} onCommand={command => send(device, command)} />;
     if (device.kind === "vacuum") return <VacuumTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} />;
     if (device.kind === "alarm") return <AlarmTile device={device} config={tile} interactive={interactive} openMethod={home.openMethod} onCommand={(command, pin) => send(device, command, pin)} />;
@@ -479,7 +505,10 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     );
   }
 
-  const suggestions = suggestedTiles(sources);
+  const cameraCount = sources.filter(source => source.kind === "camera").length;
+  const cameraPage = home.pages.find(item => item.kind === "cameras");
+  const onCameraPage = cameraPage?.id === pageId;
+  const showCameras = cameraCount > 0 && (Boolean(cameraPage) || canEdit);
   return (
     <div className={styles.dashboard}>
       <header className={styles.intro} data-on-wall>
@@ -516,20 +545,37 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         </div>
       </header>
 
-      <PageTabs pages={home.pages} current={pageId} editing={editing} onSelect={selectPage} onChanged={refresh} />
-
-      {linkedRooms.length > 1 && !editing && (
-        <SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} />
-      )}
+      {editing ? <PageTabs pages={home.pages} current={pageId} editing={editing} onSelect={selectPage} onChanged={refresh} />
+        : (home.pages.length > 1 || linkedRooms.length > 1 || showCameras) && (
+          <div className={styles.screens}>
+            {showCameras && (
+              <Button variant="secondary" className={styles.toolButton} aria-pressed={onCameraPage} aria-label={onCameraPage ? "Back from the cameras" : "Cameras"} title="Cameras"
+                onClick={() => {
+                  setRoom(ALL_ROOMS);
+                  if (onCameraPage) selectPage(home.pages[0].id);
+                  else if (cameraPage) selectPage(cameraPage.id);
+                  else setCameraLayouts(true);
+                }}>
+                <Video size={16} strokeWidth={1.75} aria-hidden="true" />
+              </Button>
+            )}
+            {home.pages.length > 1 && (
+              <DropdownMenu icon={<LayoutGrid size={15} strokeWidth={1.75} aria-hidden="true" />} label={page?.name ?? "Home"}
+                items={home.pages.map(item => ({ label: item.name, onSelect: () => { setRoom(ALL_ROOMS); selectPage(item.id); } }))} />
+            )}
+            {linkedRooms.length > 1 && (
+              <SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} />
+            )}
+          </div>
+        )}
 
       {failing.map(integration => (
         <Alert key={integration.id} tone="warning" title={`${integration.name} is not responding`}>{integration.error ?? ""}</Alert>
       ))}
 
+      <div ref={gridWrap} className={styles.swipe} {...swipeHandlers}>
       {tiles.length > 0 ? (
-        <div ref={gridWrap} className={styles.swipe} {...swipeHandlers}>
         <HomeGrid tiles={shownTiles} editing={editing} placed={!filtering} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(filtering ? mergeFiltered(tiles, next) : next)} onCustomize={setCustomizing} />
-        </div>
       ) : (
         <Glass className={styles.placeholder}>
           <EmptyState
@@ -541,12 +587,15 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
             action={(
               <div className={styles.emptyActions}>
                 <Button onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" />Add a tile</Button>
-                {suggestions.length > 0 && <Button variant="secondary" onClick={() => change(suggestions)}>Start with suggestions</Button>}
+                {cameraCount > 0 && <Button variant="secondary" onClick={() => setCameraLayouts(true)}><Video size={16} strokeWidth={1.75} aria-hidden="true" />Camera layout</Button>}
               </div>
             )}
           />
         </Glass>
       )}
+      </div>
+      <CameraPageDialog open={cameraLayouts} cameras={cameraCount} into={tiles.length === 0 ? pageId : undefined} onOpenChange={setCameraLayouts}
+        onCreated={async id => { await refresh(); setRoom(ALL_ROOMS); selectPage(id); }} />
 
       {dialogs}
     </div>

@@ -1,5 +1,9 @@
 import { applyCommand, deviceId, livePosition, type Device, type DeviceCommand, type MediaPlayerDevice, type TodoItem } from "@/lib/devices/types";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { IntegrationError, type DeviceList, type HistoryPoint, type Provider } from "./types";
+
+const DEMO_CAMERA_PICTURES: Record<string, string> = { "front-camera": "front-door-doorbell.jpg", "backyard-camera": "backyard-wyze.jpg" };
 
 interface DemoHome {
   devices: Map<string, Device>;
@@ -85,6 +89,8 @@ export function seedDemoDevices(integrationId: string): Device[] {
     { ...base("alarm", "Alarm", null), kind: "alarm", state: "disarmed", modes: ["home", "away", "night"], codeFormat: "number", codeToArm: false },
     { ...base("shopping", "Shopping list", null), kind: "todo", open: 3, can: { add: true, remove: true, check: true } },
     { ...base("doorbell", "Doorbell", "Entry"), kind: "event", eventClass: "doorbell", last: null },
+    { ...base("front-camera", "Front door camera", "Entry"), kind: "camera", streamable: true },
+    { ...base("backyard-camera", "Backyard", "Outside"), kind: "camera", streamable: true },
     { ...base("evening", "Evening", null), kind: "scene", variant: "scene" },
     {
       ...base("music", "Music", "Living room"), kind: "media_player", state: "playing", ...TRACKS[0], position: 52, positionAt: new Date().toISOString(),
@@ -260,6 +266,14 @@ export class DemoProvider implements Provider {
       home.devices.set(command.type === "volume" || command.type === "output" ? device.id : leaderId, applyCommand(command.type === "volume" || command.type === "output" ? device : leader, command));
     }
     followLeader(home, leaderId);
+  }
+
+  /** The demo's cameras show a still from the samples Hearth ships with; they have no video to stream. */
+  async camera(nativeId: string) {
+    const file = DEMO_CAMERA_PICTURES[nativeId];
+    if (!file) return new Response(null, { status: 404 });
+    const picture = await readFile(join(process.cwd(), "public", "samples", file));
+    return new Response(new Uint8Array(picture), { headers: { "Content-Type": "image/jpeg" } });
   }
 
   async execute(nativeId: string, command: DeviceCommand) {
