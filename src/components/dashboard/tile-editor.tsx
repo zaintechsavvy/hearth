@@ -58,6 +58,8 @@ export interface EditableTile {
   color: TileColor | null;
   /** How this tile can be tuned: what holding it may do, and whether it has an icon, colour, and status line. */
   tuning?: { holds: { value: string; label: string }[]; styled: boolean };
+  /** For a lock, garage door, or door: the cameras its camera button can show, and the pages it can open instead. */
+  cameraLink?: { cameras: { value: string; name: string }[]; pages: { value: string; name: string }[] };
 }
 
 interface TileEditorProps {
@@ -109,6 +111,8 @@ const CAMERA_SIZE_NOTES: Partial<Record<TileSize, string>> = {
   "4x3": "Big picture",
   "4x4": "The biggest square",
 };
+
+const NO_CAMERA = "__none";
 
 const MANAGE_LABELS: Partial<Record<TileKind, string>> = {
   departures: "Choose stops",
@@ -324,6 +328,17 @@ function TuningSection({ tile, tuning, onChange }: { tile: EditableTile; tuning:
       </div>
       <Select label="When held" value={options.hold ?? holdDefault} onValueChange={value => set({ hold: value === holdDefault ? undefined : value as TileHold })}
         options={[...tuning.holds, { value: "none", label: "Nothing" }]} />
+      {tile.cameraLink && tile.cameraLink.cameras.length > 0 && (
+        <>
+          <Select label="Camera button" value={options.camera ?? NO_CAMERA} description="A small camera button on this tile, to see what is there before you open it."
+            onValueChange={value => set(value === NO_CAMERA ? { camera: undefined, cameraOpens: undefined } : { camera: value })}
+            options={[{ value: NO_CAMERA, label: "None" }, ...tile.cameraLink.cameras.map(camera => ({ value: camera.value, label: camera.name }))]} />
+          {options.camera && (
+            <Select label="The camera button opens" value={options.cameraOpens ?? "view"} onValueChange={value => set({ cameraOpens: value === "view" ? undefined : value as `page:${string}` })}
+              options={[{ value: "view", label: "The camera, full screen" }, ...tile.cameraLink.pages.map(page => ({ value: `page:${page.value}`, label: `The ${page.name} page` }))]} />
+          )}
+        </>
+      )}
     </section>
   );
 }

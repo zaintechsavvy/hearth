@@ -1,0 +1,11 @@
+.sheet.sheet {
+  width: min(96vw, 1100px);
+  max-width: none;
+}
+
+.view {
+  aspect-ratio: 16 / 9;
+  max-height: 72vh;
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+}

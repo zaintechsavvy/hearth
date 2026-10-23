@@ -3,6 +3,11 @@
   justify-content: flex-start;
 }
 
+/* The same shape as the room picker beside it: a rounded rectangle holding rounded rectangles. */
+.tabs.tabs {
+  border-radius: var(--radius-control);
+}
+
 .tabs {
   display: flex;
   align-items: center;
@@ -24,7 +29,7 @@
   align-items: center;
   height: 34px;
   padding: 0 var(--space-4);
-  border-radius: 999px;
+  border-radius: calc(var(--radius-control) - 4px);
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 500;

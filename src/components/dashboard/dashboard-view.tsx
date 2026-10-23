@@ -35,6 +35,7 @@ import type { Candidate } from "./entity-chooser";
 import { HomeGrid } from "./home-grid";
 import { IntegrationCameraTile } from "./integration-camera-tile";
 import { SnapshotCamera } from "./camera-snapshots";
+import { CameraSheet } from "./camera-sheet";
 import { hasControls, LightControls } from "./light-controls";
 import { HistorySheet } from "./history-sheet";
 import { SceneEditor } from "./scene-editor";
@@ -134,6 +135,13 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
 
   const devices = useMemo(() => new Map((home?.devices ?? []).map(device => [device.id, device])), [home?.devices]);
   const cameras = useMemo(() => new Map((home?.cameras ?? []).map(camera => [cameraTileId(camera.id), camera])), [home?.cameras]);
+  /** Every camera a lock, garage door, or door tile can be linked to: Home Assistant's and Hearth's own. */
+  const cameraChoices = useMemo(() => [
+    ...(home?.devices ?? []).filter(device => device.kind === "camera" && device.streamable).map(device => ({ value: device.id, name: device.name })),
+    ...(home?.cameras ?? []).map(camera => ({ value: cameraTileId(camera.id), name: camera.name })),
+  ], [home?.devices, home?.cameras]);
+  const [viewing, setViewing] = useState<string | null>(null);
+  const [focus, setFocus] = useState<string | null>(null);
   const scenes = useMemo(() => new Map((home?.scenes ?? []).map(scene => [sceneTileId(scene.id), scene])), [home?.scenes]);
   const sources = useMemo<TileSource[]>(() => home ? tileSources(home) : [], [home]);
   const sourceById = useMemo(() => new Map(sources.map(source => [source.id, source])), [sources]);
@@ -159,6 +167,19 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const swiped = useRef(0);
 
   useEffect(() => () => clearTimeout(saveTimer.current), []);
+  // A camera button that opens a page brings that camera's tile into view on it, with a brief ring around it.
+  useEffect(() => {
+    if (!focus) return;
+    const frame = requestAnimationFrame(() => requestAnimationFrame(() => {
+      setFocus(null);
+      const cell = document.querySelector<HTMLElement>(`[data-link="${CSS.escape(focus)}"]`);
+      if (!cell) return;
+      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      cell.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+      if (!reduce) cell.animate([{ transform: "scale(1)" }, { transform: "scale(1.02)" }, { transform: "scale(1)" }], { duration: 600, easing: "cubic-bezier(.2, .8, .2, 1)", delay: 250 });
+    }));
+    return () => cancelAnimationFrame(frame);
+  }, [focus, storedPage]);
   useEffect(() => {
     const onAdd = () => setDialog({ mode: "add" });
     window.addEventListener(ADD_TILE_EVENT, onAdd);
@@ -208,6 +229,14 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     setStoredPage(id);
   };
   const pageIndex = home.pages.findIndex(item => item.id === pageId);
+  /** A linked camera's button: the camera itself in a sheet, or the page chosen for it, scrolled to that camera. */
+  const openCamera = (cameraId: string, opens: string | undefined) => {
+    const target = opens?.startsWith("page:") ? home.pages.find(item => item.id === opens.slice(5)) : undefined;
+    if (!target) return setViewing(cameraId);
+    setRoom(ALL_ROOMS);
+    selectPage(target.id);
+    setFocus(cameraId);
+  };
 
   const finishEditing = async () => {
     clearTimeout(saveTimer.current);
@@ -343,7 +372,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const editable = customizingTile ? editableTile(customizingTile, resolve(customizingTile), nameOf(customizingTile), sourceLabel, [
     ...home.scenes.map(scene => ({ value: `scene:${scene.id}`, name: scene.name })),
     ...home.devices.filter(device => device.kind === "scene").map(device => ({ value: `device:${device.id}`, name: device.name })),
-  ], home.devices.filter(device => device.kind === "camera" && device.streamable).map(device => ({ value: device.id, name: device.name }))) : null;
+  ], home.devices.filter(device => device.kind === "camera" && device.streamable).map(device => ({ value: device.id, name: device.name })), cameraChoices,
+  home.pages.map(item => ({ value: item.id, name: item.name }))) : null;
   const customizingLink = customizingTile ? resolve(customizingTile) : null;
   const customizingScene = customizingLink?.type === "scene" ? customizingLink.scene : null;
 
@@ -424,7 +454,9 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     if (device.kind === "person") return <PersonTile device={device} config={tile} now={minuteNow} />;
     if (device.kind === "binary_sensor" && device.sensorClass === "leak") return <LeakTile device={device} config={tile} />;
     if (device.kind === "sensor" && (tile.size === "2x2" || tile.size === "4x2")) return <ChartTile device={device} config={tile} onOpen={interactive ? () => setCharting(device.id) : undefined} />;
-    return <DeviceTile device={device} config={tile} interactive={interactive} openMethod={home.openMethod} onCommand={(command, pin) => send(device, command, pin)} onOpenControls={() => setControlling(device.id)} onOpenHistory={() => setCharting(device.id)} onHold={onHold} />;
+    const linkedCamera = tile.options?.camera ? cameraChoices.find(choice => choice.value === tile.options?.camera) : undefined;
+    const camera = linkedCamera && { name: linkedCamera.name, open: () => openCamera(linkedCamera.value, tile.options?.cameraOpens) };
+    return <DeviceTile device={device} config={tile} interactive={interactive} openMethod={home.openMethod} onCommand={(command, pin) => send(device, command, pin)} onOpenControls={() => setControlling(device.id)} onOpenHistory={() => setCharting(device.id)} onHold={onHold} camera={camera} />;
   };
 
   const charted = charting ? devices.get(charting) : undefined;
@@ -450,6 +482,11 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
           change([...tiles, ...cameraLayoutTiles(layout, fresh.length ? fresh : cameras, below)]);
         }}
       />
+      <CameraSheet name={viewing ? cameraChoices.find(choice => choice.value === viewing)?.name ?? "Camera" : null} onClose={() => setViewing(null)}>
+        {viewing && (cameras.get(viewing)
+          ? <CameraTile camera={cameras.get(viewing)!} fill />
+          : (() => { const device = devices.get(viewing); return device?.kind === "camera" ? <IntegrationCameraTile camera={device} /> : null; })())}
+      </CameraSheet>
       <WidgetEditor state={managing} items={home.widgets} onOpenChange={open => !open && setManaging(null)}
         onLink={(tileId, itemId) => change(tiles.map(tile => tile.id === tileId ? { ...tile, options: { ...tile.options, itemId } } : tile))} />
       <StopsDialog open={stopsFor !== null} ready={home.transitReady} sample={home.transitSample} initial={tiles.find(tile => tile.id === stopsFor)?.options?.stops ?? []} onOpenChange={open => !open && setStopsFor(null)}
@@ -609,7 +646,8 @@ function mergeFiltered(all: TileConfig[], changed: TileConfig[]) {
   return all.map(tile => ids.has(tile.id) ? queue.shift() ?? tile : tile);
 }
 
-function editableTile(tile: TileConfig, linked: Linked | null, name: string, sourceLabel: (device: Device) => string, scenes: { value: string; name: string }[], cameras: { value: string; name: string }[]): EditableTile {
+function editableTile(tile: TileConfig, linked: Linked | null, name: string, sourceLabel: (device: Device) => string, scenes: { value: string; name: string }[], cameras: { value: string; name: string }[],
+  cameraChoices: { value: string; name: string }[], pages: { value: string; name: string }[]): EditableTile {
   const info = KIND_INFO[tile.kind];
   const base = { config: tile, kind: tile.kind, name, linkedName: null as string | null, adjustable: true, icon: null, color: null };
   if (isWidget(tile.kind)) return { ...base, linkedName: tile.kind === "weather" ? tile.options?.place?.name ?? null : null };
@@ -631,7 +669,8 @@ function editableTile(tile: TileConfig, linked: Linked | null, name: string, sou
     ...(device.kind === "sensor" ? [{ value: "history", label: "Show history" }] : []),
     ...scenes.map(scene => ({ value: scene.value, label: `Run ${scene.name}` })),
   ];
-  const tuning = { tuning: { holds, styled: isStyled(device.kind) } };
+  const opens = device.kind === "lock" || device.kind === "cover" || (device.kind === "binary_sensor" && ["door", "window", "garage", "opening"].includes(device.sensorClass));
+  const tuning = { tuning: { holds, styled: isStyled(device.kind) }, ...(opens ? { cameraLink: { cameras: cameraChoices, pages } } : {}) };
   if (!isStyled(device.kind)) return { ...base, ...tuning, linkedName: device.name, identity, adjustable: false };
   const style = defaultStyle(device);
   return { ...base, ...tuning, linkedName: device.name, identity, adjustable: hasLevel(device), icon: tile.icon ?? style.icon, color: tile.color ?? style.color };

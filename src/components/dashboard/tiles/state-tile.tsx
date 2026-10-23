@@ -1,6 +1,6 @@
 "use client";
 
-import { LockOpen, Warehouse } from "lucide-react";
+import { LockOpen, Video, Warehouse } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/arc/button/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
@@ -38,6 +38,8 @@ interface StateTileProps {
   onOpenHistory?: () => void;
   /** What a press and hold does; null or undefined for nothing. */
   onHold?: (() => void) | null;
+  /** The camera this tile is linked to, shown as a small button that opens it or the page it is on. */
+  camera?: { name: string; open: () => void };
 }
 
 const LOCK_TEXT: Record<LockDevice["state"], string> = { locked: "Locked", unlocked: "Unlocked", locking: "Locking", unlocking: "Unlocking", jammed: "Jammed", open: "Open", unknown: "Unknown" };
@@ -170,7 +172,7 @@ function SensitiveConfirm({ device, state, onConfirm, onClose }: { device: State
   );
 }
 
-export function StateTile({ device, config, onCommand, interactive = true, onOpenHistory, onHold, openMethod = "hold" }: StateTileProps) {
+export function StateTile({ device, config, onCommand, interactive = true, onOpenHistory, onHold, openMethod = "hold", camera }: StateTileProps) {
   const now = useSyncExternalStore(subscribeMinute, minute, () => 0);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<DeviceCommand | null>(null);
@@ -205,6 +207,11 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   const holdMeta = hold.holding ? "Keep holding" : hold.hint ? `Hold to ${holdWords.toLowerCase()}` : null;
   const meta = error ?? holdMeta ?? (ran ? "Done" : [device.room && config.size !== "1x1" ? device.room : null, config.options?.hideStatus && device.kind !== "sensor" ? null : text].filter(Boolean).join(" · "));
   const fill = holdToOpen && <span className={styles.holdFill} aria-hidden="true" />;
+  const cameraButton = (className: string) => camera && interactive && config.size !== "1x1" && (
+    <button type="button" className={`${glassClass("pill")} ${className}`} onClick={camera.open} aria-label={`Show ${camera.name}`} title={camera.name}>
+      <Video size={15} strokeWidth={1.75} aria-hidden="true" />
+    </button>
+  );
   const isReading = device.kind === "sensor";
   const confirm = pending && (openMethod === "pin"
     ? <PinConfirm device={device} state={text} onClose={() => setPending(null)} onPin={pin => onCommand(pending, pin).then(() => { setPending(null); return null; }, cause => cause instanceof Error ? cause.message : "That did not work.")} />
@@ -261,8 +268,11 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
             <span className={styles.name}>{device.name}</span>
             {(holdMeta ?? device.room) && <span className={styles.meta}>{holdMeta ?? device.room}</span>}
           </span>
-          <button type="button" className={styles.tallAction} disabled={disabled} onClick={() => { if (!hold.justOpened()) void request(command); }} {...hold.handlers}
-            aria-label={holdToOpen ? `Hold to ${actionWord(command).toLowerCase()} ${device.name}` : `${actionWord(command)} ${device.name}`}>{actionWord(command)}</button>
+          <span className={styles.tallActions}>
+            <button type="button" className={styles.tallAction} disabled={disabled} onClick={() => { if (!hold.justOpened()) void request(command); }} {...hold.handlers}
+              aria-label={holdToOpen ? `Hold to ${actionWord(command).toLowerCase()} ${device.name}` : `${actionWord(command)} ${device.name}`}>{actionWord(command)}</button>
+            {cameraButton(styles.tallCamera)}
+          </span>
         </div>
         {confirm}
       </>
@@ -272,8 +282,8 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   const charted = isReading && onOpenHistory && interactive;
   const door = device.kind === "event" && device.eventClass === "doorbell" && interactive && device.available;
   const Root = command || charted || door ? "button" : "div";
-  return (
-    <>
+  const corner = cameraButton(styles.swatch);
+  const tile = (
       <Root
         {...(command ? { type: "button" as const, onClick: () => { if (!hold.justOpened()) void request(command); }, disabled, "aria-label": `${device.name}${device.room ? ` in ${device.room}` : ""}, ${text}${holdToOpen ? `. Hold to ${holdWords.toLowerCase()}` : ""}` }
           : charted ? { type: "button" as const, onClick: onOpenHistory, "aria-label": `${device.name}, ${text}. Show history` }
@@ -302,6 +312,10 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
           </>
         )}
       </Root>
+  );
+  return (
+    <>
+      {corner ? <div className={styles.frame}>{tile}{corner}</div> : tile}
       {confirm}
     </>
   );

@@ -89,7 +89,7 @@
   gap: 4px;
   height: 30px;
   padding-inline: 10px;
-  border-radius: 999px;
+  border-radius: calc(var(--radius-tile-control) - 2px);
   font-size: var(--text-xs);
   font-weight: 500;
   white-space: nowrap;

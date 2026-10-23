@@ -40,6 +40,12 @@
  * sit together. Lit lights, a wet leak sensor, and camera video set their own.
  */
 /* --tile-opacity is the tile style's own unless the person sets one in Appearance, which the bootstrap puts on <html>. */
+/*
+ * Buttons inside a tile: words on a rounded rectangle whose corner is the tile's own less its padding, so the two
+ * curves run parallel; a button with only an icon is round. Every tile action follows this.
+ */
+:root { --radius-tile-control: var(--radius-control-sm); }
+
 :root { --tile-opacity-preset: .55; }
 :root[data-glass="clear"] { --tile-opacity-preset: .3; }
 :root[data-glass="solid"] { --tile-opacity-preset: 1; }

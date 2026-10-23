@@ -225,6 +225,8 @@ const tileSchema = z.object({
     stops: z.array(z.object({ key: z.string().min(1).max(200), name: z.string().trim().min(1).max(120) })).max(4).optional(),
     video: z.enum(["live", "snapshots"]).optional(),
     every: z.number().int().min(5).max(900).optional(),
+    camera: z.string().min(1).max(300).optional(),
+    cameraOpens: z.custom<"view" | `page:${string}`>(value => typeof value === "string" && /^(view|page:[\w-]{1,100})$/.test(value)).optional(),
     hold: z.custom<TileHold>(value => typeof value === "string" && /^(controls|history|none|scene:[\w-]{1,100}|device:[\w.:-]{1,300})$/.test(value)).optional(),
   }).optional(),
   at: z.object({ 4: cellSchema.optional(), 6: cellSchema.optional(), 8: cellSchema.optional() }).optional(),

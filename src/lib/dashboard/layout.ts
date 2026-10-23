@@ -60,6 +60,9 @@ export interface TileOptions {
   /** Cameras: stream live, or show a fresh still every `every` seconds and go live only when tapped. */
   video?: "live" | "snapshots";
   every?: number;
+  /** Locks, garage doors, and doors: the camera a small button on the tile shows, and whether it opens that camera or a page holding it. */
+  camera?: string;
+  cameraOpens?: "view" | `page:${string}`;
 }
 
 export interface TransitStop {

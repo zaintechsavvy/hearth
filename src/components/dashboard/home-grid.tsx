@@ -171,6 +171,7 @@ function GridTile({ tile, index, cells, editing, name, held, onCustomize, childr
       ref={setNodeRef}
       style={style}
       className={styles.cell}
+      data-link={tile.link ?? undefined}
       data-held={held || undefined}
       data-wobble={editing && !held ? (index % 2 ? "b" : "a") : undefined}
       {...(editing ? { ...attributes, ...listeners, "aria-roledescription": "Movable tile", "aria-label": `${name}. Press space to move, then the arrow keys.` } : {})}

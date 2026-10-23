@@ -19,9 +19,11 @@ interface DeviceTileProps {
   onOpenHistory?: () => void;
   /** What a press and hold does; null for nothing, undefined for the tile's own default. */
   onHold?: (() => void) | null;
+  /** A camera linked to a lock, garage door, or door, opened from a small button on the tile. */
+  camera?: { name: string; open: () => void };
 }
 
-export function DeviceTile({ device, onOpenControls, onOpenHistory, onHold, openMethod, ...props }: DeviceTileProps) {
+export function DeviceTile({ device, onOpenControls, onOpenHistory, onHold, openMethod, camera, ...props }: DeviceTileProps) {
   if (device.kind === "light" || device.kind === "switch" || device.kind === "fan") return <ToggleTile device={device} onOpenControls={onOpenControls} onHold={onHold} {...props} />;
-  return <StateTile device={device} onOpenHistory={onOpenHistory} onHold={onHold} openMethod={openMethod} {...props} />;
+  return <StateTile device={device} onOpenHistory={onOpenHistory} onHold={onHold} openMethod={openMethod} camera={camera} {...props} />;
 }

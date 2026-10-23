@@ -201,7 +201,7 @@
   height: 36px;
   padding-inline: 14px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-tile-control);
   background: oklch(50% 0 0 / .08);
   color: var(--foreground);
   font: inherit;
@@ -363,7 +363,7 @@
 .alarmAction {
   height: 36px;
   padding-inline: var(--space-4);
-  border-radius: 999px;
+  border-radius: var(--radius-tile-control);
   background: color-mix(in oklab, var(--danger) 12%, transparent);
   color: var(--danger);
   font-size: var(--text-sm);

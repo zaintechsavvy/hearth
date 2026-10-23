@@ -441,7 +441,7 @@
   gap: var(--space-1);
   min-height: 32px;
   padding-inline: var(--space-3) var(--space-1);
-  border-radius: 999px;
+  border-radius: calc(var(--radius-control) - 4px);
   background: var(--surface-muted);
   font-size: var(--text-sm);
 }
