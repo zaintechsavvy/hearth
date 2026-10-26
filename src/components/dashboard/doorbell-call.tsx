@@ -119,7 +119,7 @@ export function DoorbellCall() {
   return (
     <AnimatePresence>
       {ring && (
-        <motion.div key={ring.id} role="alertdialog" aria-modal="true" aria-labelledby="doorbell-title" aria-describedby="doorbell-where" className={styles.call}
+        <motion.div key={ring.id} role="alertdialog" aria-modal="true" aria-labelledby="doorbell-title" aria-describedby="doorbell-where" className={styles.call} data-camera={camera ? "" : undefined}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: motionTokens.duration.exit } }}
           transition={{ duration: reduce ? 0 : motionTokens.duration.standard }}>
           {!reduce && !looking && <span key={ring.last} className={styles.flash} aria-hidden="true" />}
