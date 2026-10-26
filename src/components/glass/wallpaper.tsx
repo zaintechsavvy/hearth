@@ -46,12 +46,8 @@ export function Wallpaper() {
         <span className={styles.veil} />
         <span className={styles.grain} />
       </div>
-      {wallpaper === "photo" && photo && (
-        <>
-          <span className={`${styles.edge} ${styles.edgeTop}`} aria-hidden="true" />
-          <span className={`${styles.edge} ${styles.edgeBottom}`} aria-hidden="true" />
-        </>
-      )}
+      <span className={`${styles.edge} ${styles.edgeTop}`} aria-hidden="true" />
+      <span className={`${styles.edge} ${styles.edgeBottom}`} aria-hidden="true" />
     </>
   );
 }

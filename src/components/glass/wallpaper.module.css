@@ -11,6 +11,16 @@
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
+}
+
+/*
+ * The colours sit on a layer inside the fixed backdrop, never on the backdrop itself: Safari 26 tints its status bar
+ * and toolbar from a fixed full-width element's own background, which turned them a flat band over photos.
+ */
+.wallpaper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   background:
     radial-gradient(140% 80% at 50% 118%, var(--floor), transparent 62%),
     linear-gradient(180deg, var(--base-top), var(--base-bottom));
@@ -75,7 +85,7 @@
 :root[data-theme="dark"][data-wallpaper="dusk"] .wallpaper { --m1: #26121a; --m2: #552235; --m3: #36204d; --m4: #4f3018; }
 :root[data-theme="dark"][data-wallpaper="meadow"] .wallpaper { --m1: #0d1f16; --m2: #1b4430; --m3: #373f17; --m4: #12303b; }
 
-:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="gradient"]) .wallpaper {
+:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="gradient"]) .wallpaper::before {
   background:
     radial-gradient(60% 60% at 15% 20%, var(--m2), transparent 70%),
     radial-gradient(55% 55% at 85% 25%, var(--m4), transparent 70%),
@@ -84,7 +94,7 @@
 }
 
 /* A smooth gradient: one still blend from the top colour down, as set by `applyGradientVars`. */
-:root[data-wallpaper="gradient"][data-gradient-style="smooth"] .wallpaper {
+:root[data-wallpaper="gradient"][data-gradient-style="smooth"] .wallpaper::before {
   background: var(--gradient, linear-gradient(180deg, var(--m1), var(--m2)));
 }
 
@@ -145,8 +155,9 @@
   background: oklch(0% 0 0 / var(--photo-dim, 0));
 }
 
-:root[data-wallpaper="photo"] .wallpaper {
-  background: oklch(50% 0 0);
+/* Under the photo, and in its place until it loads, the photo's own top and bottom colours rather than a flat grey. */
+:root[data-wallpaper="photo"] .wallpaper::before {
+  background: linear-gradient(180deg, var(--edge-top, oklch(50% 0 0)), var(--edge-bottom, oklch(50% 0 0)));
 }
 
 /*
@@ -165,10 +176,10 @@
 
 .edgeTop {
   top: 0;
-  background-color: var(--edge-top, transparent);
+  background-color: var(--edge-top, var(--page-top));
 }
 
 .edgeBottom {
   bottom: 0;
-  background-color: var(--edge-bottom, transparent);
+  background-color: var(--edge-bottom, var(--page-floor));
 }

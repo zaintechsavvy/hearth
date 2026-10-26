@@ -77,6 +77,24 @@
 :root[data-theme="dark"][data-wallpaper="photo"] { --tile-rest-shadow: inset 0 1px 0 oklch(100% 0 0 / .1), 0 10px 30px -14px oklch(0% 0 0 / .4); }
 
 /* The canvas colour behind the wallpaper, matched to its lower edge, which shows when a page overscrolls. */
+/* The colour at the top of each backdrop, for the strip Safari tints its status bar from. */
+:root { --page-top: oklch(97.6% .002 260); }
+:root[data-wallpaper="linen"] { --page-top: oklch(97.4% .007 80); }
+:root[data-wallpaper="slate"] { --page-top: oklch(96.8% .007 250); }
+:root[data-wallpaper="aurora"] { --page-top: #dfe7ff; }
+:root[data-wallpaper="dusk"] { --page-top: #ffe6d8; }
+:root[data-wallpaper="meadow"] { --page-top: #e3f3df; }
+:root[data-wallpaper="gradient"] { --page-top: var(--m1, oklch(97.6% .002 260)); }
+:root[data-wallpaper="photo"] { --page-top: oklch(24% .005 260); }
+:root[data-theme="dark"] { --page-top: oklch(18.5% .003 260); }
+:root[data-theme="dark"][data-wallpaper="linen"] { --page-top: oklch(19.5% .009 70); }
+:root[data-theme="dark"][data-wallpaper="slate"] { --page-top: oklch(19% .014 255); }
+:root[data-theme="dark"][data-wallpaper="aurora"] { --page-top: #0c1430; }
+:root[data-theme="dark"][data-wallpaper="dusk"] { --page-top: #26121a; }
+:root[data-theme="dark"][data-wallpaper="meadow"] { --page-top: #0d1f16; }
+:root[data-theme="dark"][data-wallpaper="gradient"] { --page-top: var(--m1, oklch(18.5% .003 260)); }
+:root[data-theme="dark"][data-wallpaper="photo"] { --page-top: oklch(12% .004 260); }
+
 :root { --page-floor: oklch(93.2% .003 260); }
 :root[data-wallpaper="linen"] { --page-floor: oklch(92.8% .011 75); }
 :root[data-wallpaper="slate"] { --page-floor: oklch(91.6% .012 252); }
