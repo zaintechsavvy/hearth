@@ -58,6 +58,8 @@ export interface EditableTile {
   color: TileColor | null;
   /** How this tile can be tuned: what holding it may do, and whether it has an icon, colour, and status line. */
   tuning?: { holds: { value: string; label: string }[]; styled: boolean };
+  /** For a camera: the devices its advanced view can show under the picture, and the ones suggested first. */
+  cameraControls?: { choices: { value: string; name: string }[]; suggested: string[] };
   /** For a lock, garage door, or door: the cameras its camera button can show, and the pages it can open instead. */
   cameraLink?: { cameras: { value: string; name: string }[]; pages: { value: string; name: string }[] };
 }
@@ -222,6 +224,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
                     onValueChange={value => onChange({ options: { ...tile.config.options, every: Number(value) } })}
                     options={[{ value: "10", label: "10 s" }, { value: "30", label: "30 s" }, { value: "60", label: "1 min" }, { value: "300", label: "5 min" }]} />
                 )}
+                {tile.cameraControls && <AdvancedCamera options={tile.config.options ?? {}} controls={tile.cameraControls} onChange={options => onChange({ options })} />}
               </section>
             )}
             {tile.kind === "timers" && <PresetsSection presets={tile.config.options?.presets ?? []} onChange={presets => onChange({ options: { ...tile.config.options, presets: presets.length ? presets : undefined } })} />}
@@ -306,6 +309,39 @@ function LinkSection({ tile, onChange, onRelink, rooms, onIdentity }: Pick<TileE
       )}
       {tile.identity && <IdentityFields key={tile.identity.id} identity={tile.identity} rooms={rooms} onIdentity={onIdentity} />}
     </section>
+  );
+}
+
+/** Advanced mode: a tap opens the camera large, with the chosen devices' controls under it. */
+function AdvancedCamera({ options, controls, onChange }: { options: TileOptions; controls: NonNullable<EditableTile["cameraControls"]>; onChange: (options: TileOptions) => void }) {
+  const chosen = options.controls ?? [];
+  const names = new Map(controls.choices.map(choice => [choice.value, choice.name]));
+  const left = controls.choices.filter(choice => !chosen.includes(choice.value));
+  const set = (next: string[]) => onChange({ ...options, controls: next.length ? next : undefined });
+  return (
+    <>
+      <Switch label="Advanced mode" checked={Boolean(options.advanced)}
+        onCheckedChange={on => onChange({ ...options, advanced: on || undefined, controls: on ? (options.controls ?? (controls.suggested.length ? controls.suggested : undefined)) : options.controls })} />
+      <p className={styles.note}>{options.advanced ? "Tap the camera to open it large, with these controls underneath." : "Tap the camera to open it large, with the lock, garage door, or lights near it underneath."}</p>
+      {options.advanced && (
+        <>
+          {chosen.length > 0 && (
+            <ul className={styles.controlChips} aria-label="Controls under the camera">
+              {chosen.map(id => (
+                <li key={id} className={styles.controlChip}>
+                  <span>{names.get(id) ?? "A device that is gone"}</span>
+                  <button type="button" onClick={() => set(chosen.filter(item => item !== id))} aria-label={`Take ${names.get(id) ?? "it"} off`}><X size={14} strokeWidth={1.75} aria-hidden="true" /></button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {left.length > 0 && chosen.length < 8 && (
+            <Select label="Add a control" placeholder="Choose a device" value="" onValueChange={id => id && set([...chosen, id])}
+              options={left.map(choice => ({ value: choice.value, label: choice.name }))} />
+          )}
+        </>
+      )}
+    </>
   );
 }
 

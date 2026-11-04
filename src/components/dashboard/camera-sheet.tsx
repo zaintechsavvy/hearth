@@ -5,12 +5,25 @@ import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
 import { glassSheetClass } from "@/components/glass/glass";
 import styles from "./camera-sheet.module.css";
 
-/** A camera opened from a tile linked to it, such as the garage door's: large, live, and closed with a tap outside. */
-export function CameraSheet({ name, onClose, children }: { name: string | null; onClose: () => void; children: ReactNode }) {
+interface CameraSheetProps {
+  name: string | null;
+  onClose: () => void;
+  children: ReactNode;
+  /** Advanced mode: the controls of the things near the camera, as tiles in a row under the picture. */
+  controls?: ReactNode[];
+}
+
+/** A camera opened large over the dashboard, live, with the controls near it underneath when it has any. */
+export function CameraSheet({ name, onClose, children, controls = [] }: CameraSheetProps) {
   return (
     <Dialog open={name !== null} onOpenChange={open => !open && onClose()}>
-      <DialogContent className={`${glassSheetClass} ${styles.sheet}`} title={name ?? ""}>
+      <DialogContent className={`${glassSheetClass} ${styles.sheet}`} data-stage={controls.length > 0 || undefined} title={name ?? ""}>
         <div className={styles.view}>{children}</div>
+        {controls.length > 0 && (
+          <ul className={styles.controls} aria-label="Nearby">
+            {controls.map((control, index) => <li key={index} className={styles.control}>{control}</li>)}
+          </ul>
+        )}
       </DialogContent>
     </Dialog>
   );

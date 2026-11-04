@@ -3,7 +3,7 @@
 import { Clapperboard, House, LayoutGrid, Mic, Plus, QrCode, Sparkles, Sun, Video } from "lucide-react";
 import { listenToHearth } from "@/components/assistant/assistant-dock";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
@@ -83,6 +83,8 @@ const SAVE_DELAY_MS = 500;
 const PAGE_KEY = "hearth-page";
 const SWIPE_PX = 70;
 const DEFAULT_SNAPSHOT_SECONDS = 30;
+/** What a camera's advanced view can put under the picture: things you work while looking. */
+const CONTROL_KINDS = new Set<Device["kind"]>(["lock", "cover", "light", "switch", "fan", "alarm"]);
 const ALL_ROOMS = "all";
 const LEVEL_SIZES = new Set(["1x2", "2x2"]);
 const subscribeNever = () => () => {};
@@ -374,9 +376,38 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     ...home.devices.filter(device => device.kind === "scene").map(device => ({ value: `device:${device.id}`, name: device.name })),
   ], home.devices.filter(device => device.kind === "camera" && device.streamable).map(device => ({ value: device.id, name: device.name })), cameraChoices,
   home.pages.map(item => ({ value: item.id, name: item.name }))) : null;
+  if (editable && customizingTile?.kind === "camera" && customizingTile.link) {
+    const cameraId = customizingTile.link;
+    const cameraRoom = devices.get(cameraId)?.room ?? null;
+    const choices = home.devices.filter(device => CONTROL_KINDS.has(device.kind) && !device.auxiliary);
+    const linkedHere = home.pages.flatMap(item => item.layout).flatMap(entry => "link" in entry && entry.options?.camera === cameraId && entry.link ? [entry.link] : []);
+    // What you reach for while looking at a door: its lock and the garage, then the lights by it and outside.
+    const ways = choices.filter(device => device.kind === "lock" || device.kind === "cover").sort((a, b) => Number(b.room === cameraRoom) - Number(a.room === cameraRoom));
+    const lights = choices.filter(device => device.kind === "light" && (device.room === cameraRoom || /outside|outdoor|porch|garden|yard/i.test(device.room ?? "")));
+    editable.cameraControls = {
+      choices: choices.map(device => ({ value: device.id, name: [device.name, device.room].filter(Boolean).join(" · ") })),
+      suggested: [...new Set([...linkedHere, ...ways.map(device => device.id), ...lights.map(device => device.id)])].slice(0, 4),
+    };
+  }
   const customizingLink = customizingTile ? resolve(customizingTile) : null;
   const customizingScene = customizingLink?.type === "scene" ? customizingLink.scene : null;
 
+  /** Advanced mode: a tap on the camera opens it large, with its controls, instead of what the tile does itself. */
+  const staged = (tile: TileConfig, node: ReactNode) => !tile.options?.advanced || editing ? node : (
+    <div className={styles.staged} onClickCapture={event => {
+      if ((event.target as Element).closest("a, [class*='__tools']")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (tile.link) setViewing(tile.link);
+    }}>{node}</div>
+  );
+  const controlsFor = (cameraId: string) => {
+    const tile = home.pages.flatMap(item => item.layout).find((entry): entry is TileConfig => "link" in entry && entry.link === cameraId && Boolean(entry.options?.advanced));
+    return (tile?.options?.controls ?? []).flatMap(id => {
+      const device = devices.get(id);
+      return device ? [renderTile({ id: `stage:${id}`, kind: device.kind, link: id, size: "2x1" })] : [];
+    });
+  };
   const renderTile = (tile: TileConfig, preview = false) => {
     const interactive = !editing && !preview;
     switch (tile.kind) {
@@ -423,9 +454,9 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     if (linked.type === "camera") {
       if (preview) return <CameraPreview name={linked.camera.name} />;
       const live = <CameraTile camera={linked.camera} fill />;
-      return tile.options?.video === "snapshots"
+      return staged(tile, tile.options?.video === "snapshots"
         ? <SnapshotCamera name={linked.camera.name} every={tile.options.every ?? DEFAULT_SNAPSHOT_SECONDS} still={frame => `/api/cameras/${linked.camera.id}/snapshot?frame=${frame}`} live={live} />
-        : live;
+        : live);
     }
     const source = linked.device;
     // A tile can carry its own name and leave the room off; commands still go to the device itself.
@@ -443,9 +474,9 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     if (device.kind === "camera") {
       if (preview) return <CameraPreview name={device.name} />;
       const live = <IntegrationCameraTile camera={device} />;
-      return tile.options?.video === "snapshots"
+      return staged(tile, tile.options?.video === "snapshots"
         ? <SnapshotCamera name={device.name} every={tile.options.every ?? DEFAULT_SNAPSHOT_SECONDS} still={frame => `/api/devices/${encodeURIComponent(device.id)}/camera?mode=snapshot&frame=${frame}`} live={live} />
-        : live;
+        : live);
     }
     if (device.kind === "media_player") return <MediaTile tileId={tile.id} device={device} layout={tile.size === "4x2" ? "player" : "bar"} interactive={interactive} onCommand={command => send(device, command)} />;
     if (device.kind === "vacuum") return <VacuumTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} />;
@@ -482,7 +513,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
           change([...tiles, ...cameraLayoutTiles(layout, fresh.length ? fresh : cameras, below)]);
         }}
       />
-      <CameraSheet name={viewing ? cameraChoices.find(choice => choice.value === viewing)?.name ?? "Camera" : null} onClose={() => setViewing(null)}>
+      <CameraSheet name={viewing ? cameraChoices.find(choice => choice.value === viewing)?.name ?? "Camera" : null} onClose={() => setViewing(null)} controls={viewing ? controlsFor(viewing) : []}>
         {viewing && (cameras.get(viewing)
           ? <CameraTile camera={cameras.get(viewing)!} fill />
           : (() => { const device = devices.get(viewing); return device?.kind === "camera" ? <IntegrationCameraTile camera={device} /> : null; })())}

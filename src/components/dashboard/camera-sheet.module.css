@@ -3,9 +3,37 @@
   max-width: none;
 }
 
+/* Advanced mode: as large as the screen allows while still floating, with room for a row of controls under it. */
+.sheet.sheet[data-stage] {
+  width: min(96vw, 1440px);
+}
+
 .view {
   aspect-ratio: 16 / 9;
   max-height: 72vh;
   overflow: hidden;
   border-radius: var(--radius-panel);
+}
+
+.sheet[data-stage] .view {
+  max-height: min(66vh, calc(96vw * 9 / 16));
+  margin-inline: auto;
+}
+
+.controls {
+  display: flex;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+/* Each control is the device's own tile at a card's size, so a lock still asks to be held and a light still dims. */
+.control {
+  flex: none;
+  width: 220px;
+  height: 92px;
+  container: cell / size;
 }

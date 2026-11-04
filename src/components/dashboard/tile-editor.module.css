@@ -232,3 +232,32 @@
   justify-self: start;
   width: fit-content;
 }
+
+.controlChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.controlChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 32px;
+  padding-inline: var(--space-3) var(--space-1);
+  border-radius: var(--radius-control-sm);
+  background: oklch(50% 0 0 / .08);
+  font-size: var(--text-sm);
+}
+
+.controlChip button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+}

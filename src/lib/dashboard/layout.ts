@@ -63,6 +63,9 @@ export interface TileOptions {
   /** Locks, garage doors, and doors: the camera a small button on the tile shows, and whether it opens that camera or a page holding it. */
   camera?: string;
   cameraOpens?: "view" | `page:${string}`;
+  /** Cameras: tapped, open large with these devices' controls under the picture. */
+  advanced?: boolean;
+  controls?: string[];
 }
 
 export interface TransitStop {

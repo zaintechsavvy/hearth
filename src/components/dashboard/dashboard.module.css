@@ -241,3 +241,9 @@
   padding-inline: 0;
   justify-content: center;
 }
+
+/* Advanced mode wraps a camera to catch its taps; it takes no box of its own, so the tile is laid out as before. */
+.staged {
+  display: contents;
+  cursor: zoom-in;
+}
