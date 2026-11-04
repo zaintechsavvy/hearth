@@ -78,7 +78,7 @@
 
 /* The canvas colour behind the wallpaper, matched to its lower edge, which shows when a page overscrolls. */
 /* The colour at the top of each backdrop, for the strip Safari tints its status bar from. */
-:root { --page-top: oklch(97.6% .002 260); }
+:root { --page-top: oklch(99.6% .001 260); }
 :root[data-wallpaper="linen"] { --page-top: oklch(97.4% .007 80); }
 :root[data-wallpaper="slate"] { --page-top: oklch(96.8% .007 250); }
 :root[data-wallpaper="aurora"] { --page-top: #dfe7ff; }
@@ -95,7 +95,7 @@
 :root[data-theme="dark"][data-wallpaper="gradient"] { --page-top: var(--m1, oklch(18.5% .003 260)); }
 :root[data-theme="dark"][data-wallpaper="photo"] { --page-top: oklch(12% .004 260); }
 
-:root { --page-floor: oklch(93.2% .003 260); }
+:root { --page-floor: oklch(97.4% .002 260); }
 :root[data-wallpaper="linen"] { --page-floor: oklch(92.8% .011 75); }
 :root[data-wallpaper="slate"] { --page-floor: oklch(91.6% .012 252); }
 :root[data-wallpaper="aurora"] { --page-floor: #c3d0fb; }

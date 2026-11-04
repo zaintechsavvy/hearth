@@ -1,0 +1,21 @@
+name: Sweep homes
+
+# A hosted Hearth has no monitor running, so this looks at every home every few minutes: Activity and alerts keep up
+# with no screen open. Needs the CRON_SECRET repository secret, the same as the one set on Vercel.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Sweep
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          HEARTH_URL: ${{ vars.HEARTH_URL || 'https://hearth-kappa-six.vercel.app' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "CRON_SECRET is not set; skipping."; exit 0; fi
+          curl --fail --silent --show-error --max-time 90 -H "Authorization: Bearer $CRON_SECRET" "$HEARTH_URL/api/cron/sweep"

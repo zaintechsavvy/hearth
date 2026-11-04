@@ -9,7 +9,7 @@ export default async function AuthLayout({ children }: LayoutProps<"/">) {
   if (await getUser()) redirect("/dashboard");
   return (
     <div className={styles.page}>
-      <Wallpaper />
+      <Wallpaper plain />
       <header className={styles.header} data-on-wall><Link href="/" aria-label="Hearth"><Logo /></Link></header>
       <main className={styles.main}>{children}</main>
     </div>

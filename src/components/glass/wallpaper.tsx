@@ -22,14 +22,18 @@ const MeshBackdrop = dynamic(() => import("./mesh-backdrop"), { ssr: false });
  * gradients draw a slow Paper Shaders gradient over a CSS blend of the same colours, which is all that shows before
  * the shader loads or with reduced motion turned on. Photos come from the person's uploads. The preset comes from `data-wallpaper` on `<html>`.
  */
-export function Wallpaper() {
-  const [wallpaper] = useHtmlPreference<WallpaperName>(WALLPAPER_KEY, "wallpaper", DEFAULT_WALLPAPER);
+export function Wallpaper({ plain = false }: { plain?: boolean }) {
+  const [stored] = useHtmlPreference<WallpaperName>(WALLPAPER_KEY, "wallpaper", DEFAULT_WALLPAPER);
   const [gradient] = useStoredJson<CustomGradient>(GRADIENT_KEY, DEFAULT_GRADIENT);
-  const [photo] = useStoredJson<PhotoBackground | null>(PHOTO_KEY, null);
+  const [storedPhoto] = useStoredJson<PhotoBackground | null>(PHOTO_KEY, null);
+  // Signed-out pages, the landing and sign-in, wear the plain backdrop: a photo of someone's own cannot load there.
+  const wallpaper = plain ? DEFAULT_WALLPAPER : stored;
+  const photo = plain ? null : storedPhoto;
   const theme = useResolvedTheme();
   const still = usePrefersReducedMotion();
   usePhotoInk(wallpaper === "photo" ? photo : null, theme);
   useEffect(() => {
+    document.documentElement.dataset.wallpaper = wallpaper;
     if (wallpaper === "gradient") applyGradientVars(gradient, theme);
     else clearGradientState();
     if (wallpaper === "photo" && photo) applyPhotoVars(photo);

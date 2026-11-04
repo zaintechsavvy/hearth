@@ -1,4 +1,4 @@
-import type { SwitchableKind } from "@/lib/devices/types";
+import type { Device, SwitchableKind } from "@/lib/devices/types";
 import { boolean, customType, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { DashboardPage, SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
@@ -284,3 +284,10 @@ export const invite = pgTable("invite", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: createdAt(),
 }, t => [index("invite_owner_idx").on(t.ownerId)]);
+
+/** Each home's devices as the scheduled sweep last saw them, so a hosted Hearth notices changes with no screen open. */
+export const homeWatch = pgTable("home_watch", {
+  userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
+  devices: jsonb("devices").$type<Device[]>().notNull(),
+  checkedAt: timestamp("checked_at").notNull(),
+});

@@ -7,7 +7,7 @@ export default async function HomePage() {
   if (await getUser()) redirect("/dashboard");
   return (
     <>
-      <Wallpaper />
+      <Wallpaper plain />
       <Landing />
     </>
   );

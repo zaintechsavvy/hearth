@@ -1,8 +1,8 @@
 .wallpaper {
-  --base-top: oklch(97.6% .002 260);
-  --base-bottom: oklch(93.2% .003 260);
+  --base-top: oklch(99.6% .001 260);
+  --base-bottom: oklch(97.4% .002 260);
   --light: oklch(100% 0 0 / .95);
-  --floor: oklch(86% .004 260 / .55);
+  --floor: oklch(92% .003 260 / .35);
   position: fixed;
   inset: 0 0 auto;
   /* The largest viewport, so the backdrop still reaches the bottom while a phone's toolbars collapse. */
