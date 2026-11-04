@@ -247,3 +247,40 @@
   display: contents;
   cursor: zoom-in;
 }
+
+/* Select mode's actions, floating at the foot of the screen over the tiles. */
+.selectBar {
+  position: fixed;
+  left: 50%;
+  bottom: max(var(--space-6), calc(env(safe-area-inset-bottom) + var(--space-4)));
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: calc(100vw - var(--space-6));
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius-panel);
+  transform: translateX(-50%);
+  animation: select-in var(--duration-standard) var(--ease-enter) both;
+}
+
+.selectCount {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes select-in { from { opacity: 0; transform: translate(-50%, 10px); } }
+
+@media (max-width: 560px) {
+  .selectBar { left: var(--space-3); right: var(--space-3); transform: none; animation: none; }
+  .selectBar > button:first-of-type { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selectBar { animation: none; }
+}

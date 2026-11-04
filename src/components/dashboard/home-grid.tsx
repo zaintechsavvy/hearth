@@ -4,8 +4,8 @@ import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor, useDraggable, useSensor, useSensors,
   type DragMoveEvent, type DragStartEvent, type KeyboardCoordinateGetter,
 } from "@dnd-kit/core";
-import { SlidersHorizontal } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Check, SlidersHorizontal } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { glassClass } from "@/components/glass/glass";
 import { haptic } from "@/lib/haptics";
 import { spanOf, type TileConfig } from "@/lib/dashboard/layout";
@@ -21,6 +21,9 @@ interface HomeGridProps {
   nameOf: (tile: TileConfig) => string;
   onTilesChange: (tiles: TileConfig[]) => void;
   onCustomize: (id: string) => void;
+  /** Select mode: a tap picks a tile instead of customizing it, and nothing can be dragged. */
+  selected?: ReadonlySet<string> | null;
+  onToggle?: (id: string) => void;
 }
 
 interface Metrics {
@@ -62,7 +65,7 @@ function useFitHeight() {
   return frame;
 }
 
-export function HomeGrid({ tiles, editing, placed = true, renderTile, nameOf, onTilesChange, onCustomize }: HomeGridProps) {
+export function HomeGrid({ tiles, editing, placed = true, renderTile, nameOf, onTilesChange, onCustomize, selected = null, onToggle }: HomeGridProps) {
   const frame = useFitHeight();
   const grid = useRef<HTMLDivElement>(null);
   const metrics = useRef<Metrics | null>(null);
@@ -131,7 +134,8 @@ export function HomeGrid({ tiles, editing, placed = true, renderTile, nameOf, on
         <div ref={grid} className={styles.grid} data-editing={editing || undefined}>
           {tiles.map((tile, index) => (
             <GridTile key={tile.id} tile={tile} index={index} cells={GRID_COLUMNS.map(columns => [columns, cellsAt(columns).get(tile.id)!])}
-              editing={editing} name={nameOf(tile)} held={tile.id === active} onCustomize={() => onCustomize(tile.id)}>
+              editing={editing} name={nameOf(tile)} held={tile.id === active} onCustomize={() => onCustomize(tile.id)}
+              picked={selected ? selected.has(tile.id) : null} onToggle={() => onToggle?.(tile.id)}>
               {renderTile(tile)}
             </GridTile>
           ))}
@@ -154,11 +158,15 @@ interface GridTileProps {
   /** Being dragged: its place in the grid shows where it will land, at its own size. */
   held: boolean;
   onCustomize: () => void;
+  /** In select mode, whether this tile is picked; null outside it. */
+  picked: boolean | null;
+  onToggle: () => void;
   children: ReactNode;
 }
 
-function GridTile({ tile, index, cells, editing, name, held, onCustomize, children }: GridTileProps) {
-  const { attributes, listeners, setNodeRef } = useDraggable({ id: tile.id, disabled: !editing });
+function GridTile({ tile, index, cells, editing, name, held, onCustomize, picked, onToggle, children }: GridTileProps) {
+  const selecting = picked !== null;
+  const { attributes, listeners, setNodeRef } = useDraggable({ id: tile.id, disabled: !editing || selecting });
   const { columns, rows } = spanOf(tile.size);
   const style = { "--w": columns, "--h": rows } as CSSProperties & Record<string, number>;
   for (const [count, cell] of cells) {
@@ -173,11 +181,16 @@ function GridTile({ tile, index, cells, editing, name, held, onCustomize, childr
       className={styles.cell}
       data-link={tile.link ?? undefined}
       data-held={held || undefined}
-      data-wobble={editing && !held ? (index % 2 ? "b" : "a") : undefined}
-      {...(editing ? { ...attributes, ...listeners, "aria-roledescription": "Movable tile", "aria-label": `${name}. Press space to move, then the arrow keys.` } : {})}
+      data-wobble={editing && !held && !selecting ? (index % 2 ? "b" : "a") : undefined}
+      data-picked={picked || undefined}
+      {...(selecting ? { role: "checkbox", "aria-checked": picked, "aria-label": name, tabIndex: 0, onClick: onToggle, onKeyDown: (event: KeyboardEvent) => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); onToggle(); } } }
+        : editing ? { ...attributes, ...listeners, "aria-roledescription": "Movable tile", "aria-label": `${name}. Press space to move, then the arrow keys.` } : {})}
     >
       <div className={styles.content} inert={editing || undefined}>{children}</div>
-      {editing && !held && (
+      {selecting && (
+        <span className={`${glassClass("pill")} ${styles.check}`} aria-hidden="true">{picked && <Check size={16} strokeWidth={2.25} />}</span>
+      )}
+      {editing && !held && !selecting && (
         <div className={styles.controls}>
           <button type="button" className={`${glassClass("pill")} ${styles.control}`} onClick={onCustomize} aria-label={`Customize ${name}`}>
             <SlidersHorizontal size={16} strokeWidth={1.75} aria-hidden="true" />

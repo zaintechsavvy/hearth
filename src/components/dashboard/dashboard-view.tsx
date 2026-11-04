@@ -1,6 +1,6 @@
 "use client";
 
-import { Clapperboard, House, LayoutGrid, Mic, Plus, QrCode, Sparkles, Sun, Video } from "lucide-react";
+import { Clapperboard, ClipboardPaste, Copy, House, LayoutGrid, ListChecks, Mic, Plus, QrCode, Sparkles, Sun, Trash2, Video } from "lucide-react";
 import { listenToHearth } from "@/components/assistant/assistant-dock";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
@@ -20,7 +20,7 @@ import type { HomeCamera } from "@/lib/home";
 import { INTEGRATION_LABELS } from "@/lib/integrations/types";
 import { KIND_INFO } from "@/lib/dashboard/catalog";
 import {
-  cameraTileId, createTile, defaultSize, HOME_PAGE_ID, isStyled, isWidget, removeTile, resolveLayout, SIZE_OPTIONS, spanOf, updateTile,
+  cameraTileId, createTile, defaultSize, HOME_PAGE_ID, isStyled, isWidget, newTileId, removeTile, resolveLayout, SIZE_OPTIONS, spanOf, updateTile,
   type TileConfig, type TileKind, type TileSource,
 } from "@/lib/dashboard/layout";
 import { cameraLayoutTiles } from "@/lib/dashboard/camera-pages";
@@ -83,6 +83,8 @@ const SAVE_DELAY_MS = 500;
 const PAGE_KEY = "hearth-page";
 const SWIPE_PX = 70;
 const DEFAULT_SNAPSHOT_SECONDS = 30;
+const CLIPBOARD_KEY = "hearth-tile-clipboard";
+const NO_TILES: TileConfig[] = [];
 /** What a camera's advanced view can put under the picture: things you work while looking. */
 const CONTROL_KINDS = new Set<Device["kind"]>(["lock", "cover", "light", "switch", "fan", "alarm"]);
 const ALL_ROOMS = "all";
@@ -143,6 +145,9 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     ...(home?.cameras ?? []).map(camera => ({ value: cameraTileId(camera.id), name: camera.name })),
   ], [home?.devices, home?.cameras]);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [selected, setSelected] = useState<ReadonlySet<string> | null>(null);
+  /** Tiles copied in select mode, kept on this device so they can be pasted on any page. */
+  const [clipboard, setClipboard] = useStoredJson<TileConfig[]>(CLIPBOARD_KEY, NO_TILES);
   const [focus, setFocus] = useState<string | null>(null);
   const scenes = useMemo(() => new Map((home?.scenes ?? []).map(scene => [sceneTileId(scene.id), scene])), [home?.scenes]);
   const sources = useMemo<TileSource[]>(() => home ? tileSources(home) : [], [home]);
@@ -231,6 +236,10 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     setStoredPage(id);
   };
   const pageIndex = home.pages.findIndex(item => item.id === pageId);
+  /** Copied tiles land after the page's own, filling the first gaps, each as a new tile with the same settings. */
+  const paste = () => {
+    change([...tiles, ...clipboard.map(tile => ({ ...tile, id: newTileId(), at: undefined }))]);
+  };
   /** A linked camera's button: the camera itself in a sheet, or the page chosen for it, scrolled to that camera. */
   const openCamera = (cameraId: string, opens: string | undefined) => {
     const target = opens?.startsWith("page:") ? home.pages.find(item => item.id === opens.slice(5)) : undefined;
@@ -243,6 +252,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const finishEditing = async () => {
     clearTimeout(saveTimer.current);
     setEditing(false);
+    setSelected(null);
     if (draft) await saveLayout(draft, pageId);
     await refresh();
     setDraft(null);
@@ -600,7 +610,15 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         <div className={styles.actions} data-wall-hide={!editing || undefined}>
           {editing ? (
             <>
-              <Button variant="ghost" onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" />Add tile</Button>
+              {selected ? (
+                <Button variant="ghost" onClick={() => setSelected(null)}>Cancel</Button>
+              ) : (
+                <>
+                  {clipboard.length > 0 && <Button variant="ghost" onClick={paste}><ClipboardPaste size={16} strokeWidth={1.75} aria-hidden="true" />Paste {clipboard.length}</Button>}
+                  {tiles.length > 0 && <Button variant="ghost" onClick={() => setSelected(new Set())}><ListChecks size={16} strokeWidth={1.75} aria-hidden="true" />Select</Button>}
+                  <Button variant="ghost" onClick={() => setDialog({ mode: "add" })}><Plus size={16} strokeWidth={1.75} aria-hidden="true" />Add tile</Button>
+                </>
+              )}
               <Button onClick={finishEditing}>Done</Button>
             </>
           ) : (
@@ -637,7 +655,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
 
       <div ref={gridWrap} className={styles.swipe} {...swipeHandlers}>
       {tiles.length > 0 ? (
-        <HomeGrid tiles={shownTiles} editing={editing} placed={!filtering} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(filtering ? mergeFiltered(tiles, next) : next)} onCustomize={setCustomizing} />
+        <HomeGrid tiles={shownTiles} editing={editing} placed={!filtering} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(filtering ? mergeFiltered(tiles, next) : next)} onCustomize={setCustomizing}
+          selected={selected} onToggle={id => setSelected(current => { const next = new Set(current); if (!next.delete(id)) next.add(id); return next; })} />
       ) : (
         <Glass className={styles.placeholder}>
           <EmptyState
@@ -657,6 +676,20 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       </div>
 
       {dialogs}
+      {selected && (
+        <div className={`${glassClass("pill")} ${styles.selectBar}`} role="toolbar" aria-label="Selected tiles">
+          <span className={styles.selectCount}>{selected.size ? `${selected.size} selected` : "Tap tiles to select them"}</span>
+          <Button variant="ghost" onClick={() => setSelected(selected.size === tiles.length ? new Set() : new Set(tiles.map(tile => tile.id)))}>{selected.size === tiles.length ? "Select none" : "Select all"}</Button>
+          <Button variant="secondary" disabled={!selected.size} onClick={() => {
+            setClipboard(tiles.filter(tile => selected.has(tile.id)));
+            setSelected(null);
+          }}><Copy size={16} strokeWidth={1.75} aria-hidden="true" />Copy</Button>
+          <Button variant="danger" disabled={!selected.size} onClick={() => {
+            change(tiles.filter(tile => !selected.has(tile.id)));
+            setSelected(null);
+          }}><Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />Delete</Button>
+        </div>
+      )}
     </div>
   );
 }

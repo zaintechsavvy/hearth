@@ -22,6 +22,7 @@
 
 .controls {
   display: flex;
+  justify-content: safe center;
   gap: var(--space-3);
   margin: var(--space-4) 0 0;
   padding: 0;

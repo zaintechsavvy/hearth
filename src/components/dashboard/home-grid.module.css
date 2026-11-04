@@ -118,3 +118,40 @@
 @media (prefers-reduced-motion: reduce) {
   .cell[data-wobble] .content { animation: none; }
 }
+
+/* Select mode: each tile carries a round check in its corner, and a picked one is ringed. */
+.grid[data-editing] .cell[role="checkbox"] {
+  cursor: pointer;
+}
+
+.check {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--background);
+}
+
+.cell[data-picked] .check {
+  background: var(--foreground);
+}
+
+.cell[data-picked]::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border: 2px solid var(--foreground);
+  border-radius: calc(var(--radius-panel, 28px) + 3px);
+  pointer-events: none;
+}
+
+.cell[role="checkbox"]:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 4px;
+  border-radius: var(--radius-panel, 28px);
+}
