@@ -4,6 +4,7 @@ import { Download, Tablet } from "lucide-react";
 import { useSyncExternalStore, type CSSProperties } from "react";
 import { Button } from "@/components/arc/button/button";
 import { Input } from "@/components/arc/input/input";
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { Slider } from "@/components/arc/slider/slider";
 import { Switch } from "@/components/arc/switch/switch";
 import { useHome } from "@/components/dashboard/use-home";
@@ -11,7 +12,7 @@ import { useMinute } from "@/components/dashboard/widgets/use-minute";
 import { Glass } from "@/components/glass/glass";
 import { installPrompt } from "@/components/shell/service-worker";
 import { useStoredJson } from "@/components/shell/use-stored-json";
-import { CLOCK_COLORS, DEFAULT_WALL, WALL_KEY, type ClockColor, type WallSettings } from "@/lib/wall";
+import { CLOCK_COLORS, DEFAULT_WALL, FACE_COLORS, WALL_KEY, type ClockColor, type WallSettings } from "@/lib/wall";
 import styles from "./connections.module.css";
 import { PhotoFrameSettings } from "./photo-frame-settings";
 import { SettingsSection } from "./settings-section";
@@ -61,14 +62,15 @@ export function WallSection() {
             <span className={styles.rowTitle}>Resting screen</span>
             <span className={styles.rowMeta}>The clock this screen rests on.</span>
           </div>
-          <div className={styles.clockPreview} style={{ color: CLOCK_COLORS[settings.clockColor], "--clock-brightness": settings.clockBrightness } as CSSProperties} aria-hidden="true">
+          <SegmentedControl label="Clock style" value={settings.clockFace} onValueChange={value => set({ clockFace: value as WallSettings["clockFace"] })} options={[{ value: "digital", label: "Digital" }, { value: "analog", label: "Analog" }]} />
+          <div className={styles.clockPreview} style={{ color: settings.clockFace === "analog" ? "oklch(18% 0.04 255)" : CLOCK_COLORS[settings.clockColor], background: settings.clockFace === "analog" ? FACE_COLORS[settings.clockColor] : undefined, "--clock-brightness": settings.clockBrightness } as CSSProperties} aria-hidden="true">
             <span className={styles.clockPreviewDate}>{now ? new Date(now).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : "\u00a0"}</span>
             <span className={styles.clockPreviewTime}>{now ? new Date(now).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "\u00a0"}</span>
           </div>
           <div role="radiogroup" aria-label="Clock colour" className={styles.clockColors}>
             {(Object.keys(CLOCK_COLORS) as ClockColor[]).map(color => (
               <button key={color} type="button" role="radio" aria-checked={settings.clockColor === color} aria-label={color[0].toUpperCase() + color.slice(1)} title={color[0].toUpperCase() + color.slice(1)}
-                className={styles.clockColor} style={{ background: CLOCK_COLORS[color] }} onClick={() => set({ clockColor: color })} />
+                className={styles.clockColor} style={{ background: settings.clockFace === "analog" ? FACE_COLORS[color] : CLOCK_COLORS[color] }} onClick={() => set({ clockColor: color })} />
             ))}
           </div>
           <Slider label="Brightness" value={Math.round(settings.clockBrightness * 100)} min={15} max={100} format={value => `${value}%`} onValueChange={value => set({ clockBrightness: value / 100 })} />

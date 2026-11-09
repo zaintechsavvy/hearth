@@ -18,6 +18,7 @@ import { StateNotices } from "@/components/shell/state-notice";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { isDark } from "@/lib/left-open";
 import { isWidget, type TileConfig } from "@/lib/dashboard/layout";
+import { AnalogFace } from "./analog-face";
 import { CLOCK_COLORS, DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { itemsOf } from "@/lib/widgets/items";
@@ -229,6 +230,15 @@ function Glance({ now, night, settings, leftOpen }: { now: number; night: boolea
     time: parts.filter(part => part.type !== "dayPeriod").map(part => part.value).join("").trim(),
     period: parts.find(part => part.type === "dayPeriod")?.value ?? null,
   };
+  if (settings.clockFace === "analog" && !photos) {
+    return (
+      <>
+        <span style={offset} className={styles.analog}><AnalogFace night={night} settings={settings} note={notes[0]?.text ?? null} /></span>
+        <span className={styles.hint}>Touch to wake</span>
+      </>
+    );
+  }
+
   return (
     <>
       {photos && <PhotoFrame source={settings.frameSource} seconds={settings.frameSeconds} onEmpty={setFrameEmpty} />}

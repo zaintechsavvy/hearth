@@ -1,0 +1,84 @@
+.face {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--face);
+  color: oklch(18% 0.04 255);
+  opacity: var(--saver-dim, 1);
+  transition: background-color 1.2s var(--ease-standard);
+}
+
+.dial {
+  width: min(100vw, 142vh);
+  height: auto;
+  max-height: 100vh;
+  transform: translate(var(--drift-x, 0), var(--drift-y, 0));
+  transition: transform 4s var(--ease-standard);
+}
+
+.numeral {
+  fill: currentColor;
+  font-family: var(--font-display);
+  font-size: 500px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.hand,
+.neck,
+.second {
+  stroke: oklch(99% 0 0);
+}
+
+.pin {
+  fill: oklch(99% 0 0);
+}
+
+.corner {
+  position: absolute;
+  left: clamp(28px, 5vw, 72px);
+  bottom: clamp(24px, 5vh, 56px);
+  display: grid;
+  gap: var(--space-1);
+  color: color-mix(in oklab, currentColor 70%, var(--face));
+  font-size: clamp(var(--text-xl), 3vw, 44px);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.note {
+  font-size: clamp(var(--text-sm), 1.4vw, 20px);
+  letter-spacing: 0;
+}
+
+.face[data-night] {
+  color: oklch(62% 0.01 260 / .7);
+}
+
+.face[data-night] :is(.hand, .neck, .second) {
+  stroke: oklch(80% 0 0 / .8);
+}
+
+.face[data-night] .pin {
+  fill: oklch(80% 0 0 / .8);
+}
+
+.face[data-red] {
+  color: oklch(40% 0.12 25);
+}
+
+.face[data-red] :is(.hand, .neck, .second) {
+  stroke: oklch(58% 0.15 25);
+}
+
+.face[data-red] .pin {
+  fill: oklch(58% 0.15 25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .face,
+  .dial {
+    transition: none;
+  }
+}

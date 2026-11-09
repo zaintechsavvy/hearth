@@ -15,6 +15,8 @@ export interface WallSettings {
   /** The resting clock's colour and how bright it shows, 0.15 to 1. */
   clockColor: ClockColor;
   clockBrightness: number;
+  /** Rest on large digits, or on an analog face filled with the clock colour. */
+  clockFace: "digital" | "analog";
   /** Turn the resting clock a dim red in the night window, instead of the chosen colour. */
   nightRed: boolean;
   /** After dark, point out a door, window, or garage door open for longer than `openMinutes`. */
@@ -44,11 +46,22 @@ export const CLOCK_COLORS = {
 } as const;
 export type ClockColor = keyof typeof CLOCK_COLORS;
 
+/** The analog face's fill for each clock colour: soft enough to sit on a wall all day, dark numerals on top. */
+export const FACE_COLORS: Record<ClockColor, string> = {
+  white: "oklch(93% 0.004 250)",
+  warm: "oklch(90% 0.045 75)",
+  amber: "oklch(85% 0.12 78)",
+  red: "oklch(80% 0.09 25)",
+  green: "oklch(86% 0.09 155)",
+  blue: "oklch(84% 0.09 225)",
+  violet: "oklch(83% 0.08 300)",
+};
+
 export const WALL_KEY = "hearth-wall";
 
 export const DEFAULT_WALL: WallSettings = {
   enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: true, showAssistant: true,
-  clockColor: "white", clockBrightness: 0.85, nightRed: true, openReminder: true, openMinutes: 15,
+  clockColor: "white", clockBrightness: 0.85, clockFace: "digital", nightRed: true, openReminder: true, openMinutes: 15,
   frame: false, frameSource: "uploads", frameSeconds: 20, frameAtNight: false, frameClock: "corner",
 };
 

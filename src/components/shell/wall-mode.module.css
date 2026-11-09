@@ -328,3 +328,7 @@
   background: var(--surface-muted);
   color: var(--foreground);
 }
+
+.analog {
+  display: contents;
+}
