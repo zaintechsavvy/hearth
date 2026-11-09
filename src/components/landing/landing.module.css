@@ -210,9 +210,9 @@
 
 .feature {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.75fr);
   align-items: center;
-  gap: clamp(32px, 6vw, 72px);
+  gap: clamp(32px, 5vw, 64px);
 }
 
 .flip .featureCopy { order: 2; }
@@ -232,7 +232,7 @@
 
 .featureShotSmall {
   justify-self: center;
-  width: min(100%, 420px);
+  width: min(100%, 460px);
 }
 
 .shot {
@@ -318,20 +318,21 @@
 
 .how {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-  align-items: center;
-  gap: clamp(32px, 6vw, 72px);
+  gap: var(--space-10);
   padding-top: clamp(80px, 12vw, 160px);
 }
 
 .howCopy {
   display: grid;
-  justify-items: start;
+  justify-items: center;
   gap: var(--space-4);
+  max-width: 680px;
+  margin-inline: auto;
+  text-align: center;
 }
 
 .howShot {
-  overflow: hidden;
+  padding: clamp(16px, 2.4vw, 28px);
   border: 1px solid var(--border);
   border-radius: var(--radius-panel);
   background: var(--surface);

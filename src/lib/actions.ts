@@ -9,7 +9,7 @@ import { StreamRelay, relayStreamName } from "@/lib/cameras/stream-relay";
 import { ASSISTANT_PROVIDER_IDS, ASSISTANT_PROVIDERS, matchModel, providerOfKey, type AssistantProvider } from "@/lib/assistant/providers";
 import { checkAssistantKey } from "@/lib/assistant/run";
 import { seal, unseal } from "@/lib/crypto";
-import { createTile, HOME_PAGE_ID, newTileId, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES, withoutOrphanTiles, type TileHold } from "@/lib/dashboard/layout";
+import { createTile, HOME_PAGE_ID, newTileId, suggestedTiles, type TileConfig, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES, withoutOrphanTiles, type TileHold } from "@/lib/dashboard/layout";
 import { tileSources } from "@/lib/dashboard/sources";
 import { db } from "@/lib/db";
 import { assistant, automation, calendar, camera, deviceOverride, integration, preference, reminder, scene } from "@/lib/db/schema";
@@ -88,18 +88,25 @@ async function placeDemoTiles(userId: string, integrationId: string) {
   const placed = new Set(home.layout.map(tile => tile.kind === undefined ? tile.id : tile.link));
   const sources = tileSources(home).filter(source => source.id.startsWith(`${integrationId}:`) && !placed.has(source.id) && !DEMO_LEFT_OUT.has(source.kind));
   const suggested = suggestedTiles(sources.filter(source => source.kind !== "camera")).map(tile => DEMO_SQUARE.has(tile.kind) ? { ...tile, size: "1x1" as const } : tile);
-  const fresh = [...suggested.filter(tile => DEMO_SQUARE.has(tile.kind)), ...suggested.filter(tile => !DEMO_SQUARE.has(tile.kind))];
-  const porchCamera = sources.find(source => source.kind === "camera");
-  if (!fresh.length) return;
+  if (!suggested.length) return;
   const empty = home.layout.length === 0;
-  const widgets = empty ? [
-    createTile("weather", null, false, { options: { place: DEMO_PLACE } }),
-    createTile("energy"),
+  const take = (native: string, size: TileConfig["size"]) => {
+    const index = suggested.findIndex(tile => tile.link === `${integrationId}:${native}`);
+    return index < 0 ? [] : [{ ...suggested.splice(index, 1)[0], size }];
+  };
+  const porchCamera = sources.find(source => source.kind === "camera");
+  // The first two rows of an 8 column grid: the front door, the week's weather and the garage, then the porch camera and the thermostat.
+  const lead = empty ? [
+    ...take("front-lock", "2x2"),
+    createTile("weather", null, false, { size: "4x2", options: { place: DEMO_PLACE } }),
+    ...take("garage", "2x2"),
+    ...(porchCamera ? [{ id: newTileId(), kind: "camera" as const, link: porchCamera.id, size: "4x2" as const, options: { video: "snapshots" as const, every: 30 } }] : []),
+    ...take("thermostat", "2x2"),
     createTile("people"),
+    ...take("alarm", "2x1"),
     createTile("activity", null, false, { size: "2x3" }),
   ] : [];
-  const porch = porchCamera ? [{ id: newTileId(), kind: "camera" as const, link: porchCamera.id, size: "2x2" as const, options: { video: "snapshots" as const, every: 30 } }] : [];
-  const layout = [...home.layout, ...widgets, ...porch, ...fresh];
+  const layout = [...home.layout, ...lead, ...suggested];
   const pages = home.pages.map((page, index) => index === 0 ? { ...page, layout } : page);
   await savePreferences(userId, { layout, pages });
 }

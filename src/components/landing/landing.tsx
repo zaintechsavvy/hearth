@@ -11,15 +11,15 @@ import ipad from "./shots/ipad.webp";
 import ipadDark from "./shots/ipad-dark.webp";
 import analog from "./shots/wall-analog.webp";
 import analogWarm from "./shots/wall-analog-warm.webp";
-import thermostat from "./shots/thermostat-warm.webp";
-import thermostatDark from "./shots/thermostat-warm-dark.webp";
+import thermostat from "./shots/thermostat-cool.webp";
+import thermostatDark from "./shots/thermostat-cool-dark.webp";
 import activity from "./shots/activity.webp";
 import activityDark from "./shots/activity-dark.webp";
 import customize from "./shots/customize.webp";
 import customizeDark from "./shots/customize-dark.webp";
 import phone from "./shots/phone.webp";
 import phoneDark from "./shots/phone-dark.webp";
-import overview from "./shots/overview.webp";
+import { ConnectsDiagram } from "@/app/how-it-works/diagrams";
 import styles from "./landing.module.css";
 
 const GITHUB = "https://github.com/zaintechsavvy/hearth";
@@ -32,7 +32,6 @@ const FEATURES: { title: string; body: string; points: string[]; shot: StaticIma
     shot: customize,
     dark: customizeDark,
     alt: "The customize dialog for a tile, with size, icon, colour and press actions",
-    small: true,
   },
   {
     title: "Climate you can feel",
@@ -40,7 +39,7 @@ const FEATURES: { title: string; body: string; points: string[]; shot: StaticIma
     points: ["Heat, cool and auto with one tap", "History chart one press away", "Celsius or Fahrenheit"],
     shot: thermostat,
     dark: thermostatDark,
-    alt: "The thermostat tile glowing warm while heating",
+    alt: "The thermostat tile glowing cool while cooling",
     small: true,
   },
   {
@@ -94,9 +93,9 @@ export function Landing() {
       <main>
         <section className={styles.hero}>
           <motion.div className={styles.copy} data-on-wall {...rise()}>
-            <h1 className={styles.title}>Your Home Assistant, on the wall.</h1>
+            <h1 className={styles.title}>Smart home controls that feel right at home.</h1>
             <p className={styles.lede}>
-              Hearth is a calm, self-hosted dashboard made for a tablet on the wall. Tiles you arrange yourself, a clock when nobody is looking, and the doorbell camera the moment someone rings.
+              Hearth turns a tablet on the wall into calm controls for your Home Assistant. Tiles you arrange yourself, a clock when nobody is looking, and the doorbell camera the moment someone rings.
             </p>
             <div className={styles.actions}>
               <Button size="lg" onClick={() => router.push("/sign-up")}>Try the demo home</Button>
@@ -107,8 +106,8 @@ export function Landing() {
 
           <motion.div className={styles.tablet} {...rise(0.1)}>
             <div className={styles.bezel}>
-              <Image src={ipad} alt="Hearth on a wall tablet: thermostat, transit, music, locks, a porch camera, lights and who is home" priority className={`${styles.screen} ${styles.lightOnly}`} sizes="(min-width: 1200px) 1100px, 92vw" />
-              <Image src={ipadDark} alt="" aria-hidden="true" loading="eager" className={`${styles.screen} ${styles.darkOnly}`} sizes="(min-width: 1200px) 1100px, 92vw" />
+              <Image unoptimized src={ipad} alt="Hearth on a wall tablet: thermostat, transit, music, locks, a porch camera, lights and who is home" priority className={`${styles.screen} ${styles.lightOnly}`} sizes="(min-width: 1200px) 1100px, 92vw" />
+              <Image unoptimized src={ipadDark} alt="" aria-hidden="true" loading="eager" className={`${styles.screen} ${styles.darkOnly}`} sizes="(min-width: 1200px) 1100px, 92vw" />
             </div>
           </motion.div>
         </section>
@@ -127,8 +126,8 @@ export function Landing() {
             </ul>
           </motion.div>
           <motion.div className={styles.restShots} {...rise(0.1)}>
-            <Image src={analog} alt="The wall tablet resting on an analog face: large overlapping numerals behind white hands" className={styles.restShot} sizes="(min-width: 900px) 560px, 92vw" />
-            <Image src={analogWarm} alt="The analog face in a warm colour" className={`${styles.restShot} ${styles.restShotBack}`} sizes="(min-width: 900px) 420px, 70vw" />
+            <Image unoptimized src={analog} alt="The wall tablet resting on an analog face: large overlapping numerals behind white hands" className={styles.restShot} sizes="(min-width: 900px) 560px, 92vw" />
+            <Image unoptimized src={analogWarm} alt="The analog face in a warm colour" className={`${styles.restShot} ${styles.restShotBack}`} sizes="(min-width: 900px) 420px, 70vw" />
           </motion.div>
         </section>
 
@@ -141,8 +140,8 @@ export function Landing() {
                 <ul className={styles.points}>{f.points.map(p => <li key={p}>{p}</li>)}</ul>
               </div>
               <div className={`${styles.featureShot} ${f.small ? styles.featureShotSmall : ""}`}>
-                <Image src={f.shot} alt={f.alt} className={`${styles.shot} ${styles.lightOnly}`} sizes="(min-width: 900px) 640px, 92vw" />
-                <Image src={f.dark} alt="" aria-hidden="true" className={`${styles.shot} ${styles.darkOnly}`} sizes="(min-width: 900px) 640px, 92vw" />
+                <Image unoptimized src={f.shot} alt={f.alt} className={`${styles.shot} ${styles.lightOnly}`} sizes="(min-width: 900px) 760px, 92vw" />
+                <Image unoptimized src={f.dark} alt="" aria-hidden="true" className={`${styles.shot} ${styles.darkOnly}`} sizes="(min-width: 900px) 760px, 92vw" />
               </div>
             </motion.article>
           ))}
@@ -155,7 +154,7 @@ export function Landing() {
             <Link href="/how-it-works" className={styles.ghost}>See how it fits together</Link>
           </motion.div>
           <motion.div className={styles.howShot} {...rise(0.08)}>
-            <Image src={overview} alt="How Hearth connects: screens talk to Hearth, and Hearth talks to Home Assistant, Matter, cameras and its database" className={styles.shot} sizes="(min-width: 900px) 640px, 92vw" />
+            <ConnectsDiagram />
           </motion.div>
         </section>
 

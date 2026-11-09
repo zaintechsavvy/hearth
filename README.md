@@ -2,7 +2,7 @@
 
 <h1 align="center">Hearth</h1>
 
-<p align="center"><b>An Apple Home-style wall display for Home Assistant.</b><br>A calm, self-hosted dashboard made for a tablet on the wall: tiles you arrange by dragging, a clock when nobody is looking, and the doorbell camera the moment someone rings.</p>
+<p align="center"><b>Smart home controls that feel right at home.</b><br>An Apple Home-style wall display for Home Assistant. A calm, self-hosted dashboard made for a tablet on the wall: tiles you arrange by dragging, a clock when nobody is looking, and the doorbell camera the moment someone rings.</p>
 
 <p align="center">
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-2f6f4e"></a>
