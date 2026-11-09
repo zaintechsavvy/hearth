@@ -9,29 +9,37 @@ import { Logo } from "@/components/brand/logo";
 import { useRouter } from "next/navigation";
 import ipad from "./shots/ipad.webp";
 import ipadDark from "./shots/ipad-dark.webp";
-import clock from "./shots/wall-clock.webp";
-import clockNight from "./shots/wall-clock-night.webp";
+import analog from "./shots/wall-analog.webp";
+import analogWarm from "./shots/wall-analog-warm.webp";
 import thermostat from "./shots/thermostat-warm.webp";
+import thermostatDark from "./shots/thermostat-warm-dark.webp";
 import activity from "./shots/activity.webp";
+import activityDark from "./shots/activity-dark.webp";
 import customize from "./shots/customize.webp";
+import customizeDark from "./shots/customize-dark.webp";
 import phone from "./shots/phone.webp";
+import phoneDark from "./shots/phone-dark.webp";
+import overview from "./shots/overview.webp";
 import styles from "./landing.module.css";
 
 const GITHUB = "https://github.com/zaintechsavvy/hearth";
 
-const FEATURES: { title: string; body: string; points: string[]; shot: StaticImageData; alt: string; small?: boolean }[] = [
+const FEATURES: { title: string; body: string; points: string[]; shot: StaticImageData; dark: StaticImageData; alt: string; small?: boolean }[] = [
   {
     title: "A grid you arrange yourself",
     body: "Start empty and add what you reach for. Drag tiles into any cell, gaps and all, and pick a size from 1×1 to 4×3. No YAML.",
     points: ["Lights, locks, garage doors, cameras, climate, scenes", "Each screen width keeps its own layout", "Swipe between rooms on a tablet"],
     shot: customize,
+    dark: customizeDark,
     alt: "The customize dialog for a tile, with size, icon, colour and press actions",
+    small: true,
   },
   {
     title: "Climate you can feel",
     body: "The thermostat glows warm from the top when you raise it and cool from the bottom when you lower it, and stays softly lit while the system runs.",
     points: ["Heat, cool and auto with one tap", "History chart one press away", "Celsius or Fahrenheit"],
     shot: thermostat,
+    dark: thermostatDark,
     alt: "The thermostat tile glowing warm while heating",
     small: true,
   },
@@ -40,6 +48,7 @@ const FEATURES: { title: string; body: string; points: string[]; shot: StaticIma
     body: "Activity lists every change from Hearth and Home Assistant alike, even while no screen was open. Noisy devices fold into one line you can open.",
     points: ["Credits the person, scene or automation", "Doorbell rings come with a picture", "Mute a device that talks too much"],
     shot: activity,
+    dark: activityDark,
     alt: "The Activity page grouping changes by day",
   },
   {
@@ -47,6 +56,7 @@ const FEATURES: { title: string; body: string; points: string[]; shot: StaticIma
     body: "The same home on your phone, with the same tiles. Add it to your home screen and it opens like an app.",
     points: ["Pages and rooms you can swipe", "Ask by typing or speaking", "Guests can be invited with a code"],
     shot: phone,
+    dark: phoneDark,
     alt: "Hearth on a phone showing rooms and tiles",
     small: true,
   },
@@ -107,18 +117,18 @@ export function Landing() {
           <motion.div className={styles.restCopy} {...rise()}>
             <h2 className={styles.heading}>When nobody is looking</h2>
             <p className={styles.body}>
-              After a few quiet minutes the wall tablet rests: the date and a clock you can read across the room. It drifts a little so nothing burns in, dims at night, and wakes when someone walks by or rings the bell.
+              After a few quiet minutes the wall tablet rests on a clock you can read across the room: an analog face in the colour you pick, or large digits. It drifts a little so nothing burns in, dims at night, and wakes when someone walks by or rings the bell.
             </p>
             <ul className={styles.points}>
-              <li>Pick the colour and brightness of the clock</li>
+              <li>Analog or digital, in the colour and brightness you pick</li>
               <li>Night dim, and an optional red clock after dark</li>
               <li>A photo frame from your own pictures or Immich</li>
               <li>Wakes on motion, a door opening, or the doorbell</li>
             </ul>
           </motion.div>
           <motion.div className={styles.restShots} {...rise(0.1)}>
-            <Image src={clock} alt="The wall tablet resting, showing the date and a large clock" className={styles.restShot} sizes="(min-width: 900px) 560px, 92vw" />
-            <Image src={clockNight} alt="The resting clock dimmed and red at night" className={`${styles.restShot} ${styles.restShotBack}`} sizes="(min-width: 900px) 420px, 70vw" />
+            <Image src={analog} alt="The wall tablet resting on an analog face: large overlapping numerals behind white hands" className={styles.restShot} sizes="(min-width: 900px) 560px, 92vw" />
+            <Image src={analogWarm} alt="The analog face in a warm colour" className={`${styles.restShot} ${styles.restShotBack}`} sizes="(min-width: 900px) 420px, 70vw" />
           </motion.div>
         </section>
 
@@ -131,10 +141,22 @@ export function Landing() {
                 <ul className={styles.points}>{f.points.map(p => <li key={p}>{p}</li>)}</ul>
               </div>
               <div className={`${styles.featureShot} ${f.small ? styles.featureShotSmall : ""}`}>
-                <Image src={f.shot} alt={f.alt} className={styles.shot} sizes="(min-width: 900px) 640px, 92vw" />
+                <Image src={f.shot} alt={f.alt} className={`${styles.shot} ${styles.lightOnly}`} sizes="(min-width: 900px) 640px, 92vw" />
+                <Image src={f.dark} alt="" aria-hidden="true" className={`${styles.shot} ${styles.darkOnly}`} sizes="(min-width: 900px) 640px, 92vw" />
               </div>
             </motion.article>
           ))}
+        </section>
+
+        <section className={styles.how}>
+          <motion.div className={styles.howCopy} {...rise()}>
+            <h2 className={styles.heading}>How it works</h2>
+            <p className={styles.body}>Your screens only talk to Hearth. Hearth talks to Home Assistant, Matter and your cameras, keeps its own database, and pushes every change to each screen the moment it happens.</p>
+            <Link href="/how-it-works" className={styles.ghost}>See how it fits together</Link>
+          </motion.div>
+          <motion.div className={styles.howShot} {...rise(0.08)}>
+            <Image src={overview} alt="How Hearth connects: screens talk to Hearth, and Hearth talks to Home Assistant, Matter, cameras and its database" className={styles.shot} sizes="(min-width: 900px) 640px, 92vw" />
+          </motion.div>
         </section>
 
         <section className={styles.host}>

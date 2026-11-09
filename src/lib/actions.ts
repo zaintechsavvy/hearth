@@ -9,8 +9,7 @@ import { StreamRelay, relayStreamName } from "@/lib/cameras/stream-relay";
 import { ASSISTANT_PROVIDER_IDS, ASSISTANT_PROVIDERS, matchModel, providerOfKey, type AssistantProvider } from "@/lib/assistant/providers";
 import { checkAssistantKey } from "@/lib/assistant/run";
 import { seal, unseal } from "@/lib/crypto";
-import { createTile, HOME_PAGE_ID, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES, withoutOrphanTiles, type TileHold } from "@/lib/dashboard/layout";
-import { CAMERA_LAYOUTS, cameraPageTiles } from "@/lib/dashboard/camera-pages";
+import { createTile, HOME_PAGE_ID, newTileId, suggestedTiles, TILE_COLORS, TILE_ICONS, TILE_KINDS, TILE_SIZES, withoutOrphanTiles, type TileHold } from "@/lib/dashboard/layout";
 import { tileSources } from "@/lib/dashboard/sources";
 import { db } from "@/lib/db";
 import { assistant, automation, calendar, camera, deviceOverride, integration, preference, reminder, scene } from "@/lib/db/schema";
@@ -74,35 +73,35 @@ export async function addIntegration(input: unknown): Promise<CreatedResult> {
   return result.ok ? { ok: true, id } : result;
 }
 
-/** Kinds the demo's own widgets already cover, Energy, Who's home, and the thermostat, so each does not take a tile too; cameras get a page of their own. */
-const DEMO_LEFT_OUT = new Set(["sensor", "todo", "person", "camera"]);
+/** Kinds the demo's own widgets already cover, Energy and Who's home, so each does not take a tile too. */
+const DEMO_LEFT_OUT = new Set(["sensor", "todo", "person"]);
+/** Kinds that sit best as a single square in the demo: a door you tap to lock or open. */
+const DEMO_SQUARE = new Set(["lock", "cover"]);
+const DEMO_PLACE = { name: "Toronto", region: "Ontario, Canada", latitude: 43.6532, longitude: -79.3832 };
 
 /**
  * A demo home arrives with its devices already on the first page, after whatever is there, so there is something to
  * try straight away. On an empty dashboard it also brings the widgets worth seeing, with sample departures.
  */
 async function placeDemoTiles(userId: string, integrationId: string) {
-  const [home, preferences] = await Promise.all([loadHome(userId), getPreferences(userId)]);
+  const home = await loadHome(userId);
   const placed = new Set(home.layout.map(tile => tile.kind === undefined ? tile.id : tile.link));
-  const fresh = suggestedTiles(tileSources(home).filter(source => source.id.startsWith(`${integrationId}:`) && !placed.has(source.id) && !DEMO_LEFT_OUT.has(source.kind)));
+  const sources = tileSources(home).filter(source => source.id.startsWith(`${integrationId}:`) && !placed.has(source.id) && !DEMO_LEFT_OUT.has(source.kind));
+  const suggested = suggestedTiles(sources.filter(source => source.kind !== "camera")).map(tile => DEMO_SQUARE.has(tile.kind) ? { ...tile, size: "1x1" as const } : tile);
+  const fresh = [...suggested.filter(tile => DEMO_SQUARE.has(tile.kind)), ...suggested.filter(tile => !DEMO_SQUARE.has(tile.kind))];
+  const porchCamera = sources.find(source => source.kind === "camera");
   if (!fresh.length) return;
   const empty = home.layout.length === 0;
   const widgets = empty ? [
-    createTile("clock"),
-    createTile("departures", null, false, { options: { stops: [{ key: "sample:maple-5th", name: "Maple St at 5th Ave" }, { key: "sample:central", name: "Central Station" }] } }),
+    createTile("weather", null, false, { options: { place: DEMO_PLACE } }),
     createTile("energy"),
     createTile("people"),
     createTile("activity", null, false, { size: "2x3" }),
   ] : [];
-  const layout = [...home.layout, ...widgets, ...fresh];
-  const cameras = empty ? cameraPageTiles(CAMERA_LAYOUTS.find(item => item.id === "pair")!, tileSources(home).filter(source => source.id.startsWith(`${integrationId}:`)))
-    .map(tile => ({ ...tile, options: { video: "snapshots" as const, every: 30 } })) : [];
+  const porch = porchCamera ? [{ id: newTileId(), kind: "camera" as const, link: porchCamera.id, size: "2x2" as const, options: { video: "snapshots" as const, every: 30 } }] : [];
+  const layout = [...home.layout, ...widgets, ...porch, ...fresh];
   const pages = home.pages.map((page, index) => index === 0 ? { ...page, layout } : page);
-  await savePreferences(userId, {
-    layout,
-    pages: cameras.length ? [...pages, { id: `page-${crypto.randomUUID()}`, name: "Cameras", layout: cameras }] : pages,
-    ...(empty && !preferences.transit ? { transit: { key: seal("sample"), sample: true } } : {}),
-  });
+  await savePreferences(userId, { layout, pages });
 }
 
 export async function addDemoHome(): Promise<ActionResult> {

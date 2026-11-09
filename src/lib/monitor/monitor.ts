@@ -112,12 +112,18 @@ async function discover() {
     let watch = state.watches.get(row.userId);
     if (!watch) state.watches.set(row.userId, watch = { userId: row.userId, stops: new Map(), devices: null, home: null, running: false, again: false, last: 0 });
     if (watch.stops.has(row.id)) continue;
-    const provider = createProvider(row);
     const changed = () => schedule(watch);
-    if (provider.subscribe) watch.stops.set(row.id, provider.subscribe(changed));
-    else {
-      const timer = setInterval(changed, POLL_MS);
-      watch.stops.set(row.id, () => clearInterval(timer));
+    // A connection that cannot be opened, such as one sealed before the secret changed, is skipped so the rest still get watched.
+    try {
+      const provider = createProvider(row);
+      if (provider.subscribe) watch.stops.set(row.id, provider.subscribe(changed));
+      else {
+        const timer = setInterval(changed, POLL_MS);
+        watch.stops.set(row.id, () => clearInterval(timer));
+      }
+    } catch (error) {
+      console.error(`Home monitor skipped ${row.name}`, error);
+      continue;
     }
     schedule(watch);
   }

@@ -286,7 +286,7 @@
 }
 
 /* The Add menu sits between plain buttons, so it takes their corners, and its plus reads in the label's colour. */
-.actions [class*="dropdown-menu-module"][class*="trigger"] {
+.actions [class*="dropdown-menu-module"]:is([class$="__trigger"], [class*="__trigger "]) {
   border-radius: var(--radius-control);
 }
 
