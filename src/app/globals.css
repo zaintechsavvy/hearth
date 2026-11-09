@@ -153,20 +153,14 @@
   text-shadow: 0 1px 14px oklch(0% 0 0 / .45);
 }
 
-/* Buttons over a photo keep a solid surface, whatever colour the words around them take, so the photo never shows through. */
+/* Buttons over a photo are frosted glass in the same ink as the words around them, so a toolbar reads as one piece. */
 :root[data-wallpaper="photo"] [data-on-wall] :is(button, [role="button"], a)[class*="secondary"],
 :root[data-wallpaper="photo"] [data-on-wall] [class*="dropdown-menu-module"][class*="trigger"] {
-  border-color: oklch(100% 0 0 / .7);
-  background: oklch(99% 0 0 / .92);
-  color: oklch(17% 0 0);
-  text-shadow: none;
-}
-
-:root[data-theme="dark"][data-wallpaper="photo"] [data-on-wall] :is(button, [role="button"], a)[class*="secondary"],
-:root[data-theme="dark"][data-wallpaper="photo"] [data-on-wall] [class*="dropdown-menu-module"][class*="trigger"] {
-  border-color: oklch(100% 0 0 / .12);
-  background: oklch(24% .005 260 / .94);
-  color: oklch(97% 0 0);
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--foreground);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
 }
 
 /* A label that scrolls over a photo sits on a small frosted chip and keeps the theme's own colours. */

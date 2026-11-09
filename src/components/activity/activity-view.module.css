@@ -240,3 +240,11 @@
 @media (prefers-reduced-motion: reduce) {
   .expandIcon { transition: none; }
 }
+
+.retry {
+  color: var(--foreground);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+}

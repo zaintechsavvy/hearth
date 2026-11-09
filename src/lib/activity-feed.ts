@@ -45,6 +45,8 @@ const MAX_WINDOWS = 6;
 export interface ActivityPage {
   entries: ActivityEntry[];
   more: boolean;
+  /** An integration's own history did not load, so only what Hearth recorded is shown. */
+  partial?: boolean;
   /** Where the next page starts, when it is not simply the last entry. */
   next?: string;
 }
@@ -78,18 +80,19 @@ export async function activityPage(homeId: string, filter: Filter): Promise<Acti
   const muted = new Set(home.devices.filter(device => device.quiet).map(device => device.id));
   let to = filter.before ?? new Date();
   for (let window = 1; ; window++) {
-    const page = await windowPage(filters, sources, devices, { category, room }, to);
+    const page = await windowPage(homeId, filters, sources, devices, { category, room }, to);
     const entries = settle(page.entries, muted);
-    if (entries.length || !page.more || window === MAX_WINDOWS) return { ...page, entries: await withPictures(homeId, entries) };
+    if (entries.length || !page.more || window === MAX_WINDOWS || page.partial) return { ...page, entries: await withPictures(homeId, entries) };
     to = new Date(page.next!);
   }
 }
 
-async function windowPage(filters: SQL[], sources: { row: typeof integration.$inferSelect; provider: Provider }[], devices: Map<string, Device>, { category, room }: Omit<Filter, "before">, to: Date): Promise<ActivityPage> {
+async function windowPage(home: string, filters: SQL[], sources: { row: typeof integration.$inferSelect; provider: Provider }[], devices: Map<string, Device>, { category, room }: Omit<Filter, "before">, to: Date): Promise<ActivityPage> {
   let from = new Date(to.getTime() - WINDOW_MS);
   const page = await db.select().from(activity).where(and(...filters, lt(activity.at, to), gte(activity.at, from))).orderBy(desc(activity.at)).limit(PAGE * 4);
   if (page.length === PAGE * 4) from = page[page.length - 1].at;
 
+  let partial = false;
   const logged = await Promise.all(sources.map(async ({ row, provider }) => {
     const shown = [...devices.values()].filter(device => device.integrationId === row.id && LOGGED_KINDS.has(device.kind) && !device.auxiliary);
     const nativeIds = shown.map(device => device.id.slice(row.id.length + 1));
@@ -107,6 +110,7 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
       });
     } catch (error) {
       console.error(`Activity: ${row.name} did not send its logbook for ${from.toISOString()} to ${to.toISOString()}: ${error instanceof Error ? error.message : error}`);
+      partial = true;
       return [];
     }
   }));
@@ -121,16 +125,40 @@ async function windowPage(filters: SQL[], sources: { row: typeof integration.$in
     const match = entry.by ? undefined : theirsAll.find(other => sameChange(entry, other));
     return match ? { ...entry, by: match.by, via: match.via } : entry;
   });
-  const theirs = theirsAll.filter(entry => {
+  const unseen = theirsAll.filter(entry => {
     const time = Date.parse(entry.at);
-    if (time < from.getTime() || time >= to.getTime()) return false;
-    if ((category && entry.category !== category) || (room && entry.room !== room)) return false;
-    return !mine.some(own => sameChange(own, entry));
+    return time >= from.getTime() && time < to.getTime() && !mine.some(own => sameChange(own, entry));
   });
+  if (!category && !room) await keep(home, unseen);
+  const theirs = unseen.filter(entry => !(category && entry.category !== category) && !(room && entry.room !== room));
   const entries = [...mine, ...theirs].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const older = await db.select({ at: activity.at }).from(activity).where(and(...filters, lt(activity.at, from))).limit(1);
   const more = older.length > 0 || from.getTime() > Date.now() - LOGBOOK_DAYS * 86_400_000;
-  return { entries, more, next: from.toISOString() };
+  return { entries, more, next: from.toISOString(), partial };
+}
+
+/** What an integration recorded on its own is written to Hearth's log too, so it stays after the integration forgets it. */
+async function keep(home: string, entries: ActivityEntry[]) {
+  const rows = entries.filter(entry => entry.deviceId).map(entry => ({
+    userId: home, at: new Date(entry.at), deviceId: entry.deviceId, name: entry.name, room: entry.room, what: entry.what,
+    category: entry.category, tone: entry.tone, by: entry.by, dedupe: `logbook|${entry.deviceId}|${entry.what}|${entry.at}`,
+  }));
+  if (rows.length) await db.insert(activity).values(rows).onConflictDoNothing();
+}
+
+/** Writes every change each integration recorded since a time to Hearth's log, for a scheduled sweep that runs rarely. */
+export async function recordHistory(home: string, since: Date, now = new Date()) {
+  const rows = await db.select().from(integration).where(eq(integration.userId, home));
+  const sources = rows.map(row => ({ row, provider: createProvider(row) })).filter(source => source.provider.logbook);
+  if (!sources.length) return;
+  const loaded = await loadHome(home);
+  const devices = new Map(loaded.devices.map(device => [device.id, device]));
+  const start = Math.max(since.getTime(), now.getTime() - LOGBOOK_DAYS * 86_400_000);
+  for (let to = now; to.getTime() > start;) {
+    const page = await windowPage(home, [eq(activity.userId, home)], sources, devices, { category: null, room: null }, to);
+    to = new Date(Math.max(Date.parse(page.next!), start));
+    if (to.getTime() <= start) break;
+  }
 }
 
 async function mutedDevices(homeId: string) {

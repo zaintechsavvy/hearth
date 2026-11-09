@@ -6,6 +6,7 @@ import { activity, homeWatch, integration } from "@/lib/db/schema";
 import { loadHome } from "@/lib/home";
 import { logSeenChanges, type LoggedChange } from "./activity";
 import { alertOnChanges } from "./alerts";
+import { recordHistory } from "@/lib/activity-feed";
 
 /**
  * One look at every home with a connection, for hosts with no monitor running: what changed since the last look is
@@ -19,6 +20,8 @@ export async function sweepHomes(now = new Date()) {
 
 async function sweepHome(userId: string, now: Date) {
   const [home, last] = await Promise.all([loadHome(userId), db.query.homeWatch.findFirst({ where: eq(homeWatch.userId, userId) })]);
+  // Sweeps can be hours apart, so each one first writes down everything the integration recorded since the last.
+  await recordHistory(userId, last?.checkedAt ?? new Date(now.getTime() - 86_400_000), now).catch(error => console.error(error));
   const devices = home.devices;
   if (last) {
     // A change already written down since the last look, such as one sent from Hearth or seen by an open screen, is not written again.

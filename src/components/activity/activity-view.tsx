@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSWRConfig } from "swr";
 import useSWRInfinite from "swr/infinite";
 import { Button } from "@/components/arc/button/button";
+import { Alert } from "@/components/arc/alert/alert";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
@@ -15,7 +16,7 @@ import { updateDevice } from "@/lib/actions";
 import { activityIcon, activityLit } from "./activity-icon";
 import styles from "./activity-view.module.css";
 
-type Page = { entries: ActivityEntry[]; more: boolean; next?: string };
+type Page = { entries: ActivityEntry[]; more: boolean; next?: string; partial?: boolean };
 const ALL = "all";
 /** How long the chance to undo a mute stays on screen. */
 const UNDO_MS = 6000;
@@ -59,6 +60,7 @@ export function ActivityView() {
   const entries = data?.flatMap(page => page.entries) ?? [];
   const devices = new Map((home?.devices ?? []).map(device => [device.id, device]));
   const more = data?.at(-1)?.more ?? false;
+  const partial = data?.some(page => page.partial) ?? false;
   const { mutate: mutateKey } = useSWRConfig();
   const muted = (home?.devices ?? []).filter(device => device.quiet);
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
@@ -104,6 +106,9 @@ export function ActivityView() {
             items={muted.map(device => ({ label: `Show ${device.name} again`, icon: <BellRing size={15} strokeWidth={1.75} />, onSelect: () => void changeQuiet([device.id], device.name, false) }))} />
         )}
       </div>
+      <Alert tone="warning" title="Home Assistant's history did not load" open={partial}>
+        Showing what Hearth recorded itself. Changes made while Hearth was closed appear once Home Assistant answers. <button type="button" className={styles.retry} onClick={() => void mutate()}>Try again</button>
+      </Alert>
       {isLoading && !data ? (
         <Glass shape="panel" className={styles.group}><Skeleton lines={5} label="Loading activity" /></Glass>
       ) : error ? (
