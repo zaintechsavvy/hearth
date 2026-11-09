@@ -1,89 +1,60 @@
-# Hearth
+<p align="center"><img src="docs/screenshots/ipad.png" alt="Hearth on a wall tablet" width="900"></p>
 
-A calm, self-hosted home dashboard. Hearth brings your thermostat, cameras, lights, locks, speakers, and Matter devices into one grid you arrange yourself, talks to the Home Assistant you already run, and lets you change things by tapping, typing, or saying them.
+<h1 align="center">Hearth</h1>
 
-**Why "Hearth"?** A hearth is the fireplace at the centre of a home, the spot everyone gathers around. The logo keeps it simple: the outline of a house.
+<p align="center"><b>An Apple Home-style wall display for Home Assistant.</b><br>A calm, self-hosted dashboard made for a tablet on the wall: tiles you arrange by dragging, a clock when nobody is looking, and the doorbell camera the moment someone rings.</p>
 
-The thermostat glows warm from the top when you raise it and cool from the bottom when you lower it, and keeps a softer glow while the system is actually heating or cooling.
+<p align="center">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-2f6f4e"></a>
+  <img alt="Works with Home Assistant" src="https://img.shields.io/badge/works%20with-Home%20Assistant-41BDF5">
+  <img alt="Docker Compose" src="https://img.shields.io/badge/runs%20with-Docker%20Compose-2496ED">
+  <a href="https://hearth-kappa-six.vercel.app"><img alt="Live demo" src="https://img.shields.io/badge/demo-try%20it-222"></a>
+</p>
 
-| Raise | Lower |
-| --- | --- |
-| ![Thermostat warming](docs/screenshots/thermostat-warm.png) | ![Thermostat cooling](docs/screenshots/thermostat-cool.png) |
+## Why another dashboard?
 
-**The dashboard**, built from tiles you choose and arrange yourself: the next buses and trains, what is drawing power, who is home, what just happened, and your devices.
+The stock Home Assistant dashboard, Mushroom and Bubble Card are great if you enjoy building cards in YAML. Hearth is for a screen the whole household uses, and it does a few things card stacks do not:
 
-![The dashboard](docs/screenshots/dashboard.png)
+- **Arrange by dragging.** Tiles snap into any cell, gaps and all, from 1×1 to 4×3. Each screen width keeps its own layout. No YAML.
+- **Rests like a clock.** After a few quiet minutes the wall tablet shows the date and a large clock, dims at night, and wakes on motion, a door, or the doorbell.
+- **Doorbell takeover.** A ring fills the screen with that doorbell's camera.
+- **Activity that reads like a sentence.** "Garage door closed by Alex." Noisy devices fold into one line, and changes made while no screen was open are kept.
+- **Ask in plain words.** Type or say "turn off the kitchen lights" with the AI provider you choose, or none.
+- **Works on your phone too**, with the same tiles.
 
-**In dark mode.**
+Hearth sits on top of the Home Assistant you already run. It does not replace it, and your automations stay where they are.
 
-![The dashboard in dark mode](docs/screenshots/dashboard-dark.png)
-
-**On a phone.**
-
-<p align="center"><img src="docs/screenshots/phone.png" alt="The dashboard on a phone" width="390"></p>
-
-**One tap for the things you reach for most**: lights that dim and glow in their own colour, plugs, the front door, and the garage.
-
-![Quick controls](docs/screenshots/quick-controls.png)
-
-**Customize any tile**: its size, icon, colour, and what press and hold does.
-
-![Customize dialog](docs/screenshots/customize.png)
-
-**Activity**: everything that happened, from Hearth and Home Assistant alike, and who did it. Devices that change together share one line, the same ones switched back and forth fold into one you can open ("turned on and off 4 times"), and whatever is on or open shows in warm yellow.
-
-![Activity](docs/screenshots/activity.png)
-
-**Settings** in four short groups, one section at a time.
-
-![Settings](docs/screenshots/settings.png)
-
-**Automations** you can pause or snooze.
-
-![Automations](docs/screenshots/automations.png)
-
-**A wall tablet at rest**: the date and a clock you can read across the room, in the colour and brightness you choose.
-
-![Wall clock](docs/screenshots/wall-clock.png)
-
-**How it fits together**: your screens only talk to Hearth, and Hearth talks to everything else.
-
-![How Hearth connects](docs/diagrams/overview.png)
-
-**New here?** [How it works](https://hearth-kappa-six.vercel.app/how-it-works) shows, in pictures, how your screens, Hearth, the database, Home Assistant, and your devices fit together, and [docs/guide.md](docs/guide.md) walks through every screen.
-
-## What it does
-
-- **A dashboard you build.** It starts empty. Choose **Add tile** and pick what the tile is: a light, lock, garage door, camera, thermostat, doorbell, sensor, scene, weather, calendar, reminders, or a clock. Link it to a device straight away, or leave it as a placeholder ("Front door") and tap it later to link it. Tiles sit on square cells in sizes from 1×1 to 4×3; lights and fans have four templates: **Icon** (tap to switch), **Card** (name, room, status), **Slider** (a tall vertical brightness or speed control), and **Large** (details beside a slider). Locks and garage doors get a **Tall** card and a **Large** card with the state and one big button you hold to open. Choose **Edit** to drag tiles into any cell, gaps and all, so a 1×1 can sit beside another 1×1 without filling the row (tiles it covers step aside, and an outline shows where it lands; each screen width keeps its own arrangement), resize, relink, restyle, or remove them, or start from **Start with suggestions**. Filter by room, or on a touch screen swipe left and right through All and each room, the way Apple Home does, and on to the next page; on a wall tablet a swipe turns the page. The page menu sits beside the rooms. **Add tile**, then **Camera**, places every camera at once in a layout (one large and two beside, two side by side, a grid of four, or one large), or one at a time. A lock, garage door, or door tile can carry a small camera button, linked in its **Customize** to any camera, that shows that camera full screen or jumps to the page you choose with it in view. Turn on **Advanced mode** in a camera's **Customize** and a tap opens it large, still floating, with the controls of what is near it underneath, such as the front door lock, the garage door, and the porch light, suggested for you and yours to change. A doorbell ring fills the screen with that doorbell's camera. Camera tiles come up to 4×4, and each can stream live or show a fresh snapshot every 10 seconds to 5 minutes, going live for two minutes when tapped. A demo home arrives with its tiles already placed.
-- **Pages**: make pages such as Kitchen or Wall tablet, each with its own tiles. Swipe between them on a touch screen.
-- **Leak sensors**: their own tile, a quiet blue drop while dry that turns red with ripples the moment water shows up. On a wall tablet a leak fills the screen until someone taps it.
-- **Everyday widgets**: weather for any city (Open-Meteo, no key needed), Google Calendar or any iCal feed, reminders, a clock, and countdowns.
-- **Departures**: the next buses and trains from up to four stops, in each route's own colour, with live times marked where the agency shares them. Stops are found near home or by name. It uses [Transitland](https://www.transit.land), which gathers timetables and live feeds from agencies worldwide; its API key is free.
-- **Kitchen timers**: every screen counts down together. One timer fills its tile as a dial, up to four sit side by side in their own colours, presets such as "Eggs, 7 min" start in one tap, and "set a 10 minute timer for the pasta" works by voice without any AI key.
-- **Household widgets**: bin day (bins collected together share one card, a split week shows two), medications with doses to tick off and refill warnings, a sticky-note board, guest Wi-Fi (the **Wi-Fi** button beside **New scene** shows the QR code full screen, with the password hidden until you tap the eye), and plants with watering meters.
-- **Rename and re-room anything**: give any device or camera your own name and room, make new rooms, and reorder them. Home Assistant keeps its own names and areas.
-- **Light colour**: colour and white temperature for lights that have them, from Home Assistant and Matter. Press and hold a light, or tap the colour dot in its corner, for brightness, presets, and Arc's colour picker. A lit light glows warm yellow, or in its real colour when it is set to one.
-- **Home Assistant** and **Matter**: lights, switches, fans, thermostats, locks, garage doors, gates, blinds and shades, door and window sensors, motion and leak sensors, temperature, humidity, light level and battery readings, doorbells and buttons, cameras, and Home Assistant scenes, scripts, and buttons. Rooms come from your Home Assistant areas. Anything Hearth cannot show yet is listed under the connection in Settings.
-- **Scenes**: choose **New scene**, add devices, and set each one: on or off, brightness, fan speed, thermostat mode and temperature, or how far a blind opens. Locks only lock and garage doors only close, so a scene never opens the home. A new scene gets its own tile; run it there or ask the assistant.
-- **Doorbell**: a ring takes over every open screen: it flashes, plays the doorbell's camera, and offers **Listen** and **Talk** for two-way audio when the camera has a speaker and the browser can reach it directly. Choose the camera under the doorbell tile's **Customize**, or let Hearth find it by room and name. Tap the doorbell tile any time to see the door. With alerts on, a ring also sends a notification to your phone, and Activity keeps a picture of each one.
-- **Good night**: one hold locks the doors, closes the garage, turns off the lights, and arms the alarm, then lists what needs a look. Choose what it does, what it only checks, and what it never touches in Settings, under Good night.
-- **Search**: Cmd or Ctrl K finds any device, scene, page, or setting, and switches things straight from the search box.
-- **Automations**: when, only if, then rules: a time, sunrise or sunset, or a device changing (or staying changed for some minutes); only after dark, between times, or while another device is in a state; then control devices, run scenes, or send an alert. Ready-made ideas fill in from your own devices. Pause a rule with its switch, or snooze it for an hour, four hours, or until tomorrow.
-- **Activity and alerts**: what happened, who did it, and where, from Hearth's own log and Home Assistant's logbook together, so a change made in the Home Assistant app ("by Sam · in Home Assistant"), by an automation, or at a wall switch ("at the device") shows too, even on Vercel. Background chatter such as sun times and sensor readings stays out, motion and occupancy sensors show at most once every 15 minutes, and any device can be muted from its line in Activity or its tile's **Customize**, then shown again, one at a time, from the **Muted** menu beside the filters, with a moment to undo either. An **Activity** tile puts the latest changes on the dashboard. On Vercel, where no monitor runs, any open screen (a wall tablet, say) writes down the changes it sees, once however many screens see them, so a garage opened at its wall button is there even when the logbook is slow. Web Push alerts for the doorbell, leaks and smoke, doors left open, jammed locks, timers, and doses come from the monitor at home in Docker, or on Vercel from a sweep every five minutes once `CRON_SECRET` is set (see [docs/vercel.md](docs/vercel.md)).
-- **History**: temperature and other readings as a line on their tile, and day, week, and month charts with the low, average, and high.
-- **Wall tablet mode**: install Hearth as an app, keep the screen awake, dim it at night, and wake on a touch or a motion sensor, always back on Home. The dashboard fills the screen with four rows of tiles and the assistant beside the greeting. It rests on a drifting clock with running timers big enough to read across the room, and what happens while it rests arrives as up to four quiet notes in the corner that a swipe down clears, or on a **photo frame**: your own photos, or an [Immich](https://immich.app) album, drifting slowly from one to the next with the clock in the lower left or the middle, whichever you pick. When a lock, garage door, or door changes somewhere else, the screen shows it for five seconds with a picture of what happened. A finished timer takes over the screen with a louder chime until someone dismisses it, in dim red at night.
-- **Household**: invite members, who share everything, and guests, who see only the pages you pick and can never unlock or open anything. Turn on **Share my background** and everyone sees the background you pick, and each change you make to it, until they pick their own.
-- **Cameras**: Home Assistant cameras over WebRTC, the way Home Assistant's own app plays them, falling back to HLS relayed through Hearth, then MJPEG, then the last picture, and saying which. "Live" only appears once a frame has actually played, and once its picture moves, so a camera that only keeps a saved still says "Last picture". Each camera remembers which way played last, so the next view starts straight away, and a call stays up on serverless hosts too. RTSP cameras with a username and password are added to Home Assistant as Generic Cameras, so its built-in go2rtc streams them, or go through your own [go2rtc](https://github.com/AlexxIT/go2rtc). Every camera has full screen and a snapshot download.
-- **Assistant and voice**: a pill in the corner (or Cmd or Ctrl J) opens a chat, and the microphone beside it starts listening in one tap, with a [voice-glow](https://libraries.dev) beam that rises as you speak. Type or say "turn on the fan in my bedroom". Bring your own key for Claude, ChatGPT, Grok, Gemini, Muse, or Groq, or point it at a model you run yourself. On a wall tablet, the assistant opens from the button beside the greeting.
-- **Accounts**: email and password sign up and sign in. Each home has its own connections, cameras, pages, and assistants, shared with the people invited into it.
-- **Look**: liquid glass surfaces over a still backdrop (Studio, Linen, Slate), a slowly moving [Paper Shaders](https://shaders.paper.design) mesh gradient (Aurora, Dusk, Meadow), a gradient of your own, or your own photo, light and dark, and eight accents. The Background studio picks colours with Arc's colour picker, shuffles harmonious palettes, tunes motion, swirl, and grain, blurs and dims photos, and can turn any photo into a moving gradient from its own colours. Moving backgrounds hold still when reduced motion is on. Over a photo, text on the backdrop turns light or dark by what is behind it, sampled from the photo where each line sits. **Tile opacity** in Appearance sets how much of the background shows through tiles.
-- **Security**: integration tokens, camera passwords, calendar addresses, and AI keys are encrypted at rest (AES-256-GCM) and never sent to the browser. Unlocking a door or opening a garage door takes a press and hold.
-
-![Welcome](docs/screenshots/welcome.png)
+<table>
+  <tr>
+    <td><img src="docs/screenshots/wall-clock.png" alt="The wall tablet resting as a clock"></td>
+    <td><img src="docs/screenshots/dashboard-dark.png" alt="The dashboard in dark mode"></td>
+  </tr>
+  <tr>
+    <td align="center">At rest</td>
+    <td align="center">Dark mode</td>
+  </tr>
+</table>
 
 ## Quick start
 
-You need Node 24.
+With Docker Compose, on any machine that stays on (a mini PC, a NAS, a Raspberry Pi 5):
+
+```bash
+git clone https://github.com/zaintechsavvy/hearth
+cd hearth
+cp .env.example .env
+echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+docker compose up -d --build
+```
+
+Open `http://<that machine>:3000`, create an account, and either connect Home Assistant (a long-lived access token from your HA profile) or choose **Open the demo home** to look around first. Compose starts Hearth, a Postgres database and the go2rtc camera relay.
+
+If you open Hearth from other devices by IP (for example `http://192.168.1.10:3000`), set that as `BETTER_AUTH_URL` or add it to `TRUSTED_ORIGINS`. Once everyone in your household has an account, set `DISABLE_SIGNUP=true`.
+
+**On the wall:** open Hearth on the tablet, add it to the home screen, turn on **Wall tablet** in Settings, and set the tablet to never auto-lock.
+
+<details>
+<summary>Run it without Docker (Node 24)</summary>
 
 ```bash
 cp .env.example .env.local
@@ -92,7 +63,57 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000, create an account, and choose **Open the demo home**. The database and its tables are created on first start.
+Open http://localhost:3000. Without `DATABASE_URL`, Hearth keeps its data in an embedded Postgres (PGlite) under `data/pglite`.
+</details>
+
+## Configuration
+
+| Variable | What it does |
+| --- | --- |
+| `BETTER_AUTH_SECRET` | Required. Signs sessions and encrypts stored tokens and camera passwords. |
+| `BETTER_AUTH_URL` | The address people open Hearth at. |
+| `TRUSTED_ORIGINS` | Other addresses Hearth is opened at, comma separated. |
+| `DATABASE_URL` | Optional Postgres (Neon, Supabase, your own). Empty means the bundled database. |
+| `STREAM_RELAY_URL` | The go2rtc relay for cameras. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional Sign in with Google. Add `<BETTER_AUTH_URL>/api/auth/callback/google` as the redirect URI. |
+| `DISABLE_SIGNUP` | `true` closes sign up, for email and Google alike. |
+
+## Privacy
+
+- **Self-hosted.** Hearth talks to your Home Assistant and nothing else, unless you turn on an AI provider for plain-word commands.
+- **No telemetry, no analytics, no account with us.**
+- **Secrets are encrypted at rest.** Home Assistant tokens, camera passwords and AI keys are sealed with a key derived from `BETTER_AUTH_SECRET` before they reach the database. Passwords are hashed with scrypt.
+- **HTTPS** is needed for phones to install Hearth and get alerts; [docs/https.md](docs/https.md) walks through it.
+
+## Features
+
+**The dashboard**, built from tiles you choose and arrange yourself.
+
+![The dashboard](docs/screenshots/dashboard.png)
+
+**The thermostat** glows warm from the top when you raise it and cool from the bottom when you lower it.
+
+| Raise | Lower |
+| --- | --- |
+| ![Thermostat warming](docs/screenshots/thermostat-warm.png) | ![Thermostat cooling](docs/screenshots/thermostat-cool.png) |
+
+**Customize any tile**: its size, icon, colour, and what press and hold does.
+
+![Customize dialog](docs/screenshots/customize.png)
+
+**Activity**: everything that happened, from Hearth and Home Assistant alike, and who did it.
+
+![Activity](docs/screenshots/activity.png)
+
+**Automations** you can pause or snooze, and **Settings** in four short groups.
+
+![Automations](docs/screenshots/automations.png)
+
+**On a phone.**
+
+<p align="center"><img src="docs/screenshots/phone.png" alt="The dashboard on a phone" width="360"></p>
+
+[docs/guide.md](docs/guide.md) walks through every screen.
 
 ### What each device can do
 
@@ -132,16 +153,7 @@ To use Supabase, open **Connect**, copy the **Transaction pooler** string (port 
 
 Phones need HTTPS to install Hearth and get alerts. Run `npm run dev:https`, trust the Hearth certificate once on each phone, and open the address it prints. [docs/https.md](docs/https.md) walks through iPhone and Android, and how to give an always-on Hearth a real address.
 
-### Run it at home with Docker
-
-```bash
-cp .env.example .env      # set BETTER_AUTH_SECRET, and BETTER_AUTH_URL to the address you will open
-docker compose up -d --build
-```
-
-This starts Hearth on port 3000 and go2rtc next to it. If you open Hearth from other devices by IP (for example `http://192.168.1.10:3000`), set that as `BETTER_AUTH_URL` or add it to `TRUSTED_ORIGINS`. Once everyone in your household has an account, set `DISABLE_SIGNUP=true`.
-
-### Deploy to Vercel
+## Deploy to Vercel
 
 Vercel needs a Postgres database (Neon from the Vercel Marketplace works), `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`; until they are set, Hearth shows a setup screen listing what is missing. Alerts, automations, and sensor history need an always-on server, so they stay off there; Activity reads Home Assistant's logbook instead. [docs/vercel.md](docs/vercel.md) has the steps.
 
@@ -333,3 +345,17 @@ Good exercises if you are learning with this project:
 2. **Energy**: chart power and energy sensors, with a daily total and a cost per kilowatt hour.
 3. **Presence**: "everyone left" and "first one home" automations from phones' locations or a router's connected devices.
 4. **Media**: a now-playing tile for Home Assistant media players, with volume and artwork.
+
+## Limitations
+
+- Hearth needs Home Assistant (or Matter) for devices; it does not talk to Zigbee or Z-Wave directly.
+- Alerts, automations and sensor history need an always-on server. On Vercel they stay off and Activity reads Home Assistant's logbook instead.
+- Cameras stream through go2rtc or Home Assistant; a camera neither can reach will not show.
+
+## Contributing
+
+Issues and pull requests are welcome. Run `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` before opening one. [AGENTS.md](AGENTS.md) describes the design rules the code follows.
+
+## License
+
+[MIT](LICENSE)
