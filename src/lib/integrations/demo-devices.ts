@@ -40,7 +40,7 @@ export function seedDemoDevices(integrationId: string): Device[] {
     { ...base("front-door-battery", "Front door lock battery", "Entry"), kind: "sensor", sensorClass: "battery", value: 18, unit: "%" },
     { ...base("hall-motion-battery", "Hallway motion battery", "Entry"), kind: "sensor", sensorClass: "battery", value: 64, unit: "%" },
     { ...base("garden-sensor", "Garden sensor", "Outside"), kind: "sensor", sensorClass: "temperature", value: null, unit: "°C", available: false },
-    { ...base("zain", "Zain", null), kind: "person", home: true, place: null, picture: null, since: new Date(Date.now() - 2.5 * 3_600_000).toISOString(), battery: 72 },
+    { ...base("alex", "Alex", null), kind: "person", home: true, place: null, picture: null, since: new Date(Date.now() - 2.5 * 3_600_000).toISOString(), battery: 72 },
     { ...base("sam", "Sam", null), kind: "person", home: false, place: "Work", picture: null, since: new Date(Date.now() - 4 * 3_600_000).toISOString(), battery: 41 },
     { ...base("vacuum", "Robot vacuum", "Living room"), kind: "vacuum", state: "docked", battery: 100, can: { start: true, pause: true, stop: true, dock: true, locate: true } },
     { ...base("alarm", "Alarm", null), kind: "alarm", state: "disarmed", modes: ["home", "away", "night"], codeFormat: "number", codeToArm: false },

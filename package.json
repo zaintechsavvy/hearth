@@ -1,6 +1,12 @@
 {
   "name": "hearth",
   "version": "0.1.0",
+  "description": "A calm, self-hosted Home Assistant dashboard, built for a tablet on the wall.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zaintechsavvy/hearth"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",
