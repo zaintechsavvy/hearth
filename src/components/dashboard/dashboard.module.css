@@ -284,3 +284,12 @@
 @media (prefers-reduced-motion: reduce) {
   .selectBar { animation: none; }
 }
+
+/* The Add menu sits between plain buttons, so it takes their corners, and its plus reads in the label's colour. */
+.actions [class*="dropdown-menu-module"][class*="trigger"] {
+  border-radius: var(--radius-control);
+}
+
+.actions [class*="dropdown-menu-module"][class*="triggerIcon"] {
+  color: currentColor;
+}
