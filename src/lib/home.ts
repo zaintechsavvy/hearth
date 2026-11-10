@@ -106,6 +106,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
 
 export function readableError(error: unknown) {
   if (error instanceof IntegrationError) return error.message;
+  // Saved tokens are sealed with BETTER_AUTH_SECRET; after it changes they cannot be opened.
+  if (error instanceof Error && /unable to authenticate data/i.test(error.message)) return "Hearth cannot read this connection's saved token, likely because BETTER_AUTH_SECRET changed. Remove it and connect again.";
   console.error(error);
   return "Something went wrong. Check the server logs for details.";
 }
@@ -127,7 +129,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
     db.select().from(widgetItem).where(eq(widgetItem.userId, userId)).orderBy(widgetItem.position, widgetItem.createdAt),
   ]);
   const overrides = new Map(overrideRows.map(row => [row.deviceId, row]));
-  const results = await Promise.allSettled(rows.map(row => withTimeout(createProvider(row).listDevices(), LIST_TIMEOUT_MS, `${row.name} took too long to answer.`)));
+  const results = await Promise.allSettled(rows.map(row => Promise.resolve().then(() => withTimeout(createProvider(row).listDevices(), LIST_TIMEOUT_MS, `${row.name} took too long to answer.`))));
   const devices: Device[] = [];
   const integrations = rows.map((row, index): IntegrationStatus => {
     const result = results[index];

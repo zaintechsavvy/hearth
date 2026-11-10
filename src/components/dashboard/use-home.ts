@@ -67,8 +67,18 @@ const notifyLive = (live: boolean) => {
   for (const listener of shared.listeners) listener();
 };
 
-function connect() {
-  shared.users++;
+/** A tablet that slept, or a server that restarted, can leave the stream closed for good; waking the screen opens it again. */
+function wake() {
+  if (document.visibilityState !== "visible" || shared.users === 0) return;
+  if (shared.source?.readyState === EventSource.CLOSED) {
+    shared.source.close();
+    shared.source = null;
+    open();
+  }
+  void mutateKey(KEY);
+}
+
+function open() {
   if (!shared.source) {
     const source = new EventSource(STREAM);
     source.addEventListener("snapshot", event => {
@@ -80,10 +90,21 @@ function connect() {
     source.addEventListener("error", () => notifyLive(false));
     shared.source = source;
   }
+}
+
+function connect() {
+  shared.users++;
+  if (shared.users === 1) {
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("online", wake);
+  }
+  open();
   return () => {
     shared.users--;
-    if (shared.users > 0 || !shared.source) return;
-    shared.source.close();
+    if (shared.users > 0) return;
+    document.removeEventListener("visibilitychange", wake);
+    window.removeEventListener("online", wake);
+    shared.source?.close();
     shared.source = null;
     notifyLive(false);
   };
