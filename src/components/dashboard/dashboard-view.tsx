@@ -1,7 +1,6 @@
 "use client";
 
-import { Clapperboard, ClipboardPaste, Copy, House, LayoutGrid, ListChecks, Mic, Plus, QrCode, Sparkles, Sun, Trash2, Video } from "lucide-react";
-import { listenToHearth } from "@/components/assistant/assistant-dock";
+import { Clapperboard, ClipboardPaste, Copy, House, LayoutGrid, ListChecks, Plus, QrCode, Sparkles, Sun, Trash2, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Alert } from "@/components/arc/alert/alert";
@@ -14,6 +13,7 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Glass, glassClass } from "@/components/glass/glass";
 import { addDemoHome, deleteScene, saveLayout, updateDevice } from "@/lib/actions";
 import { useStoredJson } from "@/components/shell/use-stored-json";
+import { useTick } from "./household/use-tick";
 import { PageTabs } from "./page-tabs";
 import { ADD_TILE_EVENT } from "@/components/shell/command-menu";
 import type { HomeCamera } from "@/lib/home";
@@ -123,6 +123,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   const { home, error, isLoading, live, refresh, send, runScene } = useHome();
   const [sceneEditing, setSceneEditing] = useState<HearthScene | "new" | null>(null);
   const hour = useSyncExternalStore(subscribeNever, () => new Date().getHours(), () => null);
+  const minute = useTick(60_000);
+  const today = minute ? new Date(minute).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : null;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<TileConfig[] | null>(null);
   const [customizing, setCustomizing] = useState<string | null>(null);
@@ -320,7 +322,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     const linked = resolve(tile);
     return linked?.type === "device" ? linked.device.room : null;
   };
-  const filtering = room !== ALL_ROOMS && !editing && linkedRooms.includes(room);
+  const filtering = room !== ALL_ROOMS && linkedRooms.includes(room);
   // Like Apple Home, a swipe moves through All and each room, then on to the next page, and the new screen slides in from that side.
   const screens = linkedRooms.length > 1 ? [ALL_ROOMS, ...linkedRooms] : [ALL_ROOMS];
   const current = filtering ? room : ALL_ROOMS;
@@ -480,7 +482,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       : hold === "history" ? () => setCharting(source.id)
       : hold === "controls" && source.kind === "light" ? () => setControlling(source.id)
       : null;
-    if (device.kind === "thermostat") return <Thermostat device={device} onCommand={command => send(device, command)} onOpenHistory={interactive ? () => setCharting(device.id) : undefined} />;
+    if (device.kind === "thermostat") return <Thermostat device={device} size={tile.size} preview={preview} onCommand={command => send(device, command)} onOpenHistory={interactive ? () => setCharting(device.id) : undefined} />;
     if (device.kind === "camera") {
       if (preview) return <CameraPreview name={device.name} />;
       const live = <IntegrationCameraTile camera={device} />;
@@ -596,15 +598,11 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     <div className={styles.dashboard}>
       <header className={styles.intro} data-on-wall>
         <div>
-          <div className={styles.titleRow}>
-            <h1 className={styles.title}><Greeting hour={hour} name={userName} /></h1>
-            <button type="button" className={`${glassClass("pill")} ${styles.ask}`} data-wall-only onClick={() => listenToHearth()} aria-label="Ask Hearth" title="Ask Hearth">
-              <Mic size={18} strokeWidth={1.75} aria-hidden="true" />
-            </button>
-          </div>
+          <h1 className={styles.title}><Greeting hour={hour} name={userName} /></h1>
           <p className={styles.summary}>
+            {today && <span className={styles.today} data-wall-show>{today}</span>}
             {summarize(home.devices)}
-            <span className={styles.live} data-live={live || undefined} title={live ? "Updates arrive as they happen" : "Connecting to live updates"}>{live ? "Live" : "Connecting"}</span>
+            <span className={styles.live} data-wall-hide data-live={live || undefined} title={live ? "Updates arrive as they happen" : "Connecting to live updates"}>{live ? "Live" : "Connecting"}</span>
           </p>
         </div>
         <div className={styles.actions} data-wall-hide={!editing || undefined}>
@@ -636,7 +634,12 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         </div>
       </header>
 
-      {editing ? <PageTabs pages={home.pages} current={pageId} editing={editing} onSelect={selectPage} onChanged={refresh} />
+      {editing && <PageTabs pages={home.pages} current={pageId} editing={editing} onSelect={selectPage} onChanged={refresh} />}
+      {editing ? linkedRooms.length > 1 && (
+          <div className={styles.screens} data-on-wall>
+            <SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} />
+          </div>
+        )
         : (home.pages.length > 1 || linkedRooms.length > 1) && (
           <div className={styles.screens} data-on-wall>
             {home.pages.length > 1 && (
@@ -704,9 +707,11 @@ function CameraPreview({ name }: { name: string }) {
 }
 
 /** A reorder made while one room is shown, put back into the slots those tiles hold in the whole layout. */
+/** Folds a change made in one room back into the whole page: the room's tiles trade the spots they already held, so tiles from other rooms never move. */
 function mergeFiltered(all: TileConfig[], changed: TileConfig[]) {
   const ids = new Set(changed.map(tile => tile.id));
-  const queue = [...changed];
+  const spots = all.filter(tile => ids.has(tile.id)).map(tile => tile.at);
+  const queue = changed.map((tile, index) => ({ ...tile, at: spots[index] ?? tile.at }));
   return all.map(tile => ids.has(tile.id) ? queue.shift() ?? tile : tile);
 }
 

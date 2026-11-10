@@ -1,7 +1,10 @@
 import { applyCommand, deviceId, livePosition, type Device, type DeviceCommand, type MediaPlayerDevice, type TodoItem } from "@/lib/devices/types";
 import "server-only";
+import { eq } from "drizzle-orm";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { db } from "@/lib/db";
+import { demoState } from "@/lib/db/schema";
 import { DEMO_CAN, seedDemoDevices, TRACKS } from "./demo-devices";
 import { IntegrationError, type DeviceList, type HistoryPoint, type Provider } from "./types";
 
@@ -10,7 +13,10 @@ const DEMO_CAMERA_PICTURES: Record<string, string> = { "front-camera": "front-do
 interface DemoHome {
   devices: Map<string, Device>;
   lists: Map<string, TodoItem[]>;
+  moving: Map<string, { at: number; open: boolean }>;
   updatedAt: number;
+  /** The saved row this copy matches; a higher one in the database means another instance changed the home. */
+  version: number;
   listeners: Set<() => void>;
   timer?: ReturnType<typeof setInterval>;
 }
@@ -52,6 +58,12 @@ function followLeader(home: DemoHome, leaderId: string) {
 function simulate(home: DemoHome, now: number) {
   const seconds = (now - home.updatedAt) / 1000;
   home.updatedAt = now;
+  for (const [id, move] of home.moving) {
+    const cover = home.devices.get(id);
+    if (now - move.at < TRAVEL_MS && cover?.kind === "cover" && cover.state !== "stopped") continue;
+    home.moving.delete(id);
+    if (cover?.kind === "cover" && cover.state !== "stopped") home.devices.set(id, { ...cover, state: move.open ? "open" : "closed", position: move.open ? 100 : 0 });
+  }
   for (const [id, device] of home.devices) {
     if (device.kind === "vacuum" && device.state === "cleaning") home.devices.set(id, { ...device, battery: Math.max(15, (device.battery ?? 100) - seconds * 0.05) | 0 });
     if (device.kind === "vacuum" && device.state === "returning") home.devices.set(id, { ...device, state: "docked" });
@@ -64,11 +76,12 @@ function simulate(home: DemoHome, now: number) {
     }
     if (device.kind !== "thermostat" || device.current === null) continue;
     const goal = device.mode === "off" || device.target === null ? AMBIENT : device.target;
-    const heats = device.mode !== "off" && device.mode !== "cool" && goal > device.current + 0.05;
-    const cools = device.mode !== "off" && device.mode !== "heat" && goal < device.current - 0.05;
+    const heats = (device.mode === "heat" || device.mode === "auto") && goal > device.current + 0.05;
+    const cools = (device.mode === "cool" || device.mode === "auto") && goal < device.current - 0.05;
     const drift = Math.min(Math.abs(goal - device.current), seconds * HEATING_RATE) * Math.sign(goal - device.current);
     const current = heats || cools || device.mode === "off" ? device.current + drift : device.current;
-    home.devices.set(id, { ...device, current: Math.round(current * 10) / 10, action: device.mode === "off" ? "off" : heats ? "heating" : cools ? "cooling" : "idle" });
+    const action = device.mode === "off" ? "off" : device.mode === "dry" ? "drying" : device.mode === "fan" ? "fan" : heats ? "heating" : cools ? "cooling" : "idle";
+    home.devices.set(id, { ...device, current: Math.round(current * 10) / 10, action });
   }
 }
 
@@ -104,41 +117,63 @@ function demoUsage(nativeId: string, current: number, from: Date, to: Date): His
 export class DemoProvider implements Provider {
   constructor(private readonly integrationId: string) {}
 
-  private home() {
+  private seed(): DemoHome {
+    return {
+      devices: new Map(seedDemoDevices(this.integrationId).map(device => [device.id, device])), moving: new Map(), updatedAt: Date.now(), version: 0, listeners: new Set(),
+      lists: new Map([[deviceId(this.integrationId, "shopping"), ["Milk", "Eggs", "Coffee beans"].map(summary => ({ uid: summary.toLowerCase().replaceAll(" ", "-"), summary, done: false })).concat({ uid: "bread", summary: "Bread", done: true })]]),
+    };
+  }
+
+  /** This instance's copy of the home, refreshed from the database when another instance saved a newer one. */
+  private async home() {
     let home = homes.get(this.integrationId);
-    if (!home) {
-      home = {
-        devices: new Map(seedDemoDevices(this.integrationId).map(device => [device.id, device])), updatedAt: Date.now(), listeners: new Set(),
-        lists: new Map([[deviceId(this.integrationId, "shopping"), ["Milk", "Eggs", "Coffee beans"].map(summary => ({ uid: summary.toLowerCase().replaceAll(" ", "-"), summary, done: false })).concat({ uid: "bread", summary: "Bread", done: true })]]),
-      };
-      homes.set(this.integrationId, home);
+    if (!home) homes.set(this.integrationId, home = this.seed());
+    const [row] = await db.select().from(demoState).where(eq(demoState.integrationId, this.integrationId)).catch(() => []);
+    if (row && row.version > home.version) {
+      home.devices = new Map(row.devices.map(device => [device.id, device]));
+      home.lists = new Map(Object.entries(row.lists));
+      home.moving = new Map(Object.entries(row.moving));
+      home.updatedAt = row.updatedAt.getTime();
+      home.version = row.version;
     }
     simulate(home, Date.now());
     return home;
   }
 
+  private async save(home: DemoHome) {
+    home.version += 1;
+    const values = { devices: [...home.devices.values()], lists: Object.fromEntries(home.lists), moving: Object.fromEntries(home.moving), updatedAt: new Date(home.updatedAt), version: home.version };
+    await db.insert(demoState).values({ integrationId: this.integrationId, ...values })
+      .onConflictDoUpdate({ target: demoState.integrationId, set: values }).catch(() => {});
+  }
+
   async check() {}
 
   subscribe(onChange: () => void) {
-    const home = this.home();
-    home.listeners.add(onChange);
-    home.timer ??= setInterval(() => {
-      const before = JSON.stringify([...home.devices.values()]);
-      simulate(home, Date.now());
-      if (JSON.stringify([...home.devices.values()]) !== before) notify(home);
+    let home = homes.get(this.integrationId);
+    if (!home) homes.set(this.integrationId, home = this.seed());
+    const watched = home;
+    watched.listeners.add(onChange);
+    watched.timer ??= setInterval(async () => {
+      const before = JSON.stringify([...watched.devices.values()]);
+      const version = watched.version;
+      await this.home();
+      if (JSON.stringify([...watched.devices.values()]) === before) return;
+      if (watched.version === version) await this.save(watched);
+      notify(watched);
     }, TICK_MS);
     return () => {
-      home.listeners.delete(onChange);
-      if (home.listeners.size === 0 && home.timer) {
-        clearInterval(home.timer);
-        home.timer = undefined;
+      watched.listeners.delete(onChange);
+      if (watched.listeners.size === 0 && watched.timer) {
+        clearInterval(watched.timer);
+        watched.timer = undefined;
       }
     };
   }
 
   /** A believable day for demo readings: a gentle daily swing around the current value, with a little noise. */
   async history(nativeId: string, from: Date, to: Date): Promise<HistoryPoint[] | null> {
-    const device = this.home().devices.get(deviceId(this.integrationId, nativeId));
+    const device = (await this.home()).devices.get(deviceId(this.integrationId, nativeId));
     const current = device?.kind === "sensor" ? device.value : device?.kind === "thermostat" ? device.current : null;
     if (current === null || current === undefined) return null;
     if (device?.kind === "sensor" && (device.sensorClass === "energy" || device.sensorClass === "power")) return demoUsage(nativeId, current, from, to);
@@ -156,16 +191,16 @@ export class DemoProvider implements Provider {
   }
 
   async listDevices(): Promise<DeviceList> {
-    return { devices: [...this.home().devices.values()], unsupported: {} };
+    return { devices: [...(await this.home()).devices.values()], unsupported: {} };
   }
 
   async todoItems(nativeId: string) {
-    return this.home().lists.get(deviceId(this.integrationId, nativeId)) ?? [];
+    return (await this.home()).lists.get(deviceId(this.integrationId, nativeId)) ?? [];
   }
 
   /** The demo playlist around the current track: the ones before it as recently played, and the next one up. */
   async mediaQueue(nativeId: string) {
-    const device = this.home().devices.get(deviceId(this.integrationId, nativeId));
+    const device = (await this.home()).devices.get(deviceId(this.integrationId, nativeId));
     if (device?.kind !== "media_player" || !device.title) return { recent: [], next: null };
     const at = trackIndex(device);
     const pick = (index: number) => { const track = TRACKS[(index + TRACKS.length) % TRACKS.length]; return { title: track.title, artist: track.artist, media: track.media }; };
@@ -220,7 +255,7 @@ export class DemoProvider implements Provider {
   }
 
   async execute(nativeId: string, command: DeviceCommand) {
-    const home = this.home();
+    const home = await this.home();
     const id = deviceId(this.integrationId, nativeId);
     const device = home.devices.get(id);
     if (!device) throw new IntegrationError("That demo device does not exist.");
@@ -233,21 +268,18 @@ export class DemoProvider implements Provider {
         : items.map(item => item.uid === command.item ? { ...item, done: command.action === "check" } : item);
       home.lists.set(id, next);
       home.devices.set(id, { ...device, open: next.filter(item => !item.done).length } as Device);
+      await this.save(home);
       notify(home);
       return;
     }
     if (device.kind === "media_player") this.playMedia(home, device, command);
     else if (device.kind === "scene" && nativeId === "evening") this.evening(home);
     else home.devices.set(id, applyCommand(device, command));
-    notify(home);
-    if (device.kind === "cover" && command.type === "cover" && command.action !== "stop") {
-      setTimeout(() => {
-        const current = home.devices.get(id);
-        if (current?.kind !== "cover" || current.state === "stopped") return;
-        const open = command.action === "open";
-        home.devices.set(id, { ...current, state: open ? "open" : "closed", position: open ? 100 : 0 });
-        notify(home);
-      }, TRAVEL_MS);
+    if (device.kind === "cover" && command.type === "cover") {
+      if (command.action === "stop") home.moving.delete(id);
+      else home.moving.set(id, { at: Date.now(), open: command.action === "open" });
     }
+    await this.save(home);
+    notify(home);
   }
 }

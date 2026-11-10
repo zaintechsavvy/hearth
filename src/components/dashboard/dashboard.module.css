@@ -19,27 +19,6 @@
   line-height: var(--leading-display);
 }
 
-.titleRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.ask {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  color: var(--foreground);
-  transition: transform var(--duration-spring) var(--ease-spring);
-}
-
-.ask:active {
-  transform: scale(.94);
-}
-
 /* A wall tablet keeps the header tight so four rows of tiles fit under it, with the greeting a touch larger for reading across a room. */
 :global(:root[data-wall]) .dashboard {
   gap: var(--space-4);
@@ -52,6 +31,11 @@
 .summary {
   margin-top: var(--space-1);
   color: var(--text-secondary);
+}
+
+.today::after {
+  content: "·";
+  margin-inline: .5em;
 }
 
 .actions {

@@ -1,8 +1,8 @@
 import type { HueSaturation } from "./color";
 
 export type TemperatureUnit = "C" | "F";
-export type ThermostatMode = "off" | "heat" | "cool" | "auto";
-export type ThermostatAction = "heating" | "cooling" | "idle" | "off";
+export type ThermostatMode = "off" | "heat" | "cool" | "auto" | "dry" | "fan";
+export type ThermostatAction = "heating" | "cooling" | "drying" | "fan" | "idle" | "off";
 
 interface DeviceBase {
   /** `<integrationId>:<native id>`, stable across polls. */

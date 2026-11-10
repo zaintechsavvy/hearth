@@ -90,7 +90,7 @@ function sizeNote(kind: TileKind, size: TileSize) {
   if (size === "1x1") return kind === "lock" ? "Tap to lock or unlock" : kind === "cover" ? "Tap to open or close" : kind === "scene" ? "Tap to run" : kind === "sensor" || kind === "binary_sensor" || kind === "event" ? "Just the reading" : SIZE_NOTES["1x1"];
   if (size === "1x2" && kind !== "light" && kind !== "fan") return kind === "lock" || kind === "cover" ? "One big button" : "A tall card";
   if (size === "2x2" && (kind === "lock" || kind === "cover")) return "State, name, and a button";
-  return kind === "camera" ? CAMERA_SIZE_NOTES[size] : SIZE_NOTES[size];
+  return kind === "camera" ? CAMERA_SIZE_NOTES[size] : kind === "thermostat" ? THERMOSTAT_SIZE_NOTES[size] : SIZE_NOTES[size];
 }
 
 const SIZE_NOTES: Partial<Record<TileSize, string>> = {
@@ -112,6 +112,13 @@ const CAMERA_SIZE_NOTES: Partial<Record<TileSize, string>> = {
   "4x2": "Panoramic",
   "4x3": "Big picture",
   "4x4": "The biggest square",
+};
+
+const THERMOSTAT_SIZE_NOTES: Partial<Record<TileSize, string>> = {
+  "2x2": "Arrows beside the reading",
+  "3x3": "Room for every control",
+  "4x2": "Modes along the bottom",
+  "4x3": "A big reading and modes",
 };
 
 const NO_CAMERA = "__none";

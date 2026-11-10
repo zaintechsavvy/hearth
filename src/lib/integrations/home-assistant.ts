@@ -33,8 +33,8 @@ const FAN_SET_SPEED = 1;
 const COLOR_MODES = new Set(["hs", "xy", "rgb", "rgbw", "rgbww"]);
 const COVER = { open: 1, close: 2, setPosition: 4, stop: 8 };
 
-const HVAC_TO_MODE: Record<string, ThermostatMode> = { off: "off", heat: "heat", cool: "cool", heat_cool: "auto", auto: "auto" };
-const ACTIONS: Record<string, ThermostatAction> = { heating: "heating", preheating: "heating", cooling: "cooling", idle: "idle", off: "off" };
+const HVAC_TO_MODE: Record<string, ThermostatMode> = { off: "off", heat: "heat", cool: "cool", heat_cool: "auto", auto: "auto", dry: "dry", fan_only: "fan" };
+const ACTIONS: Record<string, ThermostatAction> = { heating: "heating", preheating: "heating", cooling: "cooling", drying: "drying", fan: "fan", idle: "idle", off: "off" };
 const LOCK_STATES: Record<string, LockState> = { locked: "locked", unlocked: "unlocked", locking: "locking", unlocking: "unlocking", jammed: "jammed", open: "open", opening: "unlocking" };
 const COVER_CLASSES: Record<string, CoverClass> = { garage: "garage", door: "door", gate: "gate", blind: "blind", shutter: "blind", awning: "blind", shade: "shade", curtain: "curtain", window: "window" };
 const COVER_STATES: Record<string, CoverState> = { open: "open", closed: "closed", opening: "opening", closing: "closing", stopped: "stopped" };
@@ -713,7 +713,7 @@ export class HomeAssistantProvider implements Provider {
       case "thermostatMode": {
         const entity = await this.request<HassState>(`api/states/${entityId}`);
         const modes = (entity.attributes.hvac_modes as string[] | undefined) ?? [];
-        const hvacMode = command.mode === "auto" ? modes.find(mode => mode === "heat_cool") ?? "auto" : command.mode;
+        const hvacMode = command.mode === "auto" ? modes.find(mode => mode === "heat_cool") ?? "auto" : command.mode === "fan" ? "fan_only" : command.mode;
         return void await this.call("climate", "set_hvac_mode", { ...target, hvac_mode: hvacMode });
       }
       case "lock":

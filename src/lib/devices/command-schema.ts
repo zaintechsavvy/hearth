@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const mode = z.enum(["off", "heat", "cool", "auto"]);
+const mode = z.enum(["off", "heat", "cool", "auto", "dry", "fan"]);
 
 export const deviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("power"), on: z.boolean() }),

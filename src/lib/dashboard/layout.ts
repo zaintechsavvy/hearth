@@ -133,7 +133,7 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   todo: [{ size: "2x2", label: "Short list" }, { size: "2x3", label: "List" }, { size: "2x4", label: "Tall" }],
   event: SWITCHABLE,
   scene: SWITCHABLE,
-  thermostat: [{ size: "2x2", label: "Compact" }, { size: "3x3", label: "Large" }],
+  thermostat: [{ size: "2x2", label: "Compact" }, { size: "3x3", label: "Large" }, { size: "4x2", label: "Wide" }, { size: "4x3", label: "Wide large" }],
   camera: [{ size: "2x2", label: "Square" }, { size: "3x3", label: "Medium" }, { size: "4x2", label: "Wide" }, { size: "4x3", label: "Large" }, { size: "4x4", label: "Big" }],
   media_player: [{ size: "4x1", label: "Bar" }, { size: "4x2", label: "Player" }],
   weather: [{ size: "2x1", label: "Now" }, { size: "2x2", label: "Today" }, { size: "4x2", label: "Week" }],

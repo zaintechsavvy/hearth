@@ -21,7 +21,7 @@ export const CONTROL_TOOL = {
       color: { type: "string", description: "For set_color, the colour as #rrggbb." },
       output: { type: "string", description: "For set_output, one of the media player's outputs, exactly as listed." },
       text: { type: "string", description: "For add_item, the item to add to a list; for announce, what the speaker should say." },
-      mode: { type: "string", enum: ["off", "heat", "cool", "auto"], description: "The thermostat mode, for set_mode." },
+      mode: { type: "string", enum: ["off", "heat", "cool", "auto", "dry", "fan"], description: "The thermostat mode, for set_mode." },
     },
     required: ["device_id", "action"],
     additionalProperties: false,
@@ -70,7 +70,7 @@ function toolInputShape() {
     color: z.string().optional(),
     output: z.string().optional(),
     text: z.string().max(300).optional(),
-    mode: z.enum(["off", "heat", "cool", "auto"]).optional(),
+    mode: z.enum(["off", "heat", "cool", "auto", "dry", "fan"]).optional(),
   });
 }
 

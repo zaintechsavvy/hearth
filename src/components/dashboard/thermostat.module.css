@@ -57,14 +57,6 @@
   font-size: var(--text-sm);
 }
 
-.dial {
-  min-height: 0;
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: var(--space-1);
-}
-
 .step {
   display: grid;
   place-items: center;
@@ -128,28 +120,169 @@
   color: var(--danger);
 }
 
+/* Compact: the arrows sit either side of the reading, so nothing stacks into the name or the modes. */
+.dial {
+  min-height: 0;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--space-1);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(2px, 3cqi, 14px);
+}
+
+.root[data-layout="compact"] .step {
+  width: clamp(36px, 14cqi, 48px);
+  height: clamp(36px, 14cqi, 48px);
+}
+
+.root[data-layout="compact"] .reading {
+  font-size: clamp(36px, 24cqi, 64px);
+}
+
+/* Wide: the reading on the left, the arrows and power to the right, and the modes along the bottom. */
+.panel {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.readout {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+}
+
+.root[data-layout="wide"] .reading {
+  font-size: clamp(48px, 30cqh, 112px);
+}
+
+.root[data-layout="wide"] .status {
+  text-align: start;
+  font-size: var(--text-base);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.steps {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.root[data-layout="wide"] .step {
+  width: clamp(52px, 10cqi, 64px);
+  height: clamp(44px, 15cqh, 56px);
+  background: oklch(50% 0 0 / .1);
+}
+
+.power {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+
+.power[aria-pressed="true"] {
+  color: var(--foreground);
+}
+
+.root[data-layout="wide"] .power {
+  width: clamp(52px, 10cqi, 64px);
+  height: clamp(52px, 10cqi, 64px);
+  background: oklch(50% 0 0 / .1);
+}
+
+.root[data-layout="wide"] .power[aria-pressed="false"] {
+  background: var(--foreground);
+  color: var(--background);
+}
+
 .modes {
-  justify-self: center;
+  display: flex;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.mode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  background: oklch(50% 0 0 / .08);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+
+.mode[aria-checked="true"] {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.mode[data-mode="heat"][aria-checked="true"] { background: oklch(70% .16 50); color: oklch(99% 0 0); }
+.mode[data-mode="cool"][aria-checked="true"] { background: oklch(62% .15 245); color: oklch(99% 0 0); }
+
+.root[data-off] .mode[aria-checked="true"] {
+  background: oklch(50% 0 0 / .08);
+  color: var(--text-secondary);
+}
+
+.root[data-layout="compact"] .mode {
+  width: clamp(28px, 12cqi, 36px);
+  height: clamp(28px, 12cqi, 36px);
+  padding: 0;
+}
+
+.root[data-layout="wide"] .modes {
+  gap: var(--space-2);
+}
+
+.root[data-layout="wide"] .mode {
+  flex: 1;
+  height: clamp(40px, 15cqh, 52px);
+  font-size: var(--text-base);
+}
+
+@media (hover: hover) {
+  .mode:hover:not([aria-checked="true"]),
+  .power:hover {
+    background: oklch(50% 0 0 / .16);
+    color: var(--foreground);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reading, .step { transition: none; }
+  .reading, .step, .mode, .power { transition: none; }
 }
 
-@container cell (max-width: 250px) or (max-height: 270px) {
-  .modes { display: none; }
-  .root { grid-template-rows: auto 1fr; }
-}
-
-/* A small tile: the dial tightens so the name never meets the arrows. */
+/* A small compact tile keeps the reading and arrows and drops the modes. */
 @container cell (max-height: 240px) {
-  .root { gap: 0; padding: 12px 12px 8px; }
+  .root[data-layout="compact"] { gap: 0; padding: 12px 12px 8px; grid-template-rows: auto 1fr; }
+  .root[data-layout="compact"] .modes { display: none; }
+  .root[data-layout="compact"] .status { min-height: 16px; font-size: var(--text-xs); }
   .name { font-size: var(--text-sm); }
-  .dial { gap: 0; }
-  .step { height: 30px; width: 44px; }
-  .step :global(svg) { width: 24px; height: 24px; }
-  .reading { font-size: clamp(32px, 24cqi, 44px); }
-  .status { min-height: 16px; font-size: var(--text-xs); }
 }
 
 @container cell (max-width: 200px) {

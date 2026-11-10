@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import useSWR from "swr";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
+import { listenToHearth } from "@/components/assistant/assistant-dock";
 import { useHome } from "@/components/dashboard/use-home";
 import { useTick } from "@/components/dashboard/household/use-tick";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
@@ -163,6 +164,8 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
       )}
       <StateNotices devices={home?.devices} />
       {!resting && <LeftOpenBanner items={leftOpen.items} onClose={device => void send(device, { type: "cover", action: "close" }).catch(() => {})} onQuiet={leftOpen.quietTonight} />}
+      <div className={styles.corner} data-on-wall>
+        {now > 0 && <time className={styles.cornerTime} dateTime={new Date(now).toISOString()}>{new Date(now).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>}
       <Popover open={menu} onOpenChange={setMenu}>
         <PopoverTrigger asChild>
           <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><MoreHorizontal size={18} strokeWidth={1.75} aria-hidden="true" /></button>
@@ -176,12 +179,14 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
             ))}
           </nav>
           <span className={styles.menuDivider} aria-hidden="true" />
+          {settings.showAssistant && <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); listenToHearth(); }}>Ask Hearth</button>}
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night</button>
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); setRestedAt(now); }}>Rest the screen</button>
           <span className={styles.menuDivider} aria-hidden="true" />
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.exitFullscreen?.().catch(() => {}); onLeave(); }}>Leave wall tablet mode</button>
         </PopoverContent>
       </Popover>
+      </div>
     </>
   );
 }

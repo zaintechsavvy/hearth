@@ -1,4 +1,4 @@
-import type { Device, SwitchableKind } from "@/lib/devices/types";
+import type { Device, SwitchableKind, TodoItem } from "@/lib/devices/types";
 import { boolean, customType, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp as pgTimestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { ASSISTANT_PROVIDER_IDS } from "@/lib/assistant/providers";
 import type { DashboardPage, SavedTile, TileColor, TileIcon } from "@/lib/dashboard/layout";
@@ -70,6 +70,17 @@ export const integration = pgTable("integration", {
   config: text("config").notNull(),
   createdAt: createdAt(),
 }, t => [index("integration_user_idx").on(t.userId)]);
+
+/** The demo home's simulated devices, shared by every server instance so a change sticks when the next request lands elsewhere. */
+export const demoState = pgTable("demo_state", {
+  integrationId: text("integration_id").primaryKey().references(() => integration.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  devices: jsonb("devices").$type<Device[]>().notNull(),
+  lists: jsonb("lists").$type<Record<string, TodoItem[]>>().notNull(),
+  /** Covers still travelling: when each started and which way, so any instance can finish the move. */
+  moving: jsonb("moving").$type<Record<string, { at: number; open: boolean }>>().notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+});
 
 export const camera = pgTable("camera", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),

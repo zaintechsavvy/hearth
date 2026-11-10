@@ -13,7 +13,7 @@ export const DEMO_CAN = { pause: true, seek: true, next: true, previous: true, v
 export function seedDemoDevices(integrationId: string): Device[] {
   const base = (nativeId: string, name: string, room: string | null) => ({ id: deviceId(integrationId, nativeId), integrationId, name, room, available: true });
   return [
-    { ...base("thermostat", "Living room", "Living room"), kind: "thermostat", unit: "C", current: 20.5, target: 22, min: 10, max: 30, step: 0.5, mode: "heat", modes: ["off", "heat", "cool", "auto"], action: "heating" },
+    { ...base("thermostat", "Living room", "Living room"), kind: "thermostat", unit: "C", current: 20.5, target: 22, min: 10, max: 30, step: 0.5, mode: "heat", modes: ["off", "heat", "cool", "auto", "dry", "fan"], action: "heating" },
     { ...base("kitchen-pendants", "Pendants", "Kitchen"), kind: "light", on: true, dimmable: true, brightness: 80, supportsColor: true, color: { hue: 32, saturation: 70 }, colorMode: "color", temperatureRange: { min: 2000, max: 6500 }, temperature: null },
     { ...base("living-lamp", "Floor lamp", "Living room"), kind: "light", on: true, dimmable: true, brightness: 45, supportsColor: true, color: { hue: 40, saturation: 50 }, colorMode: "white", temperatureRange: { min: 2200, max: 5000 }, temperature: 2700 },
     { ...base("porch", "Porch light", "Outside"), kind: "light", on: false, dimmable: false, brightness: 0, supportsColor: false, color: null, colorMode: null, temperatureRange: null, temperature: null },

@@ -25,8 +25,8 @@ export const ThermostatAttribute = {
 
 export const FanAttribute = { FanMode: 0, PercentSetting: 2, PercentCurrent: 3 } as const;
 
-export const SYSTEM_MODE: Record<ThermostatMode, number> = { off: 0, auto: 1, cool: 3, heat: 4 };
-const MODE_FROM_SYSTEM: Record<number, ThermostatMode> = { 0: "off", 1: "auto", 3: "cool", 4: "heat", 5: "heat", 6: "cool" };
+export const SYSTEM_MODE: Record<ThermostatMode, number> = { off: 0, auto: 1, cool: 3, heat: 4, fan: 7, dry: 8 };
+const MODE_FROM_SYSTEM: Record<number, ThermostatMode> = { 0: "off", 1: "auto", 3: "cool", 4: "heat", 5: "heat", 6: "cool", 7: "fan", 8: "dry" };
 
 const LIGHT_TYPES = [0x0100, 0x0101, 0x010c, 0x010d];
 const CONTACT_TYPE = 0x0015;
@@ -97,7 +97,7 @@ function thermostatModes(node: MatterNode, endpoint: number): ThermostatMode[] {
   const heat = features ? (features & FEATURE.heat) !== 0 : sequence === null || sequence >= 2;
   const cool = features ? (features & FEATURE.cool) !== 0 : sequence === null || sequence <= 1 || sequence >= 4;
   const auto = features ? (features & FEATURE.auto) !== 0 : heat && cool;
-  return (["off", heat && "heat", cool && "cool", auto && "auto"] as const).filter((mode): mode is ThermostatMode => Boolean(mode));
+  return (["off", heat && "heat", cool && "cool", auto && "auto"] as (ThermostatMode | false)[]).filter((mode): mode is ThermostatMode => Boolean(mode));
 }
 
 type Base = Pick<Device, "id" | "integrationId" | "name" | "room" | "available">;
