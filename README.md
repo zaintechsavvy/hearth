@@ -75,8 +75,7 @@ Open http://localhost:3000. Without `DATABASE_URL`, Hearth keeps its data in an 
 | `TRUSTED_ORIGINS` | Other addresses Hearth is opened at, comma separated. |
 | `DATABASE_URL` | Optional Postgres (Neon, Supabase, your own). Empty means the bundled database. |
 | `STREAM_RELAY_URL` | The go2rtc relay for cameras. |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional Sign in with Google. Add `<BETTER_AUTH_URL>/api/auth/callback/google` as the redirect URI. |
-| `DISABLE_SIGNUP` | `true` closes sign up, for email and Google alike. |
+| `DISABLE_SIGNUP` | `true` closes sign up. |
 
 ## Privacy
 
