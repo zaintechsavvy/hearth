@@ -118,14 +118,10 @@
   width: min(1100px, 100%);
 }
 
-.glow {
-  position: absolute;
-  inset: -10% -8%;
-  z-index: 0;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, oklch(62% 0.16 250 / .55), oklch(62% 0.16 250 / .18) 55%, transparent);
-  filter: blur(40px);
-  pointer-events: none;
+@media (max-width: 860px) {
+  .bezel {
+    box-shadow: 0 0 0 1px oklch(72% 0.11 245 / .25), 0 0 36px 0 oklch(62% 0.15 250 / .18), inset 0 0 0 1px oklch(100% 0 0 / .08);
+  }
 }
 
 .bezel {
@@ -134,7 +130,7 @@
   padding: clamp(10px, 1.6vw, 22px);
   border-radius: clamp(22px, 3vw, 44px);
   background: oklch(17% .004 260);
-  box-shadow: 0 0 0 1px oklch(70% 0.12 245 / .35), 0 0 60px 4px oklch(62% 0.16 250 / .45), 0 0 160px 30px oklch(62% 0.16 250 / .25), inset 0 0 0 1px oklch(100% 0 0 / .08);
+  box-shadow: 0 0 0 1px oklch(72% 0.11 245 / .3), 0 0 90px 0 oklch(62% 0.15 250 / .32), 0 0 240px 40px oklch(58% 0.13 252 / .18), inset 0 0 0 1px oklch(100% 0 0 / .08);
 }
 
 .screen {

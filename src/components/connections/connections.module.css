@@ -502,3 +502,11 @@
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
+
+.analogPreview {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1400 / 984;
+  width: min(100%, 360px);
+  border-radius: var(--radius-panel);
+}

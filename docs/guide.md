@@ -63,7 +63,7 @@ Connections, cameras, calendars, assistants, alerts, the household, the wall tab
 
 Turn on **Settings, Wall tablet** on the tablet itself. It keeps the screen on and rests on the date over a large clock, in the colour and brightness you pick, turning a dim red at night if you like.
 
-![The resting clock](screenshots/wall-clock.png)
+![The resting clock](screenshots/wall-analog.png)
 
 ![The resting clock in a warm colour, dimmer](screenshots/wall-clock-warm.png)
 

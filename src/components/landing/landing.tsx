@@ -107,7 +107,6 @@ export function Landing() {
           </motion.div>
 
           <motion.div className={styles.tablet} {...rise(0.1)}>
-            <div aria-hidden="true" className={styles.glow} />
             <div className={styles.bezel}>
               <Image unoptimized src={ipad} alt="Hearth on a wall tablet: thermostat, transit, music, locks, a porch camera, lights and who is home" priority className={`${styles.screen} ${styles.lightOnly}`} sizes="(min-width: 1200px) 1100px, 92vw" />
               <Image unoptimized src={ipadDark} alt="" aria-hidden="true" loading="eager" className={`${styles.screen} ${styles.darkOnly}`} sizes="(min-width: 1200px) 1100px, 92vw" />

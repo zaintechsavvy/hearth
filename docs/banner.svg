@@ -12,8 +12,8 @@
   </defs>
   <rect width="1280" height="320" rx="28" fill="url(#bg)"/>
   <rect width="1280" height="320" rx="28" fill="url(#glow)"/>
-  <g transform="translate(456 92) scale(7.2) translate(-7.4 -7.2)">
+  <g transform="translate(398 95) scale(7.2) translate(-7.4 -7.2)">
     <path d="M8.6 14.6 16 8.4l7.4 6.2v8.1a1.3 1.3 0 0 1-1.3 1.3H9.9a1.3 1.3 0 0 1-1.3-1.3z" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"/>
   </g>
-  <text x="600" y="196" font-family="Georgia, 'Source Serif 4', serif" font-size="104" font-weight="500" fill="#ffffff">Hearth</text>
+  <text x="552" y="216" font-family="Georgia, 'Source Serif 4', serif" font-size="104" font-weight="500" fill="#ffffff">Hearth</text>
 </svg>

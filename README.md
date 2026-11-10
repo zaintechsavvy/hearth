@@ -26,7 +26,7 @@ Hearth sits on top of the Home Assistant you already run. It does not replace it
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/wall-clock.png" alt="The wall tablet resting as a clock"></td>
+    <td><img src="docs/screenshots/wall-analog.png" alt="The wall tablet resting on the analog clock face"></td>
     <td><img src="docs/screenshots/dashboard-dark.png" alt="The dashboard in dark mode"></td>
   </tr>
   <tr>
@@ -93,9 +93,9 @@ Open http://localhost:3000. Without `DATABASE_URL`, Hearth keeps its data in an 
 
 **The thermostat** glows warm from the top when you raise it and cool from the bottom when you lower it.
 
-| Raise | Lower |
+| Light | Dark |
 | --- | --- |
-| ![Thermostat warming](docs/screenshots/thermostat-warm.png) | ![Thermostat cooling](docs/screenshots/thermostat-cool.png) |
+| ![Thermostat cooling](docs/screenshots/thermostat-cool.png) | ![Thermostat cooling in dark mode](docs/screenshots/thermostat-cool-dark.png) |
 
 **Customize any tile**: its size, icon, colour, and what press and hold does.
 

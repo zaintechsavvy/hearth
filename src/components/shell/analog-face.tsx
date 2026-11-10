@@ -13,7 +13,7 @@ function Hand({ angle, from, to, width, className }: { angle: number; from: numb
 }
 
 /** An analog resting face: four large numerals that overlap at the middle, white hands over them, and the day in the corner. */
-export function AnalogFace({ night, settings, note }: { night: boolean; settings: WallSettings; note?: string | null }) {
+export function AnalogFace({ night, settings, note, inline = false }: { night: boolean; settings: WallSettings; note?: string | null; inline?: boolean }) {
   const [now, setNow] = useState(0);
   useEffect(() => {
     const tick = () => setNow(Date.now());
@@ -31,7 +31,7 @@ export function AnalogFace({ night, settings, note }: { night: boolean; settings
   const day = now ? `${date.toLocaleDateString(undefined, { weekday: "short" }).toUpperCase()} ${date.getDate()}` : "";
 
   return (
-    <span className={styles.face} style={style} data-night={night || undefined} data-red={red || undefined}>
+    <span className={`${styles.face} ${inline ? styles.inline : ""}`} style={style} data-night={night || undefined} data-red={red || undefined}>
       <svg className={styles.dial} viewBox="0 0 1400 984" preserveAspectRatio="xMidYMid meet" role="img" aria-label={now ? date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "Clock"}>
         {NUMERALS.map(([text, x, y]) => (
           <text key={text} className={styles.numeral} x={x} y={y} textAnchor="middle" dominantBaseline="central">{text}</text>
