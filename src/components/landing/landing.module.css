@@ -61,11 +61,17 @@
 }
 
 .title {
-  font-family: var(--font-display);
-  font-size: clamp(40px, 6.4vw, 72px);
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: clamp(42px, 7vw, 80px);
   font-weight: 500;
-  letter-spacing: var(--tracking-display);
+  letter-spacing: -0.02em;
   line-height: 1.02;
+}
+
+.highlight {
+  color: oklch(78% 0.1 240);
+  font-style: italic;
+  font-weight: 500;
 }
 
 .lede {
@@ -106,15 +112,29 @@
 }
 
 .tablet {
+  position: relative;
+  isolation: isolate;
   margin-inline: auto;
   width: min(1100px, 100%);
 }
 
+.glow {
+  position: absolute;
+  inset: -10% -8%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, oklch(62% 0.16 250 / .55), oklch(62% 0.16 250 / .18) 55%, transparent);
+  filter: blur(40px);
+  pointer-events: none;
+}
+
 .bezel {
+  position: relative;
+  z-index: 1;
   padding: clamp(10px, 1.6vw, 22px);
   border-radius: clamp(22px, 3vw, 44px);
   background: oklch(17% .004 260);
-  box-shadow: 0 40px 80px -40px oklch(0% 0 0 / .45), inset 0 0 0 1px oklch(100% 0 0 / .08);
+  box-shadow: 0 0 0 1px oklch(70% 0.12 245 / .35), 0 0 60px 4px oklch(62% 0.16 250 / .45), 0 0 160px 30px oklch(62% 0.16 250 / .25), inset 0 0 0 1px oklch(100% 0 0 / .08);
 }
 
 .screen {
@@ -230,6 +250,12 @@
   box-shadow: 0 24px 48px -32px oklch(0% 0 0 / .35);
 }
 
+.featureShotRound {
+  border: 0;
+  border-radius: var(--shot-radius);
+  background: none;
+}
+
 .featureShotSmall {
   justify-self: center;
   width: min(100%, 460px);
@@ -339,6 +365,8 @@
 }
 
 @media (max-width: 860px) {
+  .howShot { display: none; }
+
   .how,
   .rest,
   .feature,

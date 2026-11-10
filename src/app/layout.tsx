@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Inter } from "next/font/google";
+import { Geist, Inter, Source_Serif_4 } from "next/font/google";
 import Script from "next/script";
 import { ServiceWorker } from "@/components/shell/service-worker";
 import { THEME_BOOTSTRAP } from "@/lib/theme";
@@ -7,6 +7,7 @@ import "./globals.css";
 
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const serif = Source_Serif_4({ variable: "--font-serif", subsets: ["latin"], weight: ["400", "500"], style: ["normal", "italic"] });
 
 const SITE = process.env.BETTER_AUTH_URL ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
 const DESCRIPTION = "A calm dashboard for your home: lights, locks, climate, and cameras from Home Assistant and Matter, on any screen.";
@@ -32,7 +33,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" data-theme="light" data-accent="neutral" data-wallpaper="studio" className={`${geist.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="en" data-theme="light" data-accent="neutral" data-wallpaper="studio" className={`${geist.variable} ${inter.variable} ${serif.variable}`} suppressHydrationWarning>
       <body>
         <Script id="theme-bootstrap" strategy="beforeInteractive">{THEME_BOOTSTRAP}</Script>
         {children}

@@ -2,6 +2,7 @@
 
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { motion, useReducedMotion, type HTMLMotionProps } from "motion/react";
 import { Button } from "@/components/arc/button/button";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
@@ -24,7 +25,7 @@ import styles from "./landing.module.css";
 
 const GITHUB = "https://github.com/zaintechsavvy/hearth";
 
-const FEATURES: { title: string; body: string; points: string[]; shot: StaticImageData; dark: StaticImageData; alt: string; small?: boolean }[] = [
+const FEATURES: { title: string; body: string; points: string[]; shot: StaticImageData; dark: StaticImageData; alt: string; small?: boolean; radius?: string }[] = [
   {
     title: "A grid you arrange yourself",
     body: "Start empty and add what you reach for. Drag tiles into any cell, gaps and all, and pick a size from 1×1 to 4×3. No YAML.",
@@ -41,6 +42,7 @@ const FEATURES: { title: string; body: string; points: string[]; shot: StaticIma
     dark: thermostatDark,
     alt: "The thermostat tile glowing cool while cooling",
     small: true,
+    radius: "12.06%",
   },
   {
     title: "What happened, and who did it",
@@ -93,9 +95,9 @@ export function Landing() {
       <main>
         <section className={styles.hero}>
           <motion.div className={styles.copy} data-on-wall {...rise()}>
-            <h1 className={styles.title}>Smart home controls that feel right at home.</h1>
+            <h1 className={styles.title}>Home controls, <em className={styles.highlight}>beautifully calm.</em></h1>
             <p className={styles.lede}>
-              Hearth turns a tablet on the wall into calm controls for your Home Assistant. Tiles you arrange yourself, a clock when nobody is looking, and the doorbell camera the moment someone rings.
+              A self-hosted Home Assistant dashboard, made for a tablet on the wall.
             </p>
             <div className={styles.actions}>
               <Button size="lg" onClick={() => router.push("/sign-up")}>Try the demo home</Button>
@@ -105,6 +107,7 @@ export function Landing() {
           </motion.div>
 
           <motion.div className={styles.tablet} {...rise(0.1)}>
+            <div aria-hidden="true" className={styles.glow} />
             <div className={styles.bezel}>
               <Image unoptimized src={ipad} alt="Hearth on a wall tablet: thermostat, transit, music, locks, a porch camera, lights and who is home" priority className={`${styles.screen} ${styles.lightOnly}`} sizes="(min-width: 1200px) 1100px, 92vw" />
               <Image unoptimized src={ipadDark} alt="" aria-hidden="true" loading="eager" className={`${styles.screen} ${styles.darkOnly}`} sizes="(min-width: 1200px) 1100px, 92vw" />
@@ -139,7 +142,7 @@ export function Landing() {
                 <p className={styles.body}>{f.body}</p>
                 <ul className={styles.points}>{f.points.map(p => <li key={p}>{p}</li>)}</ul>
               </div>
-              <div className={`${styles.featureShot} ${f.small ? styles.featureShotSmall : ""}`}>
+              <div className={`${styles.featureShot} ${f.small ? styles.featureShotSmall : ""} ${f.radius ? styles.featureShotRound : ""}`} style={f.radius ? { "--shot-radius": f.radius } as CSSProperties : undefined}>
                 <Image unoptimized src={f.shot} alt={f.alt} className={`${styles.shot} ${styles.lightOnly}`} sizes="(min-width: 900px) 760px, 92vw" />
                 <Image unoptimized src={f.dark} alt="" aria-hidden="true" className={`${styles.shot} ${styles.darkOnly}`} sizes="(min-width: 900px) 760px, 92vw" />
               </div>

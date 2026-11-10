@@ -1,8 +1,8 @@
+<p align="center"><img src="docs/banner.svg" alt="Hearth" width="900"></p>
+
 <p align="center"><img src="docs/screenshots/ipad.png" alt="Hearth on a wall tablet" width="900"></p>
 
-<h1 align="center">Hearth</h1>
-
-<p align="center"><b>Smart home controls that feel right at home.</b><br>An Apple Home-style wall display for Home Assistant. A calm, self-hosted dashboard made for a tablet on the wall: tiles you arrange by dragging, a clock when nobody is looking, and the doorbell camera the moment someone rings.</p>
+<p align="center"><b>Home controls, beautifully calm.</b><br>An Apple Home-style wall display for Home Assistant. A calm, self-hosted dashboard made for a tablet on the wall: tiles you arrange by dragging, a clock when nobody is looking, and the doorbell camera the moment someone rings.</p>
 
 <p align="center">
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-2f6f4e"></a>
