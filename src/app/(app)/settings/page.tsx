@@ -54,7 +54,7 @@ export default async function ConnectionsPage() {
   return (
     <div className={styles.page}>
       <header data-on-wall>
-        <h1 className={styles.title}>Settings</h1>
+        <h1 className={styles.pageTitle}>Settings</h1>
       </header>
       <SettingsShell groups={[
         { title: "Your home", items: [

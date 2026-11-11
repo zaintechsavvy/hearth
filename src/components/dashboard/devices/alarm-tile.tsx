@@ -1,6 +1,7 @@
 "use client";
 
 import { Moon, ShieldCheck, ShieldOff, Siren, Sun, Plane, House } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
 import { HoldToConfirm } from "@/components/arc/hold-to-confirm/hold-to-confirm";
@@ -55,6 +56,7 @@ export function AlarmTile({ device, config, interactive, openMethod, onCommand }
             </button>
           )}
         </div>
+        {config.size === "2x3" && <AlarmKeypad device={device} openMethod={openMethod} disabled={disabled} onCommand={onCommand} onArm={arm} />}
         {config.size === "2x2" && (
           <div className={styles.actions}>
             {armed(device)
@@ -68,6 +70,41 @@ export function AlarmTile({ device, config, interactive, openMethod, onCommand }
       </section>
       {open && <AlarmDialog device={device} target={open} openMethod={openMethod} onCommand={onCommand} onArm={arm} onClose={() => setOpen(null)} />}
     </>
+  );
+}
+
+/** The keypad laid into the tile: disarm with the alarm's code or the household PIN, or arm by mode, without a dialog in between. */
+function AlarmKeypad({ device, openMethod, disabled, onCommand, onArm }: { device: AlarmDevice; openMethod: OpenMethod; disabled: boolean; onCommand: Send; onArm: (mode: ArmMode) => void }) {
+  const pinLength = useHome().home?.pinLength;
+  const [mode, setMode] = useState<ArmMode>(device.modes[0] ?? "away");
+  const [held, setHeld] = useState(false);
+  const send = (command: DeviceCommand, pin?: string) => onCommand(command, pin).then(() => null, errorOf);
+  const armedNow = armed(device);
+  const pad = armedNow
+    ? device.codeFormat ? <PinPad fill label="Alarm code" submitLabel="Disarm" text={device.codeFormat === "text"} onSubmit={code => send({ type: "alarm", action: "disarm", code })} />
+      : openMethod === "pin" ? <PinPad fill label="Household PIN" submitLabel="Disarm" length={pinLength} onSubmit={pin => send({ type: "alarm", action: "disarm" }, pin)} />
+      : <HoldToConfirm label="Hold to disarm" confirmedLabel="Disarming" tone="neutral" duration={1000} confirmed={held} icon={<ShieldOff size={18} strokeWidth={1.75} />}
+        onConfirm={() => { setHeld(true); void send({ type: "alarm", action: "disarm" }).finally(() => setHeld(false)); }} />
+    : device.codeToArm ? <PinPad fill label="Alarm code" submitLabel="Arm" text={device.codeFormat === "text"} onSubmit={code => send({ type: "alarm", action: "arm", mode, code })} />
+      : null;
+  return (
+    <div className={styles.keypad} inert={disabled || undefined}>
+      {!armedNow && (
+        <div className={styles.actions} role="radiogroup" aria-label="Arm for">
+          {device.modes.map(item => {
+            const ModeIcon = MODE_ICONS[item];
+            return (
+              <button key={item} type="button" role={device.codeToArm ? "radio" : undefined} aria-checked={device.codeToArm ? mode === item : undefined} className={styles.pill} data-lead={(device.codeToArm && mode === item) || undefined}
+                onClick={() => (device.codeToArm ? setMode(item) : onArm(item))}>
+                <ModeIcon size={16} strokeWidth={1.75} aria-hidden="true" />{MODE_LABELS[item]}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {pad}
+      {(armedNow || device.codeToArm) && openMethod === "pin" && !device.codeFormat && <Link href="/settings#security" className={styles.keypadLink}>{pinLength ? "Change the household PIN" : "Set a household PIN"}</Link>}
+    </div>
   );
 }
 

@@ -160,6 +160,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
               <h3 id="tile-size" className={styles.heading}>Template</h3>
               <div
                 onPointerOver={event => {
+                  if (event.pointerType !== "mouse") return;
                   const card = (event.target as HTMLElement).closest<HTMLElement>("[data-card]");
                   const size = card ? options[Number(card.dataset.card)]?.size : undefined;
                   if (size && !blocked(size)) setPreview(current => ({ ...current, size }));
@@ -191,7 +192,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
                       const Icon = TILE_ICON_COMPONENTS[icon];
                       return (
                         <button key={icon} type="button" role="radio" aria-checked={tile.icon === icon} aria-label={iconLabel(icon)} title={iconLabel(icon)} className={styles.iconOption}
-                          onClick={() => onChange({ icon })} onPointerEnter={() => setPreview(current => ({ ...current, icon }))} onPointerLeave={() => setPreview(current => ({ ...current, icon: undefined }))}>
+                          onClick={() => onChange({ icon })} onPointerEnter={event => event.pointerType === "mouse" && setPreview(current => ({ ...current, icon }))} onPointerLeave={() => setPreview(current => ({ ...current, icon: undefined }))}>
                           <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
                         </button>
                       );
@@ -203,7 +204,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
                   <div role="radiogroup" aria-labelledby="tile-color" className={styles.colors}>
                     {TILE_COLORS.map(color => (
                       <button key={color} type="button" role="radio" aria-checked={tile.color === color} aria-label={capitalize(color)} title={capitalize(color)} className={styles.colorOption} data-color={color}
-                        onClick={() => onChange({ color })} onPointerEnter={() => setPreview(current => ({ ...current, color }))} onPointerLeave={() => setPreview(current => ({ ...current, color: undefined }))} />
+                        onClick={() => onChange({ color })} onPointerEnter={event => event.pointerType === "mouse" && setPreview(current => ({ ...current, color }))} onPointerLeave={() => setPreview(current => ({ ...current, color: undefined }))} />
                     ))}
                   </div>
                 </section>

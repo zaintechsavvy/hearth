@@ -129,7 +129,7 @@ export const SIZE_OPTIONS: Record<TileKind, SizeOption[]> = {
   sensor: [...SWITCHABLE, { size: "2x2", label: "Chart" }, { size: "4x2", label: "Wide chart" }],
   person: SWITCHABLE,
   vacuum: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }],
-  alarm: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Keypad" }],
+  alarm: [{ size: "2x1", label: "Card" }, { size: "2x2", label: "Large" }, { size: "2x3", label: "Keypad" }],
   todo: [{ size: "2x2", label: "Short list" }, { size: "2x3", label: "List" }, { size: "2x4", label: "Tall" }],
   event: SWITCHABLE,
   scene: SWITCHABLE,

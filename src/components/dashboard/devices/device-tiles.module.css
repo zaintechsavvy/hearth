@@ -386,3 +386,26 @@
   .card[data-size="2x1"] .badge { display: none; }
   .card[data-size="2x1"] .head { grid-template-columns: minmax(0, 1fr) auto; }
 }
+
+/* The keypad tile: modes or the number pad fill the space under the state, sized to the tile. */
+.keypad {
+  container-type: size;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+}
+
+.keypadLink {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.alarm[data-size="2x3"] {
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+}

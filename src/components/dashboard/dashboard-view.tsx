@@ -645,8 +645,13 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
           <div className={styles.screens} data-on-wall>
             {home.pages.length > 1 && (
               <span className={`${glassClass("pill")} ${styles.screenGlass}`}>
-                <DropdownMenu icon={<LayoutGrid size={15} strokeWidth={1.75} aria-hidden="true" />} label={page?.name ?? "Home"}
-                  items={home.pages.map(item => ({ label: item.name, onSelect: () => { setRoom(ALL_ROOMS); selectPage(item.id); } }))} />
+                {home.pages.length <= 5 ? (
+                  <SegmentedControl label="Page" className={styles.rooms} value={pageId} onValueChange={id => { setRoom(ALL_ROOMS); selectPage(id); }}
+                    options={home.pages.map(item => ({ value: item.id, label: item.name }))} />
+                ) : (
+                  <DropdownMenu icon={<LayoutGrid size={15} strokeWidth={1.75} aria-hidden="true" />} label={page?.name ?? "Home"}
+                    items={home.pages.map(item => ({ label: item.name, onSelect: () => { setRoom(ALL_ROOMS); selectPage(item.id); } }))} />
+                )}
               </span>
             )}
             {linkedRooms.length > 1 && (

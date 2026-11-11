@@ -138,7 +138,7 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
   );
   const power = canPower && (
     <motion.button type="button" className={styles.power} whileTap={press} aria-pressed={!off} onClick={() => setMode(off ? lastOn.current : "off")} aria-label={off ? `Turn ${device.name} on` : `Turn ${device.name} off`} title={off ? "Turn on" : "Turn off"}>
-      <Power size={18} strokeWidth={1.75} aria-hidden="true" />
+      <Power size={15} strokeWidth={1.75} aria-hidden="true" />
     </motion.button>
   );
   const modeButtons = modes.length > 1 && (
@@ -170,18 +170,15 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
               <ChartLine size={15} strokeWidth={1.75} aria-hidden="true" />
             </button>
           )}
-          {layout !== "wide" && power}
           <span className={styles.unit}>°{device.unit}</span>
+          {power}
         </span>
       </header>
 
       {layout === "wide" ? (
         <div className={styles.panel}>
           <div className={styles.readout}>{reading}{statusLine}</div>
-          <div className={styles.controls}>
-            <div className={styles.steps}>{up}{down}</div>
-            {power}
-          </div>
+          <div className={styles.steps}>{up}{down}</div>
         </div>
       ) : layout === "compact" ? (
         <div className={styles.dial}>

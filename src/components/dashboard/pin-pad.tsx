@@ -16,12 +16,14 @@ interface PinPadProps {
   text?: boolean;
   /** How many digits the code has, when known: it is sent as soon as the last one is typed, with no button to press. */
   length?: number | null;
+  /** Sizes the keys to the space it is given, for a keypad laid into a tile instead of a dialog. */
+  fill?: boolean;
 }
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 /** A phone-style keypad: dots for what is typed, big keys, and a typed keyboard works too. */
-export function PinPad({ label, submitLabel, onSubmit, text = false, length = null }: PinPadProps) {
+export function PinPad({ label, submitLabel, onSubmit, text = false, length = null, fill = false }: PinPadProps) {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -57,7 +59,7 @@ export function PinPad({ label, submitLabel, onSubmit, text = false, length = nu
   });
 
   return (
-    <div className={styles.pad} data-error={error ? "" : undefined}>
+    <div className={styles.pad} data-error={error ? "" : undefined} data-fill={fill || undefined}>
       {text ? (
         <input className={styles.text} type="password" aria-label={label} value={code} autoFocus onChange={event => { setError(null); setCode(event.target.value); }} onKeyDown={event => { if (event.key === "Enter") void submit(); }} />
       ) : (

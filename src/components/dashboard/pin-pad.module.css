@@ -103,3 +103,20 @@
   .pad[data-error] .dots { animation: none; }
   .key, .dot { transition: none; }
 }
+
+/* Laid into a tile: the keys take the width they are given, smaller than a dialog's but still a thumb wide. */
+.pad[data-fill] {
+  --key: clamp(32px, min(24cqi, 13.5cqh), 60px);
+  gap: var(--space-2);
+}
+
+.pad[data-fill] .keys {
+  grid-template-columns: repeat(3, var(--key));
+  gap: clamp(4px, min(3cqi, 1.6cqh), 12px);
+}
+
+.pad[data-fill] .key {
+  width: var(--key);
+  height: var(--key);
+  font-size: var(--text-lg);
+}

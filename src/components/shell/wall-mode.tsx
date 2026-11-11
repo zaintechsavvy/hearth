@@ -241,7 +241,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
       <StateNotices devices={home?.devices} />
       {!resting && <LeftOpenBanner items={leftOpen.items} onClose={device => void send(device, { type: "cover", action: "close" }).catch(() => {})} onQuiet={leftOpen.quietTonight} />}
       <div className={styles.corner} data-on-wall>
-        {now > 0 && <time className={styles.cornerTime} dateTime={new Date(now).toISOString()}>{new Date(now).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>}
+        {now > 0 && path.startsWith("/dashboard") && <time className={styles.cornerTime} dateTime={new Date(now).toISOString()}>{new Date(now).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>}
       <Popover open={menu} onOpenChange={setMenu}>
         <PopoverTrigger asChild>
           <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><MoreHorizontal size={18} strokeWidth={1.75} aria-hidden="true" /></button>
