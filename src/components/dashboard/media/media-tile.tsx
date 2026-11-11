@@ -2,7 +2,7 @@
 
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import {
-  Bluetooth, Check, ChevronLeft, Headphones, Heart, ListMusic, Music, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Speaker, Tv, Volume1, Volume2, X,
+  Bluetooth, Check, ChevronDown, ChevronLeft, Headphones, Heart, ListMusic, Music, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Speaker, Tv, Volume1, Volume2, X,
 } from "lucide-react";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
@@ -131,6 +131,7 @@ function Player({ device, send, interactive, view, onView: setView, autoFocus, o
           </>
         )}
         <Favourite device={device} disabled={!interactive} />
+        {onCollapse && <button type="button" className={styles.collapse} aria-label="Close the player" onClick={onCollapse}><ChevronDown size={22} strokeWidth={1.75} aria-hidden="true" /></button>}
       </div>
       <AnimatePresence mode="popLayout" initial={false}>
         {view === "controls" && (

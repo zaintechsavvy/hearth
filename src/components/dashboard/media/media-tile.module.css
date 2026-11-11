@@ -536,20 +536,110 @@ button.row:hover {
   backdrop-filter: blur(6px);
 }
 
+/* The open player fills the screen, a small inset from each edge, so the artwork and controls read from across a room. */
 .stage {
   position: fixed;
   inset: 0;
   z-index: 61;
   display: grid;
-  place-items: start center;
-  padding: max(14vh, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  place-items: stretch;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   pointer-events: none;
 }
 
 .card {
   isolation: isolate;
-  width: min(380px, calc(100vw - 32px));
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   pointer-events: auto;
+}
+
+.card .player {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 460px);
+  grid-template-rows: 1fr auto auto auto 1fr;
+  grid-template-areas: "art ." "art text" "art body" "art foot" "art .";
+  align-content: center;
+  column-gap: clamp(32px, 6vw, 96px);
+  row-gap: 28px;
+  padding: clamp(28px, 6vh, 72px) clamp(28px, 6vw, 96px);
+}
+
+.card .head,
+.card .headTap {
+  display: contents;
+}
+
+.card .headTap > .art {
+  grid-area: art;
+  justify-self: center;
+  align-self: center;
+  width: min(100%, 64vh);
+  border-radius: 24px;
+  box-shadow: 0 30px 60px -24px oklch(0% 0 0 / .55);
+}
+
+.card .text {
+  grid-area: text;
+  align-self: end;
+  padding-right: 96px;
+}
+
+.card .head .title {
+  font-size: clamp(var(--text-xl), 3.2vw, var(--text-3xl));
+  white-space: normal;
+  text-wrap: balance;
+}
+
+.card .head .by {
+  font-size: clamp(var(--text-base), 1.8vw, var(--text-xl));
+}
+
+.card .heart {
+  position: absolute;
+  top: clamp(20px, 4vh, 40px);
+  right: calc(clamp(20px, 4vw, 48px) + 52px);
+}
+
+.card .body {
+  grid-area: body;
+  align-self: start;
+}
+
+.card .foot {
+  grid-area: foot;
+  align-self: start;
+}
+
+.collapse {
+  position: absolute;
+  top: clamp(20px, 4vh, 40px);
+  right: clamp(20px, 4vw, 48px);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: oklch(50% 0 0 / .12);
+  color: var(--foreground);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.collapse:hover {
+  background: oklch(50% 0 0 / .2);
+}
+
+/* Upright screens stack the artwork over the controls. */
+@media (max-aspect-ratio: 1/1) {
+  .card .player {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas: "art" "text" "body" "foot";
+    row-gap: 24px;
+  }
+
+  .card .headTap > .art { width: min(100%, 44vh); }
+  .card .text { padding-right: 0; text-align: center; }
 }
 
 .tile {
