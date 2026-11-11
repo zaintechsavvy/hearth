@@ -9,7 +9,7 @@ const CONTROLS = "button, a[href], [role='button'], [role='switch'], [role='radi
 
 /**
  * A light tick under the finger for every control tapped on a touch screen. Controls with their own feel, such as a
- * hold, mark the click handled. On an iPhone, controls marked `data-haptic` get the switch that ticks for a tap. A
+ * hold, mark the click handled. On an iPhone, controls marked `data-haptic` get a label wired to a switch, which ticks for a tap. A
  * finger scrolling past a slider never moves it.
  */
 export function TapHaptics() {

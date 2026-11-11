@@ -39,10 +39,14 @@ interface MediaTileProps {
 }
 
 const subscribeNothing = () => () => {};
+let mounted = 0;
 
 /** Now playing, as a bar that opens into the full player and folds back as one. */
 export function MediaTile({ tileId, device, layout, interactive, onCommand }: MediaTileProps) {
   const [open, setOpen] = useState(false);
+  // Each mount morphs on its own: a tile mounted again, as when switching rooms, must not glide in from where the
+  // last one stood.
+  const [mount] = useState(() => ++mounted);
   const [view, setView] = useState<View>("controls");
   const reduce = useReducedMotion();
   const client = useSyncExternalStore(subscribeNothing, () => true, () => false);
@@ -70,7 +74,7 @@ export function MediaTile({ tileId, device, layout, interactive, onCommand }: Me
   }
 
   return (
-    <LayoutGroup id={`media-${tileId}`}>
+    <LayoutGroup id={`media-${tileId}-${mount}`}>
       {open ? <div className={styles.lifted} aria-hidden="true" /> : (
         <motion.div layoutId="card" className={`${glassClass("panel")} ${styles.tile}`} {...look} style={{ ...look.style, borderRadius: 26 }} transition={transition}>
           <Bar device={device} send={send} interactive={interactive} opener={opener} onOpen={() => setOpen(true)} />

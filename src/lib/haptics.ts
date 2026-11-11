@@ -46,8 +46,11 @@ let touch = { x: 0, y: 0, strayed: false };
 let watchingScroll = false;
 
 /**
- * Lays an invisible switch over each `[data-haptic]` control under `root`, so a tap on it ticks on an iPhone. The tap
- * toggles the switch, then is handed to the control as its own click, so links and buttons behave as before.
+ * Lays an invisible label over each `[data-haptic]` control under `root`, wired to a hidden switch inside it, so a tap
+ * on the control ticks on an iPhone: a real tap on a switch's label still toggles it as the finger's own act, which
+ * is what iOS 26.5 ticks for. The tap is then handed to the control as its own click, so links and buttons behave as
+ * before. The finger never lands on the switch itself: a switch claims every touch that starts on it to drag its
+ * thumb, which no CSS can undo, and the page could not scroll from the control.
  */
 export function addTapSwitches(root: ParentNode) {
   if (!watchingScroll) {
@@ -61,23 +64,27 @@ export function addTapSwitches(root: ParentNode) {
   for (const host of root.querySelectorAll<HTMLElement>("[data-haptic]")) {
     if (host.querySelector(`:scope > [${SWITCH_ATTR}]`)) continue;
     if (getComputedStyle(host).position === "static") host.style.position = "relative";
+    const label = document.createElement("label");
+    label.setAttribute(SWITCH_ATTR, "");
+    label.setAttribute("aria-hidden", "true");
+    label.style.cssText = "position:absolute;inset:0;z-index:1;margin:0;padding:0;cursor:inherit;-webkit-tap-highlight-color:transparent";
     const input = document.createElement("input");
     input.type = "checkbox";
     input.setAttribute("switch", "");
-    input.setAttribute(SWITCH_ATTR, "");
-    input.setAttribute("aria-hidden", "true");
     input.tabIndex = -1;
-    input.style.cssText = "position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;padding:0;border:0;-webkit-appearance:switch;appearance:auto;opacity:0;cursor:inherit;touch-action:pan-y";
-    // `touch-action` leaves an up-and-down swipe to the page, which a switch would otherwise keep for its thumb.
-    // A finger that scrolled or slid can still end in a click on the switch. The control never hears of it, but the
-    // switch is left to flip: cancelling a switch's click on iOS holds the touch and stops the page scrolling.
-    input.addEventListener("click", event => {
+    input.style.cssText = "position:absolute;width:1px;height:1px;margin:0;padding:0;border:0;opacity:0;pointer-events:none";
+    // The switch's own click, which the label's sets off, stays inside: only the label's reaches the control.
+    input.addEventListener("click", event => event.stopPropagation());
+    label.addEventListener("click", event => {
+      if (event.target !== label) return;
       event.stopPropagation();
+      // A tap that slid or scrolled is not a tap; the switch may still flip, but the control never hears of it.
       if (touch.strayed || performance.now() - scrolledAt < SCROLL_QUIET_MS) return;
       switchedAt = performance.now();
       if (!host.matches(":disabled")) host.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     });
-    host.append(input);
+    label.append(input);
+    host.append(label);
   }
 }
 

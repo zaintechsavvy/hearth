@@ -32,11 +32,11 @@
 
 /* A wall tablet hides the header, so the page starts lower to clear the corner menu, level with the pinned list. */
 :global(:root[data-wall]) .shell {
-  padding-top: 72px;
+  padding-top: 54px;
 }
 
 :global(:root[data-wall]) .list {
-  top: 86px;
+  top: 68px;
 }
 
 :root[data-theme="dark"] .pane {

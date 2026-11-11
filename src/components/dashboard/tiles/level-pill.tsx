@@ -26,8 +26,7 @@ interface LevelPillProps {
 
 /**
  * A vertical level control: drag anywhere to move the level relative to where you started, tap to toggle. On a touch
- * screen the finger rests a moment before it drags, since the pill sits in a page that scrolls the same way. It has
- * no hidden switch for an iPhone's tick, which would hold the swipe for itself.
+ * screen the finger rests a moment before it drags, since the pill sits in a page that scrolls the same way.
  */
 export function LevelPill({ label, value, on, disabled, onToggle, onCommit, className, children }: LevelPillProps) {
   const [drag, setDrag] = useState<number | null>(null);
@@ -115,6 +114,7 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
       ref={pill}
       data-dragging={drag !== null || undefined}
       data-armed={(armed && drag === null) || undefined}
+      data-haptic
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}

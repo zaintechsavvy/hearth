@@ -325,18 +325,15 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     return list.sort((a, b) => rank(a) - rank(b));
   };
 
-  const tileRooms = new Set(tiles.map(tile => {
-    const linked = resolve(tile);
-    return linked?.type === "device" ? linked.device.room : null;
-  }));
-  const linkedRooms = home.rooms.filter(value => tileRooms.has(value));
+  // Every room the home has, including one with no tiles yet, which shows as empty rather than going missing.
+  const rooms = home.rooms;
   const roomOf = (tile: TileConfig) => {
     const linked = resolve(tile);
     return linked?.type === "device" ? linked.device.room : null;
   };
-  const filtering = room !== ALL_ROOMS && linkedRooms.includes(room);
+  const filtering = room !== ALL_ROOMS && rooms.includes(room);
   // Like Apple Home, a swipe moves through All and each room, then on to the next page, and the new screen slides in from that side.
-  const screens = linkedRooms.length > 1 ? [ALL_ROOMS, ...linkedRooms] : [ALL_ROOMS];
+  const screens = rooms.length > 1 ? [ALL_ROOMS, ...rooms] : [ALL_ROOMS];
   const current = filtering ? room : ALL_ROOMS;
   const slide = (direction: number) => {
     if (!direction || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -355,7 +352,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     if (next !== undefined) showRoom(next);
   };
   // Followed from first touch to last, in the capture phase, so a swipe that starts on a tile still counts even when
-  // the tile, or the switch that ticks under it on an iPhone, takes the touch over before the finger lifts.
+  // the tile takes the touch over before the finger lifts.
   const finishSwipe = (event: React.PointerEvent, x: number, y: number) => {
     const start = swipe.current;
     swipe.current = null;
@@ -496,7 +493,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         ? <SnapshotCamera name={device.name} every={tile.options.every ?? DEFAULT_SNAPSHOT_SECONDS} still={frame => `/api/devices/${encodeURIComponent(device.id)}/camera?mode=snapshot&frame=${frame}`} live={live} />
         : live);
     }
-    if (device.kind === "media_player") return <MediaTile tileId={tile.id} device={device} layout={tile.size === "4x2" ? "player" : "bar"} interactive={interactive} onCommand={command => send(device, command)} />;
+    // Mounted afresh for each room, so the player's open-and-close morph never glides it to its new spot.
+    if (device.kind === "media_player") return <MediaTile key={current} tileId={tile.id} device={device} layout={tile.size === "4x2" ? "player" : "bar"} interactive={interactive} onCommand={command => send(device, command)} />;
     if (device.kind === "vacuum") return <VacuumTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} />;
     if (device.kind === "alarm") return <AlarmTile device={device} config={tile} interactive={interactive} openMethod={home.openMethod} onCommand={(command, pin) => send(device, command, pin)} />;
     if (device.kind === "todo") return <TodoTile device={device} config={tile} interactive={interactive} onCommand={command => send(device, command)} />;
@@ -640,10 +638,10 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         </div>
       </header>
 
-      <WallRoomsBridge rooms={linkedRooms} current={current} onWant={showRoom} />
-      {linkedRooms.length > 1 && (
+      <WallRoomsBridge rooms={rooms} current={current} onWant={showRoom} />
+      {rooms.length > 1 && (
         <div className={styles.screens} data-on-wall data-wall-hide>
-          <span className={`${glassClass("pill")} ${styles.screenGlass}`}><SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} /></span>
+          <span className={`${glassClass("pill")} ${styles.screenGlass}`}><SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...rooms.map(value => ({ value, label: value }))]} /></span>
         </div>
       )}
 
@@ -652,7 +650,12 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       ))}
 
       <div ref={gridWrap} className={styles.swipe} {...swipeHandlers}>
-      {tiles.length > 0 ? (
+      {filtering && shownTiles.length === 0 && !editing ? (
+        <Glass className={styles.placeholder}>
+          <EmptyState icon={<LayoutGrid size={24} strokeWidth={1.75} />} title={`Nothing in ${room} yet`}
+            description={`Add a tile for one of its devices, or give a device this room under Settings, Rooms.`} />
+        </Glass>
+      ) : tiles.length > 0 ? (
         <HomeGrid tiles={shownTiles} editing={editing} placed={!filtering} renderTile={tile => renderTile(tile)} nameOf={nameOf} onTilesChange={next => change(filtering ? mergeFiltered(tiles, next) : next)} onCustomize={setCustomizing}
           selected={selected} onToggle={id => setSelected(current => { const next = new Set(current); if (!next.delete(id)) next.add(id); return next; })} />
       ) : (
