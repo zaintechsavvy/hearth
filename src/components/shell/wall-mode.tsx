@@ -240,7 +240,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           <Moon size={18} strokeWidth={1.75} aria-hidden="true" /> Good night
         </button>
       )}
-      <DeviceMoments devices={home?.devices} active={resting} />
+      <DeviceMoments devices={home?.devices} />
       <StateNotices devices={home?.devices} />
       {!resting && <LeftOpenBanner items={leftOpen.items} onClose={device => void send(device, { type: "cover", action: "close" }).catch(() => {})} onQuiet={leftOpen.quietTonight} />}
       <div className={styles.corner} data-on-wall>

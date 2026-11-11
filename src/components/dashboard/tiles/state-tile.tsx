@@ -6,6 +6,7 @@ import { Button } from "@/components/arc/button/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { HoldToConfirm } from "@/components/arc/hold-to-confirm/hold-to-confirm";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
+import { GarageScene, LockScene } from "@/components/shell/device-moment";
 import type { TileConfig } from "@/lib/dashboard/layout";
 import { defaultStyle } from "@/lib/dashboard/style";
 import {
@@ -181,6 +182,11 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   const Icon = TILE_ICON_COMPONENTS[config.icon ?? style.icon];
   const color = config.color ?? style.color;
   const { text, active } = describe(device, now);
+  // A lock or garage door on its own icon shows itself moving, as a light shows its bulb.
+  const plain = (config.icon ?? style.icon) === style.icon;
+  const scene = !plain ? null : device.kind === "lock" ? <LockScene inTile locked={device.state === "locked" || device.state === "locking"} />
+    : device.kind === "cover" && device.coverClass === "garage" ? <GarageScene inTile open={device.state !== "closed" && device.state !== "closing"} /> : null;
+  const icon = (size: number) => scene ? <span className={styles.sceneIcon} style={{ width: Math.round(size * 1.5), height: Math.round(size * 1.5) }}>{scene}</span> : <Icon size={size} strokeWidth={1.75} />;
   const command = tapCommand(device);
   const disabled = !device.available || !interactive || !command;
 
@@ -226,7 +232,7 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
           <LevelOverlay shown={shown}>
             <span className={level.reading}>{shown === 0 ? "Closed" : `${shown}%`}</span>
             <span className={level.foot}>
-              <span className={styles.icon} aria-hidden="true"><Icon size={22} strokeWidth={1.75} /></span>
+              <span className={styles.icon} aria-hidden="true">{icon(22)}</span>
               <span className={styles.name}>{device.name}</span>
             </span>
           </LevelOverlay>
@@ -240,7 +246,7 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
         ) : (
           <div className={`${glassClass("panel")} ${styles.tile} ${level.large}`} {...shared} data-template="large">
             <button type="button" className={level.largeBody} onClick={toggle} disabled={disabled} data-haptic aria-label={`${device.name}, ${text}`}>
-              <span className={styles.badge}><span className={styles.icon} aria-hidden="true"><Icon size={24} strokeWidth={1.75} /></span></span>
+              <span className={styles.badge}><span className={styles.icon} aria-hidden="true">{icon(24)}</span></span>
               <span className={styles.text}>
                 <span className={styles.name}>{device.name}</span>
                 <span className={`${styles.meta} ${error ? styles.error : ""}`}>{meta}</span>
@@ -260,7 +266,7 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
       <>
         <div className={`${glassClass("panel")} ${styles.tile} ${styles.tall}`} {...shared}>
           <span className={styles.tallTop}>
-            <span className={styles.tallBadge}><span className={styles.icon} aria-hidden="true"><Icon size={large ? 30 : 26} strokeWidth={1.75} /></span></span>
+            <span className={styles.tallBadge}><span className={styles.icon} aria-hidden="true">{icon(large ? 30 : 26)}</span></span>
           </span>
           {fill}
           <span className={styles.tallText}>
@@ -297,13 +303,13 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
         {fill}
         {config.size === "1x1" ? (
           <>
-            {isReading ? <span className={styles.value}>{text}</span> : <span className={styles.icon} aria-hidden="true"><Icon size={28} strokeWidth={1.75} /></span>}
+            {isReading ? <span className={styles.value}>{text}</span> : <span className={styles.icon} aria-hidden="true">{icon(28)}</span>}
             <span className={styles.name}>{holdMeta ?? device.name}</span>
             {!isReading && !holdMeta && <span className={styles.status}>{error ?? text}</span>}
           </>
         ) : (
           <>
-            <span className={styles.badge}><span className={styles.icon} aria-hidden="true"><Icon size={22} strokeWidth={1.75} /></span></span>
+            <span className={styles.badge}><span className={styles.icon} aria-hidden="true">{icon(22)}</span></span>
             <span className={styles.text}>
               <span className={styles.name}>{device.name}</span>
               <span className={`${styles.meta} ${error ? styles.error : ""}`}>{meta}</span>

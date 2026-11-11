@@ -474,3 +474,9 @@ div.reading {
 .frame:has(> .swatch) > .press[data-size="2x1"] {
   padding-right: calc(var(--space-3) + 40px);
 }
+
+/* A lock or garage door drawn as itself in place of its icon. */
+.sceneIcon {
+  display: grid;
+  place-items: center;
+}

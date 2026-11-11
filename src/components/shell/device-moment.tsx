@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useAnimationFrame, useReducedMotion } from "mo
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { lightTint } from "@/components/dashboard/light-controls";
 import type { Device } from "@/lib/devices/types";
+import { sentHere } from "@/lib/sent-here";
 import { HangingBulb } from "./hanging-bulb";
 import styles from "./device-moment.module.css";
 
@@ -11,8 +12,8 @@ import styles from "./device-moment.module.css";
 const HOLD_MS = 3200;
 
 type Moment =
-  | { key: string; kind: "light"; name: string; on: boolean; tint: string | null; chandelier: boolean }
-  | { key: string; kind: "fan"; name: string; on: boolean };
+  | { key: string; kind: "light"; name: string; room: string | null; on: boolean; tint: string | null; chandelier: boolean }
+  | { key: string; kind: "fan"; name: string; room: string | null; on: boolean; standing: boolean };
 
 /** The settled state worth a moment, or null for a device that has none or is still moving. */
 function stateOf(device: Device): string | null {
@@ -23,19 +24,21 @@ function stateOf(device: Device): string | null {
 
 function momentOf(device: Device, state: string): Moment | null {
   const key = `${device.id}-${state}-${Date.now()}`;
-  if (device.kind === "light") return { key, kind: "light", name: device.name, on: state === "on", tint: lightTint(device), chandelier: /chandelier/i.test(device.name) };
-  if (device.kind === "fan") return { key, kind: "fan", name: device.name, on: state === "on" };
+  // A white light glows warm, as its tile does; only a coloured one takes its colour.
+  if (device.kind === "light") return { key, kind: "light", name: device.name, room: device.room, on: state === "on", tint: device.colorMode === "color" ? lightTint(device) : null, chandelier: /chandelier/i.test(device.name) };
+  if (device.kind === "fan") return { key, kind: "fan", name: device.name, room: device.room, on: state === "on", standing: STANDING.test(device.name) };
   return null;
 }
 
-const words = (moment: Moment) => `${moment.name} ${moment.on ? "on" : "off"}`;
+/** Fans named like these stand on the floor or a table; any other fan hangs from the ceiling. */
+const STANDING = /\b(stand(ing)?|pedestal|floor|desk|table|tower|box|oscillating|portable)\b/i;
 
 /**
- * Full-screen moments on a resting wall tablet: a light or fan that changes plays a short scene of it changing, one
- * after another, then the clock comes back. It never wakes the screen. Locks and garage doors have their own notice,
- * `StateNotices`, which plays `LockScene` and `GarageScene`.
+ * Full-screen moments on a wall tablet, resting or awake: a light or fan someone changes elsewhere plays a short scene
+ * of it changing, one after another. A change made on this screen plays on its own tile instead. It never wakes the
+ * screen. Locks and garage doors have their own notice, `StateNotices`, which plays `LockScene` and `GarageScene`.
  */
-export function DeviceMoments({ devices, active }: { devices: Device[] | undefined; active: boolean }) {
+export function DeviceMoments({ devices }: { devices: Device[] | undefined }) {
   const seen = useRef<Map<string, string> | null>(null);
   const [queue, setQueue] = useState<Moment[]>([]);
   useEffect(() => {
@@ -48,7 +51,7 @@ export function DeviceMoments({ devices, active }: { devices: Device[] | undefin
       if (state === null) { if (known?.has(device.id)) next.set(device.id, known.get(device.id)!); continue; }
       next.set(device.id, state);
       const before = known?.get(device.id);
-      if (active && before !== undefined && before !== state) {
+      if (before !== undefined && before !== state && !sentHere(device.id)) {
         const moment = momentOf(device, state);
         if (moment) fresh.push(moment);
       }
@@ -57,7 +60,7 @@ export function DeviceMoments({ devices, active }: { devices: Device[] | undefin
     if (!fresh.length) return;
     const timer = setTimeout(() => setQueue(current => [...current, ...fresh].slice(-4)), 0);
     return () => clearTimeout(timer);
-  }, [devices, active]);
+  }, [devices]);
 
   useEffect(() => {
     if (!queue.length) return;
@@ -65,24 +68,26 @@ export function DeviceMoments({ devices, active }: { devices: Device[] | undefin
     return () => clearTimeout(timer);
   }, [queue]);
 
-  // Waking the screen ends any moment still waiting; the queue drains on its own timer.
-  const moment = active ? queue[0] : undefined;
+  const moment = queue[0];
   return (
     <AnimatePresence>
       {moment && (
         <motion.div key={moment.key} className={styles.moment} data-kind={moment.kind} role="status" aria-live="polite"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
           <Scene moment={moment} />
-          <motion.p className={styles.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.4 }}>{words(moment)}</motion.p>
+          <motion.div className={styles.caption} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.4 }}>
+            <p className={styles.label}>{moment.name}</p>
+            <p className={styles.detail}>{moment.on ? "Turned on" : "Turned off"}{moment.room && !moment.name.toLowerCase().includes(moment.room.toLowerCase()) ? ` · ${moment.room}` : ""}</p>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 }
 
-/** Starts in the old state, then flips a beat later so the scene plays the change itself. */
-function useFlip(target: boolean) {
-  const [shown, setShown] = useState(!target);
+/** Starts in the old state, then flips a beat later so the scene plays the change itself; `still` starts in the new one. */
+function useFlip(target: boolean, still = false) {
+  const [shown, setShown] = useState(still ? target : !target);
   useEffect(() => {
     const timer = setTimeout(() => setShown(target), 260);
     return () => clearTimeout(timer);
@@ -91,7 +96,7 @@ function useFlip(target: boolean) {
 }
 
 function Scene({ moment }: { moment: Moment }) {
-  if (moment.kind === "fan") return <FanScene on={moment.on} />;
+  if (moment.kind === "fan") return moment.standing ? <StandingFanScene on={moment.on} /> : <FanScene on={moment.on} />;
   return moment.chandelier ? <ChandelierScene on={moment.on} tint={moment.tint} /> : <LightScene on={moment.on} tint={moment.tint} />;
 }
 
@@ -173,6 +178,7 @@ function ChandelierScene({ on, tint }: { on: boolean; tint: string | null }) {
 }
 
 const BLADES = [0, 72, 144, 216, 288];
+const round = (value: number) => Math.round(value * 100) / 100;
 
 /** A ceiling fan seen from a little above: the blades turn in a tilted plane that passes behind the motor. */
 function FanScene({ on }: { on: boolean }) {
@@ -224,16 +230,63 @@ function FanScene({ on }: { on: boolean }) {
   );
 }
 
+/** A pedestal fan facing you: the blades spin behind the grille, and the head turns from side to side as it runs. */
+function StandingFanScene({ on }: { on: boolean }) {
+  const reduce = useReducedMotion();
+  const id = useId();
+  return (
+    <div className={`${styles.stage} ${styles.depth}`}>
+      <motion.span className={styles.breeze} initial={{ opacity: 0 }} animate={{ opacity: on ? [0, .7, .4] : [.4, 0] }} transition={{ duration: 2 }} aria-hidden="true" />
+      <svg viewBox="0 0 100 100" className={styles.standBase} aria-hidden="true">
+        <defs>
+          <linearGradient id={`${id}-pole`} x1="0" x2="1">
+            <stop offset="0" stopColor="oklch(40% .01 250)" />
+            <stop offset=".4" stopColor="oklch(88% .01 250)" />
+            <stop offset="1" stopColor="oklch(34% .01 250)" />
+          </linearGradient>
+          <radialGradient id={`${id}-base`} cx="45%" cy="30%">
+            <stop offset="0" stopColor="oklch(70% .01 250)" />
+            <stop offset="1" stopColor="oklch(26% .01 250)" />
+          </radialGradient>
+        </defs>
+        <rect x={48} y={40} width={4} height={50} fill={`url(#${id}-pole)`} />
+        <ellipse cx={50} cy={92} rx={20} ry={5} fill={`url(#${id}-base)`} />
+      </svg>
+      <motion.div className={styles.standHead} initial={false} transition={{ duration: on ? 3.2 : 1.4, ease: "easeInOut" }}
+        animate={reduce ? undefined : { rotateY: on ? [0, -22, 14] : [14, 0], rotateX: 6 }}>
+        <svg viewBox="-100 -100 200 200" className={styles.standLayer} style={{ transform: "translateZ(-34px)" }} aria-hidden="true">
+          <circle r={34} fill={`url(#${id}-pole)`} />
+        </svg>
+        <motion.svg viewBox="-100 -100 200 200" className={styles.standLayer} style={{ transform: "translateZ(-10px)" }} aria-hidden="true"
+          initial={{ rotate: 0 }} animate={{ rotate: reduce ? 0 : on ? 2200 : 360 }} transition={{ duration: on ? 3.2 : 2.6, ease: on ? [.55, 0, 1, .8] : [0, .5, .3, 1] }}>
+          {[0, 120, 240].map(angle => <path key={angle} transform={`rotate(${angle})`} d="M 0 -10 C 30 -24 52 -70 24 -86 C 6 -94 -14 -82 -12 -56 C -10 -38 -6 -22 0 -10 Z" className={styles.standBlade} />)}
+        </motion.svg>
+        <motion.span className={styles.standBlur} initial={{ opacity: on ? 0 : .5 }} animate={{ opacity: reduce ? 0 : on ? [0, 0, .5] : [.5, 0] }} transition={{ duration: on ? 3.2 : 1.6 }} aria-hidden="true" />
+        <svg viewBox="-100 -100 200 200" className={styles.standLayer} aria-hidden="true">
+          {[96, 74, 50].map(r => <circle key={r} r={r} className={styles.grille} />)}
+          {Array.from({ length: 28 }, (_, i) => {
+            const a = i / 28 * Math.PI * 2;
+            return <line key={i} x1={round(Math.cos(a) * 20)} y1={round(Math.sin(a) * 20)} x2={round(Math.cos(a) * 96)} y2={round(Math.sin(a) * 96)} className={styles.grilleWire} />;
+          })}
+          <circle r={99} className={styles.grilleRim} />
+          <circle r={18} fill={`url(#${id}-pole)`} />
+        </svg>
+      </motion.div>
+    </div>
+  );
+}
+
 /** A brass padlock that turns toward you as its chrome shackle swings round and drops in, and the key turns. */
-export function LockScene({ locked, small = false }: { locked: boolean; small?: boolean }) {
-  const shown = useFlip(locked);
+/** `inTile` draws it as a tile's icon: it opens in its current state and plays only a change. */
+export function LockScene({ locked, small = false, inTile = false }: { locked: boolean; small?: boolean; inTile?: boolean }) {
+  const shown = useFlip(locked, inTile);
   const reduce = useReducedMotion();
   const id = useId();
   const quick = reduce ? { duration: 0 } : undefined;
   return (
-    <div className={`${styles.stage} ${styles.depth} ${small ? styles.small : ""}`} data-locked={shown || undefined}>
-      <motion.span className={styles.ring} initial={false} animate={shown && !reduce ? { scale: [0.6, 1.25], opacity: [0.7, 0] } : { opacity: 0 }} transition={{ duration: 1.1, delay: .9, ease: "easeOut" }} aria-hidden="true" />
-      <motion.div className={styles.padlock} initial={false} animate={reduce ? undefined : { rotateY: shown ? [-26, 8, 0] : [0, -20, -14], rotateX: [4, 8, 4] }} transition={{ duration: 1.4, ease: "easeInOut" }}>
+    <div className={`${styles.stage} ${styles.depth} ${small || inTile ? styles.small : ""}`} data-locked={shown || undefined}>
+      {!inTile && <motion.span className={styles.ring} initial={false} animate={shown && !reduce ? { scale: [0.6, 1.25], opacity: [0.7, 0] } : { opacity: 0 }} transition={{ duration: 1.1, delay: .9, ease: "easeOut" }} aria-hidden="true" />}
+      <motion.div className={`${styles.padlock} ${inTile ? styles.padlockTile : ""}`} initial={false} animate={reduce ? undefined : { rotateY: shown ? [-26, 8, 0] : [0, -20, -14], rotateX: [4, 8, 4] }} transition={{ duration: 1.4, ease: "easeInOut" }}>
         <motion.svg viewBox="-60 -80 120 150" className={styles.lockLayer} aria-hidden="true" initial={false} style={{ originX: "76.6%", originY: "50%" }}
           animate={shown ? { y: "0%", rotateY: 0 } : { y: "-11%", rotateY: -150 }}
           transition={quick ?? (shown ? { rotateY: { duration: .55, ease: "easeInOut" }, y: { delay: .55, duration: .22, ease: [.6, 0, 1, 1] } } : { y: { duration: .3, ease: "easeOut" }, rotateY: { delay: .3, duration: .6, ease: "easeInOut" } })}>
@@ -276,13 +329,13 @@ export function LockScene({ locked, small = false }: { locked: boolean; small?: 
 }
 
 /** A sectional garage door that rolls back into the garage, slowly, as the light inside comes on. */
-export function GarageScene({ open, small = false }: { open: boolean; small?: boolean }) {
+export function GarageScene({ open, small = false, inTile = false }: { open: boolean; small?: boolean; inTile?: boolean }) {
   const reduce = useReducedMotion();
   const id = useId();
   const travel = { duration: reduce ? 0 : 3.4, ease: [.42, 0, .2, 1] as const, delay: reduce ? 0 : .3 };
   const light = { duration: reduce ? 0 : .8, delay: reduce ? 0 : open ? .5 : 2.6 };
   return (
-    <div className={`${styles.stage} ${small ? styles.small : ""}`}>
+    <div className={`${styles.stage} ${small || inTile ? styles.small : ""}`}>
       <div className={styles.garageBox}>
         <svg viewBox="0 0 240 220" className={styles.garageArt} aria-hidden="true">
           <defs>
@@ -304,7 +357,7 @@ export function GarageScene({ open, small = false }: { open: boolean; small?: bo
           {[96, 112, 128, 144, 160, 176].map(y => <line key={y} x1={10} x2={230} y1={y} y2={y} className={styles.siding} />)}
           <path d="M 2 78 L 120 8 L 238 78" className={styles.roof} />
           <rect x={40} y={86} width={160} height={110} fill={`url(#${id}-inside)`} />
-          <motion.g initial={{ opacity: open ? 0 : 1 }} animate={{ opacity: open ? 1 : 0 }} transition={light}>
+          <motion.g initial={inTile ? false : { opacity: open ? 0 : 1 }} animate={{ opacity: open ? 1 : 0 }} transition={light}>
             <rect x={40} y={86} width={160} height={110} fill={`url(#${id}-lamp)`} />
             <rect x={104} y={88} width={32} height={3} rx={1.5} className={styles.lampBar} />
             <path d="M 40 196 L 200 196 L 232 220 L 8 220 Z" fill={`url(#${id}-spill)`} />
@@ -315,13 +368,13 @@ export function GarageScene({ open, small = false }: { open: boolean; small?: bo
           <rect x={40} y={86} width={160} height={110} className={styles.frame} />
         </svg>
         <div className={styles.opening}>
-          <motion.div className={styles.door} initial={{ rotateX: open ? 0 : -86 }} animate={{ rotateX: open ? -86 : 0 }} transition={travel}>
+          <motion.div className={styles.door} initial={inTile ? false : { rotateX: open ? 0 : -86 }} animate={{ rotateX: open ? -86 : 0 }} transition={travel}>
             {Array.from({ length: 4 }, (_, row) => (
               <span key={row} className={styles.doorRow} data-glass={row === 0 || undefined}>
                 {Array.from({ length: 4 }, (_, cell) => <span key={cell} className={styles.doorPanel} />)}
               </span>
             ))}
-            <motion.span className={styles.doorShade} initial={{ opacity: open ? 0 : .7 }} animate={{ opacity: open ? .7 : 0 }} transition={travel} />
+            <motion.span className={styles.doorShade} initial={inTile ? false : { opacity: open ? 0 : .7 }} animate={{ opacity: open ? .7 : 0 }} transition={travel} />
           </motion.div>
         </div>
       </div>
