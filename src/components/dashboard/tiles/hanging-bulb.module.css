@@ -1,0 +1,58 @@
+.bulb {
+  --bulb: var(--lit-warm);
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.cord {
+  stroke: currentColor;
+  stroke-width: 1.4;
+  opacity: .55;
+}
+
+.base {
+  fill: color-mix(in oklab, currentColor 55%, transparent);
+}
+
+.thread {
+  stroke: color-mix(in oklab, currentColor 30%, transparent);
+  stroke-width: 1;
+}
+
+.glass {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-opacity: .7;
+}
+
+.glassHi { stop-color: oklch(100% 0 0 / .35); }
+.glassLo { stop-color: oklch(100% 0 0 / .04); }
+
+.bulb[data-on] .glass {
+  stroke: var(--bulb);
+  stroke-opacity: 1;
+}
+
+.bulb[data-on] .glassHi { stop-color: color-mix(in oklab, var(--bulb) 40%, white); }
+.bulb[data-on] .glassLo { stop-color: color-mix(in oklab, var(--bulb) 80%, transparent); }
+
+.filament {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bulb[data-on] .filament {
+  stroke: oklch(99% .03 90);
+  filter: drop-shadow(0 0 2px var(--bulb));
+}
+
+.haloIn { stop-color: color-mix(in oklab, var(--bulb) 70%, transparent); }
+.haloOut { stop-color: transparent; }
+
+.shine {
+  fill: oklch(100% 0 0 / .45);
+}
