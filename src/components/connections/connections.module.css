@@ -389,8 +389,47 @@
   transition: box-shadow var(--duration-fast) var(--ease-standard);
 }
 
-.clockColor[aria-checked="true"] {
+.clockColor[aria-checked="true"],
+.clockColor[data-checked] {
   box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--foreground);
+}
+
+/* Your own colour: a colour wheel until one is picked, then that colour. */
+.customColor {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  cursor: pointer;
+  background: conic-gradient(oklch(72% .17 25), oklch(80% .15 90), oklch(78% .15 150), oklch(72% .12 230), oklch(66% .16 300), oklch(72% .17 25));
+}
+
+.colorInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* The face's own hands: half white, half dark, so it reads as "whatever suits the face". */
+.autoColor {
+  background: linear-gradient(135deg, oklch(98% 0 0) 50%, oklch(22% .01 260) 50%);
+}
+
+.swatchLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.luxuryPreview {
+  aspect-ratio: 1;
+  width: min(100%, 300px);
+}
+
+.analogPreview {
+  background: oklch(6% .004 250);
 }
 
 .ledeLink {

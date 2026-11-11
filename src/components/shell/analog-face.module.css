@@ -4,7 +4,7 @@
   display: grid;
   place-items: center;
   background: var(--face);
-  color: oklch(18% 0.04 255);
+  color: var(--ink, oklch(18% 0.04 255));
   opacity: var(--saver-dim, 1);
   transition: background-color 1.2s var(--ease-standard);
 }
@@ -26,13 +26,25 @@
 }
 
 .hand,
-.neck,
+.neck {
+  stroke: var(--hand, oklch(99% 0 0));
+}
+
 .second {
-  stroke: oklch(99% 0 0);
+  stroke: var(--second, oklch(99% 0 0));
 }
 
 .pin {
-  fill: oklch(99% 0 0);
+  fill: var(--hand, oklch(99% 0 0));
+}
+
+.sweep {
+  transform-box: view-box;
+  animation: sweep 60s linear infinite;
+}
+
+@keyframes sweep {
+  to { transform: rotate(360deg); }
 }
 
 .corner {
@@ -81,12 +93,14 @@
   .dial {
     transition: none;
   }
+
+  .sweep { animation: none; }
 }
 
+/* In Settings the preview dims with the brightness slider, over black like the resting screen. */
 .inline {
   position: absolute;
   border-radius: inherit;
-  opacity: 1;
 }
 
 .inline .dial {

@@ -1,0 +1,167 @@
+.face {
+  --metal: oklch(90% 0.03 85);
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(70% 70% at 50% 45%, oklch(20% 0.006 250), oklch(6% 0.004 250));
+  opacity: var(--saver-dim, 1);
+}
+
+.watch {
+  position: relative;
+  width: min(92vh, 92vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: 0 30px 70px -10px oklch(0% 0 0 / .7);
+  transform: translate(var(--drift-x, 0), var(--drift-y, 0));
+  transition: transform 4s var(--ease-standard);
+}
+
+.bezel,
+.rehaut,
+.dial,
+.marks {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+/* Fluted steel: fine alternating light and dark wedges, kept to a ring. */
+.bezel {
+  background:
+    repeating-conic-gradient(oklch(94% 0.005 250) 0deg 1.1deg, oklch(52% 0.006 250) 1.4deg 2.5deg, oklch(94% 0.005 250) 2.8deg),
+    oklch(70% 0.005 250);
+  -webkit-mask: radial-gradient(closest-side, transparent 89.4%, #000 89.6% 98.4%, transparent 98.6%);
+  mask: radial-gradient(closest-side, transparent 89.4%, #000 89.6% 98.4%, transparent 98.6%);
+}
+
+.rehaut {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--metal) 60%, white), var(--metal) 45%, color-mix(in oklab, var(--metal) 72%, black) 55%, color-mix(in oklab, var(--metal) 85%, white));
+  -webkit-mask: radial-gradient(closest-side, transparent 86.2%, #000 86.4% 89.4%, transparent 89.6%);
+  mask: radial-gradient(closest-side, transparent 86.2%, #000 86.4% 89.4%, transparent 89.6%);
+}
+
+/* A sunburst: faint rays over a dial that is lighter at the centre and darker at the rim. */
+.dial {
+  inset: 6.8%;
+  background:
+    repeating-conic-gradient(oklch(100% 0 0 / .05) 0deg .8deg, transparent .8deg 2deg),
+    radial-gradient(circle at 50% 42%, color-mix(in oklab, var(--dial) 78%, white), var(--dial) 70%, color-mix(in oklab, var(--dial) 70%, black));
+}
+
+.track line {
+  stroke: color-mix(in oklab, var(--metal) 80%, transparent);
+}
+
+.marker {
+  fill: url(#lux-metal);
+  stroke: oklch(0% 0 0 / .25);
+  stroke-width: 1;
+}
+
+.lume,
+.secondLume {
+  fill: oklch(96% 0.02 110);
+}
+
+.crown path,
+.crown rect {
+  fill: url(#lux-metal);
+}
+
+.brand {
+  fill: var(--metal);
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: .3em;
+}
+
+.small {
+  fill: color-mix(in oklab, var(--metal) 85%, transparent);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: .22em;
+}
+
+.window {
+  fill: oklch(97% 0.004 90);
+  stroke: url(#lux-metal);
+  stroke-width: 4;
+}
+
+.date {
+  fill: oklch(14% 0.01 250);
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 500;
+}
+
+.cyclops {
+  fill: oklch(100% 0 0 / .06);
+  stroke: oklch(100% 0 0 / .22);
+  stroke-width: 2;
+}
+
+.mercedes {
+  fill: none;
+  stroke: url(#lux-metal);
+  stroke-width: 7;
+}
+
+.spokes {
+  stroke: url(#lux-metal);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+.second line,
+.second circle:last-child {
+  stroke: var(--metal);
+  fill: var(--metal);
+}
+
+.secondLume {
+  stroke: url(#lux-metal);
+  stroke-width: 4;
+}
+
+.cap {
+  fill: color-mix(in oklab, var(--metal) 60%, black);
+}
+
+/* At night the dial goes dark and only the lume glows. */
+.face[data-night] .lume,
+.face[data-night] .secondLume {
+  fill: oklch(84% 0.14 145);
+  filter: drop-shadow(0 0 6px oklch(84% 0.14 145 / .7));
+}
+
+.face[data-night] :is(.marker, .brand, .small, .track line, .window, .date) {
+  opacity: .5;
+}
+
+.face[data-red] {
+  --metal: oklch(52% 0.14 25);
+}
+
+.face[data-red] :is(.lume, .secondLume) {
+  fill: oklch(56% 0.16 25);
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .watch { transition: none; }
+}
+
+.inline {
+  position: absolute;
+  border-radius: inherit;
+}
+
+.inline .watch {
+  width: 92%;
+  transform: none;
+  box-shadow: 0 12px 30px -8px oklch(0% 0 0 / .6);
+}

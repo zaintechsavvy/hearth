@@ -12,11 +12,17 @@ export interface WallSettings {
   wakeSensors: string[];
   keepAwake: boolean;
   showAssistant: boolean;
-  /** The resting clock's colour and how bright it shows, 0.15 to 1. */
-  clockColor: ClockColor;
+  /** The resting clock's colour and how bright it shows, 0.15 to 1. `custom` uses `customColor`. */
+  clockColor: ClockColor | "custom";
+  /** A colour of the person's own, as `#rrggbb`. */
+  customColor: string;
   clockBrightness: number;
-  /** Rest on large digits, or on an analog face filled with the clock colour. */
-  clockFace: "digital" | "analog";
+  /** Rest on large digits, an analog face filled with the clock colour, or a luxury watch dial. */
+  clockFace: ClockFace;
+  /** The hour and minute hands' colour as `#rrggbb`, or null for the face's own. */
+  handColor: string | null;
+  /** The seconds hand ticks once a second, sweeps smoothly, or is left off. */
+  secondHand: "tick" | "smooth" | "off";
   /** Turn the resting clock a dim red in the night window, instead of the chosen colour. */
   nightRed: boolean;
   /** After dark, point out a door, window, or garage door open for longer than `openMinutes`. */
@@ -45,6 +51,7 @@ export const CLOCK_COLORS = {
   violet: "oklch(76% 0.12 300)",
 } as const;
 export type ClockColor = keyof typeof CLOCK_COLORS;
+export type ClockFace = "digital" | "analog" | "luxury";
 
 /** The analog face's fill for each clock colour: soft enough to sit on a wall all day, dark numerals on top. */
 export const FACE_COLORS: Record<ClockColor, string> = {
@@ -57,11 +64,43 @@ export const FACE_COLORS: Record<ClockColor, string> = {
   violet: "oklch(83% 0.08 300)",
 };
 
+/** The luxury dial's colour for each clock colour: sunburst metal tones, from silver to a deep green. */
+export const DIAL_COLORS: Record<ClockColor, string> = {
+  white: "oklch(88% 0.006 250)",
+  warm: "oklch(80% 0.05 80)",
+  amber: "oklch(62% 0.11 75)",
+  red: "oklch(34% 0.11 20)",
+  green: "oklch(36% 0.08 160)",
+  blue: "oklch(36% 0.1 255)",
+  violet: "oklch(32% 0.09 300)",
+};
+
+type Palette = Record<ClockColor, string>;
+const pick = (settings: Pick<WallSettings, "clockColor" | "customColor">, palette: Palette) =>
+  settings.clockColor === "custom" ? settings.customColor : palette[settings.clockColor] ?? palette.white;
+
+/** The digital clock's colour. */
+export const clockColorOf = (settings: Pick<WallSettings, "clockColor" | "customColor">) => pick(settings, CLOCK_COLORS);
+/** The analog face's fill. */
+export const faceColorOf = (settings: Pick<WallSettings, "clockColor" | "customColor">) => pick(settings, FACE_COLORS);
+/** The luxury dial's base colour. */
+export const dialColorOf = (settings: Pick<WallSettings, "clockColor" | "customColor">) => pick(settings, DIAL_COLORS);
+
+/** Whether text on `color` should be dark: true for light colours. Takes `#rrggbb` or `oklch(L% …)`. */
+export function isLight(color: string) {
+  const lightness = color.match(/^oklch\((\d+(?:\.\d+)?)%/);
+  if (lightness) return Number(lightness[1]) > 62;
+  const hex = color.match(/^#([0-9a-f]{6})$/i);
+  if (!hex) return true;
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(hex[1].slice(i, i + 2), 16) / 255).map(c => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.3;
+}
+
 export const WALL_KEY = "hearth-wall";
 
 export const DEFAULT_WALL: WallSettings = {
   enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: true, showAssistant: true,
-  clockColor: "white", clockBrightness: 0.85, clockFace: "digital", nightRed: true, openReminder: true, openMinutes: 15,
+  clockColor: "white", customColor: "#7aa7ff", clockBrightness: 0.85, clockFace: "digital", handColor: null, secondHand: "tick", nightRed: true, openReminder: true, openMinutes: 15,
   frame: false, frameSource: "uploads", frameSeconds: 20, frameAtNight: false, frameClock: "corner",
 };
 
