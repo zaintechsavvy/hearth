@@ -1,33 +1,46 @@
 "use client";
 
 import { useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { dialColorOf, type WallSettings } from "@/lib/wall";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { dialColorOf, isLight, type WallSettings } from "@/lib/wall";
 import { SweepHand, useClockNow } from "./analog-face";
 import styles from "./luxury-face.module.css";
 
 const H = 1000;
+const NUMERALS = ["XII", "I", "II", "III", "IIII", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
 const rad = (angle: number) => (angle - 90) * Math.PI / 180;
 /** Two decimals, so the server and the browser, whose trigonometry can differ in the last digits, draw the same marks. */
 const round = (value: number) => Math.round(value * 100) / 100;
 
-/** How far from the centre a ray at `angle` meets a rectangle `hx` wide by `hy` tall either side, so a mark or a hand fits the screen's shape rather than a circle. */
-const toEdge = (angle: number, hx: number, hy: number) => {
-  const cos = Math.abs(Math.cos(rad(angle))), sin = Math.abs(Math.sin(rad(angle)));
-  return Math.min(cos > 1e-6 ? hx / cos : Infinity, sin > 1e-6 ? hy / sin : Infinity);
-};
+/**
+ * Where a ray from the centre at `angle` meets a rounded rectangle `hx` by `hy` either side with corners of radius `r`,
+ * relative to the centre, and the outward normal there in degrees, which a mark is turned to face.
+ */
+function onEdge(angle: number, hx: number, hy: number, r: number) {
+  const dx = Math.cos(rad(angle)), dy = Math.sin(rad(angle));
+  const t = Math.min(Math.abs(dx) > 1e-9 ? hx / Math.abs(dx) : Infinity, Math.abs(dy) > 1e-9 ? hy / Math.abs(dy) : Infinity);
+  const x = dx * t, y = dy * t;
+  if (Math.abs(x) > hx - r && Math.abs(y) > hy - r) {
+    const ox = Math.sign(x) * (hx - r), oy = Math.sign(y) * (hy - r);
+    const b = dx * ox + dy * oy;
+    const s = b + Math.sqrt(Math.max(0, b * b - (ox * ox + oy * oy - r * r)));
+    return { x: dx * s, y: dy * s, normal: Math.atan2(dy * s - oy, dx * s - ox) * 180 / Math.PI };
+  }
+  return { x, y, normal: Math.abs(x) >= hx - 1e-6 ? (x > 0 ? 0 : 180) : (y > 0 ? 90 : -90) };
+}
 
-/** A tapered hand from just behind the centre to `length`, drawn pointing at 12. */
+/** A tapered sword hand from just behind the centre to `length`, drawn pointing at 12. */
 const handPath = (cx: number, cy: number, length: number, width: number, tail: number) =>
   `M ${cx - width / 2} ${cy + tail} L ${cx - width * .62} ${cy - length * .72} L ${cx} ${cy - length} L ${cx + width * .62} ${cy - length * .72} L ${cx + width / 2} ${cy + tail} Z`;
 
 /**
- * A luxury dial shaped like the screen: a polished frame, a sunburst in the clock colour, applied batons that sit on
- * a rectangle (level at three and nine, diagonal in the corners), and hands that reach that rectangle at every angle.
+ * A dress dial shaped like the screen: a rounded rectangle in the clock colour, a railroad minute track that follows
+ * its edge, Roman numerals turned to face the centre, and sword hands that reach the track at every angle.
  */
 export function LuxuryFace({ night, settings, inline = false }: { night: boolean; settings: WallSettings; inline?: boolean }) {
   const now = useClockNow();
   const reduce = useReducedMotion();
+  const id = useId();
   const box = useRef<HTMLSpanElement>(null);
   const [aspect, setAspect] = useState(1.42);
   useEffect(() => {
@@ -40,98 +53,73 @@ export function LuxuryFace({ night, settings, inline = false }: { night: boolean
 
   const W = Math.round(H * aspect);
   const cx = W / 2, cy = H / 2;
-  const inset = H * .085;
-  const mx = cx - inset, my = cy - inset;
+  const track = { hx: cx - H * .085, hy: cy - H * .085, r: H * .085, half: H * .02 };
+  const ring = { hx: cx - H * .2, hy: cy - H * .2, r: H * .06 };
+  const numeral = H * .095;
   const sweep = settings.secondHand === "smooth" && !reduce;
   const date = new Date(now);
   const seconds = date.getSeconds();
   const minutes = date.getMinutes() + seconds / 60;
   const hours = (date.getHours() % 12) + minutes / 60;
-  const red = night && settings.nightRed;
+  const dial = dialColorOf(settings);
+  const light = isLight(dial);
   const style = {
-    "--dial": night ? "oklch(14% 0.01 250)" : dialColorOf(settings),
-    ...(settings.handColor ? { "--metal": settings.handColor } : {}),
+    "--dial": dial,
+    "--ink": light ? "oklch(22% 0.01 250)" : "oklch(94% 0.01 90)",
+    "--hand": settings.handColor ?? (light ? "oklch(38% 0.12 262)" : "oklch(92% 0.03 85)"),
   } as CSSProperties;
 
-  const at = (angle: number, distance: number) => [round(cx + distance * Math.cos(rad(angle))), round(cy + distance * Math.sin(rad(angle)))] as const;
-  const marker = (hour: number) => {
-    const angle = hour * 30;
-    const edge = toEdge(angle, mx, my);
-    const long = hour % 3 === 0;
-    const length = H * (long ? .1 : .075);
-    const [x, y] = at(angle, edge - length / 2);
-    const w = H * (hour === 0 ? .022 : .03);
-    const body = (dx: number) => (
-      <g key={dx}>
-        <rect x={x - w / 2 + dx} y={y - length / 2} width={w} height={length} rx={3} className={styles.marker} />
-        <rect x={x - w * .3 + dx} y={y - length / 2 + 8} width={w * .6} height={length - 16} rx={2} className={styles.lume} />
-      </g>
+  const rail = (offset: number) => (
+    <rect x={round(cx - track.hx - offset)} y={round(cy - track.hy - offset)} width={round(2 * (track.hx + offset))} height={round(2 * (track.hy + offset))} rx={round(track.r + offset)} className={styles.rail} />
+  );
+  const ticks = Array.from({ length: 60 }, (_, minute) => {
+    const { x, y, normal } = onEdge(minute * 6, track.hx, track.hy, track.r);
+    const along = (distance: number) => [round(cx + x + Math.cos(normal * Math.PI / 180) * distance), round(cy + y + Math.sin(normal * Math.PI / 180) * distance)];
+    const [x1, y1] = along(-track.half), [x2, y2] = along(track.half);
+    return <line key={minute} x1={x1} y1={y1} x2={x2} y2={y2} className={minute % 5 === 0 ? styles.hourTick : styles.tick} />;
+  });
+  const numerals = NUMERALS.map((text, hour) => {
+    const { x, y, normal } = onEdge(hour * 30, ring.hx, ring.hy, ring.r);
+    return (
+      <text key={text} transform={`translate(${round(cx + x)} ${round(cy + y)}) rotate(${round(normal + 90)}) scale(.78 1.18)`} textAnchor="middle" dominantBaseline="central"
+        className={styles.numeral} style={{ fontSize: numeral }}>{text}</text>
     );
-    return <g key={hour} transform={`rotate(${angle} ${x} ${y})`}>{hour === 0 ? [body(-w * .7), body(w * .7)] : body(0)}</g>;
-  };
-  const hourLength = round(toEdge(hours * 30, mx, my) * .58);
-  const minuteLength = round(toEdge(minutes * 6, mx, my) * .9);
-  const secondLength = round(Math.min(mx, my) * .96);
-  const [dateX, dateY] = at(90, mx * .74);
+  });
+  const reach = (angle: number, hx: number, hy: number, r: number) => { const point = onEdge(angle, hx, hy, r); return Math.hypot(point.x, point.y); };
+  const hourLength = round(reach(hours * 30, ring.hx, ring.hy, ring.r) - numeral * .75);
+  const minuteLength = round(reach(minutes * 6, track.hx, track.hy, track.r) - track.half * 1.4);
+  const secondLength = round(reach(seconds * 6, track.hx, track.hy, track.r) + track.half * .6);
 
   const secondHand = (
     <g className={styles.second}>
-      <line x1={cx} y1={cy + 90} x2={cx} y2={cy - secondLength} strokeWidth={4} strokeLinecap="round" />
-      <circle cx={cx} cy={cy - secondLength * .8} r={13} className={styles.secondLume} />
-      <circle cx={cx} cy={cy + 70} r={10} />
+      <line x1={cx} y1={cy + 90} x2={cx} y2={cy - secondLength} strokeWidth={3} strokeLinecap="round" />
+      <circle cx={cx} cy={cy} r={9} />
     </g>
   );
 
   return (
-    <span ref={box} className={`${styles.face} ${inline ? styles.inline : ""}`} style={style} data-night={night || undefined} data-red={red || undefined}>
+    <span ref={box} className={`${styles.face} ${inline ? styles.inline : ""}`} style={style} data-night={night || undefined} data-red={(night && settings.nightRed) || undefined}>
       <span className={styles.dial} aria-hidden="true" />
       <svg className={styles.marks} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={now ? date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "Clock"}>
         <defs>
-          <linearGradient id="lux-metal" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" style={{ stopColor: "color-mix(in oklab, var(--metal) 60%, white)" }} />
-            <stop offset=".45" style={{ stopColor: "var(--metal)" }} />
-            <stop offset=".55" style={{ stopColor: "color-mix(in oklab, var(--metal) 72%, black)" }} />
-            <stop offset="1" style={{ stopColor: "color-mix(in oklab, var(--metal) 85%, white)" }} />
+          <linearGradient id={`${id}-hand`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" style={{ stopColor: "color-mix(in oklab, var(--hand) 70%, white)" }} />
+            <stop offset=".5" style={{ stopColor: "var(--hand)" }} />
+            <stop offset=".5" style={{ stopColor: "color-mix(in oklab, var(--hand) 78%, black)" }} />
+            <stop offset="1" style={{ stopColor: "color-mix(in oklab, var(--hand) 90%, black)" }} />
           </linearGradient>
         </defs>
-
-        <rect x={inset * .45} y={inset * .45} width={W - inset * .9} height={H - inset * .9} rx={H * .05} className={styles.track} />
-        {Array.from({ length: 60 }, (_, i) => {
-          if (i % 5 === 0) return null;
-          const angle = i * 6;
-          const [x, y] = at(angle, toEdge(angle, mx + inset * .32, my + inset * .32));
-          return <line key={i} x1={x} y1={y - 9} x2={x} y2={y + 9} transform={`rotate(${angle} ${x} ${y})`} className={styles.tick} />;
-        })}
-        {Array.from({ length: 12 }, (_, hour) => hour === 3 ? null : marker(hour))}
-
-        <g className={styles.crown} transform={`translate(${cx} ${cy - my * .52}) scale(${H / 1000})`}>
-          <path d="M -30 14 L -34 -14 L -18 0 L -8 -22 L 0 -2 L 8 -22 L 18 0 L 34 -14 L 30 14 Z" />
-          <rect x={-30} y={18} width={60} height={7} rx={2} />
-        </g>
-        <text x={cx} y={cy - my * .52 + 64} textAnchor="middle" className={styles.small}>PERPETUAL · AUTOMATIC</text>
-        <text x={cx} y={cy + my * .52} textAnchor="middle" className={styles.small}>SUPERLATIVE CHRONOMETER</text>
-
-        <g transform={`translate(${dateX} ${dateY})`}>
-          <rect x={-40} y={-30} width={80} height={60} rx={6} className={styles.window} />
-          <text x={0} y={2} textAnchor="middle" dominantBaseline="central" className={styles.date}>{now ? date.getDate() : ""}</text>
-          <circle r={56} className={styles.cyclops} />
-        </g>
-
+        {rail(-track.half)}
+        {rail(track.half)}
+        {ticks}
+        {numerals}
         {now > 0 && (
           <g className={styles.hands}>
-            <g transform={`rotate(${hours * 30} ${cx} ${cy})`}>
-              <path d={handPath(cx, cy, hourLength, 24, 40)} fill="url(#lux-metal)" />
-              <circle cx={cx} cy={cy - hourLength * .7} r={30} className={styles.mercedes} />
-              <path d={`M ${cx} ${cy - hourLength * .7} L ${cx} ${cy - hourLength * .7 - 30} M ${cx} ${cy - hourLength * .7} L ${cx - 26} ${cy - hourLength * .7 + 15} M ${cx} ${cy - hourLength * .7} L ${cx + 26} ${cy - hourLength * .7 + 15}`} className={styles.spokes} />
-              <rect x={cx - 4} y={cy - hourLength * .55} width={8} height={hourLength * .35} rx={3} className={styles.lume} />
-            </g>
-            <g transform={`rotate(${minutes * 6} ${cx} ${cy})`}>
-              <path d={handPath(cx, cy, minuteLength, 20, 50)} fill="url(#lux-metal)" />
-              <rect x={cx - 4} y={cy - minuteLength * .82} width={8} height={minuteLength * .62} rx={3} className={styles.lume} />
-            </g>
+            <path d={handPath(cx, cy, hourLength, 30, 36)} fill={`url(#${id}-hand)`} transform={`rotate(${hours * 30} ${cx} ${cy})`} />
+            <path d={handPath(cx, cy, minuteLength, 20, 44)} fill={`url(#${id}-hand)`} transform={`rotate(${minutes * 6} ${cx} ${cy})`} />
             {settings.secondHand !== "off" && (sweep ? <SweepHand cx={cx} cy={cy}>{secondHand}</SweepHand> : <g transform={`rotate(${seconds * 6} ${cx} ${cy})`}>{secondHand}</g>)}
-            <circle cx={cx} cy={cy} r={18} fill="url(#lux-metal)" />
-            <circle cx={cx} cy={cy} r={6} className={styles.cap} />
+            <circle cx={cx} cy={cy} r={16} fill={`url(#${id}-hand)`} />
+            <circle cx={cx} cy={cy} r={5} className={styles.cap} />
           </g>
         )}
       </svg>

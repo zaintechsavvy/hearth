@@ -1,5 +1,4 @@
 .face {
-  --metal: oklch(90% 0.03 85);
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -8,14 +7,17 @@
   opacity: var(--saver-dim, 1);
 }
 
-/* The dial is the screen: a sunburst over a colour that is lighter at the centre and darker at the corners, inside a polished frame. */
+/* The dial is one rounded rectangle in the clock colour, a touch lighter at the centre, with no frame around it. */
 .dial {
   position: absolute;
+  inset: clamp(6px, 1.4cqh, 16px);
+  border-radius: clamp(18px, 5cqh, 56px);
+  background: radial-gradient(75% 95% at 50% 45%, color-mix(in oklab, var(--dial) 88%, white), var(--dial) 60%, color-mix(in oklab, var(--dial) 80%, black));
+}
+
+.inline .dial {
   inset: 0;
-  background:
-    repeating-conic-gradient(from 0deg at 50% 50%, oklch(100% 0 0 / .045) 0deg .7deg, transparent .7deg 1.8deg),
-    radial-gradient(70% 90% at 50% 46%, color-mix(in oklab, var(--dial) 78%, white), var(--dial) 62%, color-mix(in oklab, var(--dial) 62%, black));
-  box-shadow: inset 0 0 0 clamp(2px, 1.2cqh, 14px) color-mix(in oklab, var(--metal) 70%, black), inset 0 0 0 clamp(3px, 1.6cqh, 18px) color-mix(in oklab, var(--metal) 85%, white), inset 0 0 clamp(12px, 8cqh, 80px) oklch(0% 0 0 / .45);
+  border-radius: inherit;
 }
 
 .marks {
@@ -26,107 +28,65 @@
   translate: var(--drift-x, 0) var(--drift-y, 0);
 }
 
-.track {
+.rail {
   fill: none;
-  stroke: color-mix(in oklab, var(--metal) 40%, transparent);
+  stroke: var(--ink);
   stroke-width: 2;
+  opacity: .75;
+}
+
+.tick,
+.hourTick {
+  stroke: var(--ink);
 }
 
 .tick {
-  stroke: color-mix(in oklab, var(--metal) 75%, transparent);
-  stroke-width: 2.5;
-}
-
-.marker {
-  fill: url(#lux-metal);
-  stroke: oklch(0% 0 0 / .25);
-  stroke-width: 1;
-}
-
-.lume,
-.secondLume {
-  fill: oklch(96% 0.02 110);
-}
-
-.crown path,
-.crown rect {
-  fill: url(#lux-metal);
-}
-
-.small {
-  fill: color-mix(in oklab, var(--metal) 85%, transparent);
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: .22em;
-}
-
-.window {
-  fill: oklch(97% 0.004 90);
-  stroke: url(#lux-metal);
-  stroke-width: 4;
-}
-
-.date {
-  fill: oklch(14% 0.01 250);
-  font-family: var(--font-display);
-  font-size: 44px;
-  font-weight: 500;
-}
-
-.cyclops {
-  fill: oklch(100% 0 0 / .06);
-  stroke: oklch(100% 0 0 / .22);
   stroke-width: 2;
+  opacity: .75;
 }
 
-.mercedes {
-  fill: none;
-  stroke: url(#lux-metal);
-  stroke-width: 7;
+.hourTick {
+  stroke-width: 5;
 }
 
-.spokes {
-  stroke: url(#lux-metal);
-  stroke-width: 7;
-  stroke-linecap: round;
+.numeral {
+  fill: var(--ink);
+  font-family: var(--font-serif), "Bodoni 72", Didot, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -.02em;
 }
 
 .second line,
-.second circle:last-child {
-  stroke: var(--metal);
-  fill: var(--metal);
-}
-
-.secondLume {
-  stroke: url(#lux-metal);
-  stroke-width: 4;
+.second circle {
+  stroke: var(--hand);
+  fill: var(--hand);
 }
 
 .cap {
-  fill: color-mix(in oklab, var(--metal) 60%, black);
+  fill: color-mix(in oklab, var(--hand) 60%, black);
 }
 
-/* At night the dial goes dark and only the lume glows. */
-.face[data-night] .lume,
-.face[data-night] .secondLume {
-  fill: oklch(84% 0.14 145);
-  filter: drop-shadow(0 0 6px oklch(84% 0.14 145 / .7));
+/* At night the dial keeps its colour, only darker, and the marks step back. */
+.face[data-night] .dial {
+  background: color-mix(in oklab, var(--dial) 38%, black);
 }
 
-.face[data-night] :is(.marker, .small, .tick, .window, .date) {
-  opacity: .5;
+.face[data-night] {
+  --ink: oklch(82% 0.01 90);
+}
+
+.face[data-night] :is(.rail, .tick, .hourTick, .numeral) {
+  opacity: .55;
 }
 
 .face[data-red] {
-  --metal: oklch(52% 0.14 25);
+  --ink: oklch(55% 0.15 25);
+  --hand: oklch(55% 0.15 25);
 }
 
-.face[data-red] :is(.lume, .secondLume) {
-  fill: oklch(56% 0.16 25);
-  filter: none;
+.face[data-red] .dial {
+  background: oklch(9% 0.01 25);
 }
-
-
 
 .inline {
   position: absolute;
