@@ -186,7 +186,9 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   const plain = (config.icon ?? style.icon) === style.icon;
   const scene = !plain ? null : device.kind === "lock" ? <LockScene inTile locked={device.state === "locked" || device.state === "locking"} />
     : device.kind === "cover" && device.coverClass === "garage" ? <GarageScene inTile open={device.state !== "closed" && device.state !== "closing"} /> : null;
-  const icon = (size: number) => scene ? <span className={styles.sceneIcon} style={{ width: Math.round(size * 1.5), height: Math.round(size * 1.5) }}>{scene}</span> : <Icon size={size} strokeWidth={1.75} />;
+  // The garage is wide, so it draws smaller than the padlock to sit inside the round badge.
+  const sceneSize = (size: number) => Math.round(size * (device.kind === "cover" ? 1.15 : 1.5));
+  const icon = (size: number) => scene ? <span className={styles.sceneIcon} style={{ width: sceneSize(size), height: sceneSize(size) }}>{scene}</span> : <Icon size={size} strokeWidth={1.75} />;
   const command = tapCommand(device);
   const disabled = !device.available || !interactive || !command;
 

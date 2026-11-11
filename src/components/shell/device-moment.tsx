@@ -326,7 +326,7 @@ export function LockScene({ locked, small = false, inTile = false }: { locked: b
   );
 }
 
-/** A sectional garage door that rolls back into the garage, slowly, as the light inside comes on. */
+/** A garage door that slides slowly up into its opening, or back down, as the light inside comes on or goes out. */
 export function GarageScene({ open, small = false, inTile = false }: { open: boolean; small?: boolean; inTile?: boolean }) {
   const reduce = useReducedMotion();
   const id = useId();
@@ -366,13 +366,12 @@ export function GarageScene({ open, small = false, inTile = false }: { open: boo
           <rect x={40} y={86} width={160} height={110} className={styles.frame} />
         </svg>
         <div className={styles.opening}>
-          <motion.div className={styles.door} initial={inTile ? false : { rotateX: open ? 0 : -86 }} animate={{ rotateX: open ? -86 : 0 }} transition={travel}>
+          <motion.div className={styles.door} initial={inTile ? false : { y: open ? "0%" : "-96%" }} animate={{ y: open ? "-96%" : "0%" }} transition={travel}>
             {Array.from({ length: 4 }, (_, row) => (
               <span key={row} className={styles.doorRow} data-glass={row === 0 || undefined}>
                 {Array.from({ length: 4 }, (_, cell) => <span key={cell} className={styles.doorPanel} />)}
               </span>
             ))}
-            <motion.span className={styles.doorShade} initial={inTile ? false : { opacity: open ? 0 : .7 }} animate={{ opacity: open ? .7 : 0 }} transition={travel} />
           </motion.div>
         </div>
       </div>
