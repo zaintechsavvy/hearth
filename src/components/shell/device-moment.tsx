@@ -282,7 +282,6 @@ export function LockScene({ locked, small = false }: { locked: boolean; small?: 
   const quick = reduce ? { duration: 0 } : undefined;
   return (
     <div className={`${styles.stage} ${styles.depth} ${small ? styles.small : ""}`} data-locked={shown || undefined}>
-      <motion.span className={styles.ring} initial={false} animate={shown && !reduce ? { scale: [0.6, 1.25], opacity: [0.7, 0] } : { opacity: 0 }} transition={{ duration: 1.1, delay: .9, ease: "easeOut" }} aria-hidden="true" />
       <motion.div className={styles.padlock} initial={false} animate={reduce ? undefined : { rotateY: shown ? [-26, 8, 0] : [0, -20, -14], rotateX: [4, 8, 4] }} transition={{ duration: 1.4, ease: "easeInOut" }}>
         <motion.svg viewBox="-60 -80 120 150" className={styles.lockLayer} aria-hidden="true" initial={false} style={{ originX: "76.6%", originY: "50%" }}
           animate={shown ? { y: "0%", rotateY: 0 } : { y: "-11%", rotateY: -150 }}
@@ -350,9 +349,9 @@ export function GarageScene({ open, small = false }: { open: boolean; small?: bo
             </linearGradient>
           </defs>
           <path d="M 40 196 L 200 196 L 238 220 L 2 220 Z" className={styles.drive} />
-          <path d="M 8 74 L 120 14 L 232 74 L 232 196 L 8 196 Z" className={styles.house} />
+          <path d="M 8 80 L 104 34 Q 120 26 136 34 L 232 80 L 232 196 L 8 196 Z" className={styles.house} />
           {[96, 112, 128, 144, 160, 176].map(y => <line key={y} x1={10} x2={230} y1={y} y2={y} className={styles.siding} />)}
-          <path d="M 2 78 L 120 8 L 238 78" className={styles.roof} />
+          <path d="M 2 83 L 103 29 Q 120 20 137 29 L 238 83" className={styles.roof} />
           <rect x={40} y={86} width={160} height={110} fill={`url(#${id}-inside)`} />
           <motion.g initial={{ opacity: open ? 0 : 1 }} animate={{ opacity: open ? 1 : 0 }} transition={light}>
             <rect x={40} y={86} width={160} height={110} fill={`url(#${id}-lamp)`} />
@@ -454,29 +453,18 @@ export function WindowScene({ open, small = false }: { open: boolean; small?: bo
 
 export type MomentPreviewScene = "light" | "chandelier" | "fan" | "standingFan" | "lock" | "garage" | "door" | "window";
 
-/** How long a preview holds each state before it plays the change back. */
-const PREVIEW_MS = 4200;
-
-/** A moment playing over and over, switching on and off, as an example on the landing page. */
-export function MomentPreview({ scene }: { scene: MomentPreviewScene }) {
-  const reduce = useReducedMotion();
-  const [cycle, setCycle] = useState(0);
-  useEffect(() => {
-    if (reduce) return;
-    const timer = setInterval(() => setCycle(current => current + 1), PREVIEW_MS);
-    return () => clearInterval(timer);
-  }, [reduce]);
-  const on = cycle % 2 === 0;
+/** One moment on its own, sized to whatever holds it, as in the landing page's demo. Mount it afresh to play a change. */
+export function MomentScene({ scene, on }: { scene: MomentPreviewScene; on: boolean }) {
   return (
     <div className={styles.preview} aria-hidden="true">
-      {scene === "light" ? <LightScene key={cycle} on={on} tint={null} size={170} />
-        : scene === "chandelier" ? <ChandelierScene key={cycle} on={on} tint={null} />
-        : scene === "fan" ? <FanScene key={cycle} on={on} />
-        : scene === "standingFan" ? <StandingFanScene key={cycle} on={on} />
-        : scene === "lock" ? <LockScene key={cycle} small locked={on} />
-        : scene === "garage" ? <GarageScene key={cycle} small open={on} />
-        : scene === "door" ? <DoorScene key={cycle} small open={on} />
-        : <WindowScene key={cycle} small open={on} />}
+      {scene === "light" ? <LightScene on={on} tint={null} size={220} />
+        : scene === "chandelier" ? <ChandelierScene on={on} tint={null} />
+        : scene === "fan" ? <FanScene on={on} />
+        : scene === "standingFan" ? <StandingFanScene on={on} />
+        : scene === "lock" ? <LockScene small locked={on} />
+        : scene === "garage" ? <GarageScene small open={on} />
+        : scene === "door" ? <DoorScene small open={on} />
+        : <WindowScene small open={on} />}
     </div>
   );
 }

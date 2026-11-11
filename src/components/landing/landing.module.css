@@ -376,7 +376,7 @@
   .headerNav { gap: var(--space-4); }
 }
 
-/* Every moment the wall tablet plays, looping on and off as examples. */
+/* The moments the wall tablet plays, to try one at a time. */
 .moments {
   display: grid;
   gap: clamp(24px, 4vw, 40px);
@@ -387,36 +387,4 @@
   display: grid;
   gap: var(--space-4);
   max-width: 640px;
-}
-
-.momentGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(12px, 2vw, 20px);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-@media (max-width: 900px) {
-  .momentGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-.momentCard {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.momentArt {
-  aspect-ratio: 1;
-  overflow: hidden;
-  border-radius: 24px;
-  background: radial-gradient(80% 80% at 50% 45%, oklch(15% .006 250), oklch(6% .004 250));
-  color: oklch(96% 0 0);
-}
-
-.momentName {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  text-align: center;
 }
