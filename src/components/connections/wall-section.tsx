@@ -17,6 +17,7 @@ import styles from "./connections.module.css";
 import { PhotoFrameSettings } from "./photo-frame-settings";
 import { AnalogFace } from "@/components/shell/analog-face";
 import { LuxuryFace } from "@/components/shell/luxury-face";
+import { DigitalTime } from "@/components/shell/digital-time";
 import { startTour } from "@/components/shell/hearth-tour";
 import { SettingsSection } from "./settings-section";
 
@@ -74,12 +75,23 @@ export function WallSection() {
           {settings.clockFace === "digital" ? (
             <div className={styles.clockPreview} style={{ color: clockColorOf(settings), "--clock-brightness": settings.clockBrightness } as CSSProperties} aria-hidden="true">
               <span className={styles.clockPreviewDate}>{now ? new Date(now).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : "\u00a0"}</span>
-              <span className={styles.clockPreviewTime}>{now ? new Date(now).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "\u00a0"}</span>
+              <DigitalTime now={now ?? 0} settings={settings} className={styles.clockPreviewTime} />
             </div>
           ) : (
             <div className={`${styles.analogPreview} ${settings.clockFace === "luxury" ? styles.luxuryPreview : ""}`} style={{ "--saver-dim": settings.clockBrightness } as CSSProperties} aria-hidden="true">
               {settings.clockFace === "luxury" ? <LuxuryFace inline night={false} settings={settings} /> : <AnalogFace inline night={false} settings={settings} />}
             </div>
+          )}
+          {settings.clockFace === "digital" && (
+            <>
+              <SegmentedControl label="Digits" value={settings.digitLayout} onValueChange={value => set({ digitLayout: value as WallSettings["digitLayout"] })}
+                options={[{ value: "inline", label: "Side by side" }, { value: "stacked", label: "Stacked" }]} />
+              <SegmentedControl label="Weight" value={settings.digitWeight} onValueChange={value => set({ digitWeight: value as WallSettings["digitWeight"] })}
+                options={[{ value: "light", label: "Light" }, { value: "regular", label: "Regular" }, { value: "bold", label: "Bold" }]} />
+              <SegmentedControl label="Typeface" value={settings.digitFont} onValueChange={value => set({ digitFont: value as WallSettings["digitFont"] })}
+                options={[{ value: "display", label: "Sans" }, { value: "rounded", label: "Rounded" }, { value: "serif", label: "Serif" }, { value: "mono", label: "Mono" }]} />
+              <Slider label="Size" value={Math.round(settings.digitScale * 100)} min={70} max={130} step={5} format={value => `${value}%`} onValueChange={value => set({ digitScale: value / 100 })} />
+            </>
           )}
           <span className={styles.swatchLabel}>{settings.clockFace === "luxury" ? "Dial" : settings.clockFace === "analog" ? "Face" : "Colour"}</span>
           <div role="radiogroup" aria-label="Clock colour" className={styles.clockColors}>

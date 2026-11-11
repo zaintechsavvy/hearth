@@ -22,6 +22,7 @@ import { isDark } from "@/lib/left-open";
 import { isWidget, type TileConfig } from "@/lib/dashboard/layout";
 import { AnalogFace } from "./analog-face";
 import { LuxuryFace } from "./luxury-face";
+import { DigitalTime } from "./digital-time";
 import { clockColorOf, DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { itemsOf } from "@/lib/widgets/items";
@@ -307,11 +308,6 @@ function Glance({ night, settings, leftOpen }: { night: boolean; settings: WallS
   const waiting = !shown.has("packages") ? [] : itemsOf(widgets, "package").filter(item => item.data.status === "delivered");
   if (waiting.length) notes.push({ key: "packages", icon: <Package size={18} strokeWidth={1.75} />, text: waiting.length === 1 ? `${waiting[0].data.name} is here, collect it` : `${waiting.length} packages to collect` });
 
-  const parts = now ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).formatToParts(date) : [];
-  const clock = {
-    time: parts.filter(part => part.type !== "dayPeriod").map(part => part.value).join("").trim(),
-    period: parts.find(part => part.type === "dayPeriod")?.value ?? null,
-  };
   if (settings.clockFace !== "digital" && !photos) {
     return (
       <>
@@ -328,10 +324,7 @@ function Glance({ night, settings, leftOpen }: { night: boolean; settings: WallS
       {photos && <PhotoFrame source={settings.frameSource} seconds={settings.frameSeconds} onEmpty={setFrameEmpty} />}
       <span className={styles.glance} style={offset} data-frame={(photos && !frameEmpty) || undefined} data-align={settings.frameClock}>
         <span className={styles.date}>{now ? date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : ""}</span>
-        <span className={styles.clock}>
-          <span className={styles.time}>{clock.time}</span>
-          {clock.period && <span className={styles.period}>{clock.period}</span>}
-        </span>
+        <DigitalTime now={now} settings={settings} className={styles.clock} />
         {weather && (
           <span className={styles.weather}>
             <Thermometer size={20} strokeWidth={1.75} aria-hidden="true" />

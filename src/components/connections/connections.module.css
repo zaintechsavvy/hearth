@@ -374,13 +374,13 @@
   color: color-mix(in oklab, currentColor 62%, transparent);
 }
 
-.clockPreviewTime {
-  font-family: var(--font-display);
-  font-size: 48px;
-  font-weight: 500;
-  letter-spacing: -.05em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
+/* The preview draws the same digits as the resting screen, at a size that fits Settings. */
+.clockPreviewTime.clockPreviewTime {
+  --size: 64px;
+}
+
+.clockPreviewTime[data-layout="stacked"] {
+  --size: 72px;
 }
 
 .clockColors {
@@ -429,11 +429,6 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 500;
-}
-
-.luxuryPreview {
-  aspect-ratio: 1;
-  width: min(100%, 300px);
 }
 
 .analogPreview {

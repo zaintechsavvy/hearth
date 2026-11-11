@@ -2,56 +2,38 @@
   --metal: oklch(90% 0.03 85);
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
-  background: radial-gradient(70% 70% at 50% 45%, oklch(20% 0.006 250), oklch(6% 0.004 250));
+  overflow: hidden;
+  background: oklch(6% 0.004 250);
   opacity: var(--saver-dim, 1);
 }
 
-.watch {
-  position: relative;
-  width: min(92vh, 92vw);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  box-shadow: 0 30px 70px -10px oklch(0% 0 0 / .7);
-  transform: translate(var(--drift-x, 0), var(--drift-y, 0));
-  transition: transform 4s var(--ease-standard);
+/* The dial is the screen: a sunburst over a colour that is lighter at the centre and darker at the corners, inside a polished frame. */
+.dial {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 50%, oklch(100% 0 0 / .045) 0deg .7deg, transparent .7deg 1.8deg),
+    radial-gradient(70% 90% at 50% 46%, color-mix(in oklab, var(--dial) 78%, white), var(--dial) 62%, color-mix(in oklab, var(--dial) 62%, black));
+  box-shadow: inset 0 0 0 clamp(6px, 1.2vh, 14px) color-mix(in oklab, var(--metal) 70%, black), inset 0 0 0 clamp(8px, 1.6vh, 18px) color-mix(in oklab, var(--metal) 85%, white), inset 0 0 80px oklch(0% 0 0 / .45);
 }
 
-.bezel,
-.rehaut,
-.dial,
 .marks {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  translate: var(--drift-x, 0) var(--drift-y, 0);
 }
 
-/* Fluted steel: fine alternating light and dark wedges, kept to a ring. */
-.bezel {
-  background:
-    repeating-conic-gradient(oklch(94% 0.005 250) 0deg 1.1deg, oklch(52% 0.006 250) 1.4deg 2.5deg, oklch(94% 0.005 250) 2.8deg),
-    oklch(70% 0.005 250);
-  -webkit-mask: radial-gradient(closest-side, transparent 89.4%, #000 89.6% 98.4%, transparent 98.6%);
-  mask: radial-gradient(closest-side, transparent 89.4%, #000 89.6% 98.4%, transparent 98.6%);
+.track {
+  fill: none;
+  stroke: color-mix(in oklab, var(--metal) 40%, transparent);
+  stroke-width: 2;
 }
 
-.rehaut {
-  background: linear-gradient(135deg, color-mix(in oklab, var(--metal) 60%, white), var(--metal) 45%, color-mix(in oklab, var(--metal) 72%, black) 55%, color-mix(in oklab, var(--metal) 85%, white));
-  -webkit-mask: radial-gradient(closest-side, transparent 86.2%, #000 86.4% 89.4%, transparent 89.6%);
-  mask: radial-gradient(closest-side, transparent 86.2%, #000 86.4% 89.4%, transparent 89.6%);
-}
-
-/* A sunburst: faint rays over a dial that is lighter at the centre and darker at the rim. */
-.dial {
-  inset: 6.8%;
-  background:
-    repeating-conic-gradient(oklch(100% 0 0 / .05) 0deg .8deg, transparent .8deg 2deg),
-    radial-gradient(circle at 50% 42%, color-mix(in oklab, var(--dial) 78%, white), var(--dial) 70%, color-mix(in oklab, var(--dial) 70%, black));
-}
-
-.track line {
-  stroke: color-mix(in oklab, var(--metal) 80%, transparent);
+.tick {
+  stroke: color-mix(in oklab, var(--metal) 75%, transparent);
+  stroke-width: 2.5;
 }
 
 .marker {
@@ -68,14 +50,6 @@
 .crown path,
 .crown rect {
   fill: url(#lux-metal);
-}
-
-.brand {
-  fill: var(--metal);
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 500;
-  letter-spacing: .3em;
 }
 
 .small {
@@ -138,7 +112,7 @@
   filter: drop-shadow(0 0 6px oklch(84% 0.14 145 / .7));
 }
 
-.face[data-night] :is(.marker, .brand, .small, .track line, .window, .date) {
+.face[data-night] :is(.marker, .small, .tick, .window, .date) {
   opacity: .5;
 }
 
@@ -151,17 +125,9 @@
   filter: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .watch { transition: none; }
-}
+
 
 .inline {
   position: absolute;
   border-radius: inherit;
-}
-
-.inline .watch {
-  width: 92%;
-  transform: none;
-  box-shadow: 0 12px 30px -8px oklch(0% 0 0 / .6);
 }

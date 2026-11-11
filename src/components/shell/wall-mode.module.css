@@ -38,26 +38,7 @@
 }
 
 .clock {
-  display: flex;
-  align-items: baseline;
-  gap: clamp(8px, 1.2vw, 18px);
   margin-top: clamp(4px, 1vh, 12px);
-}
-
-.time {
-  font-family: var(--font-display);
-  font-size: clamp(96px, 21vw, 280px);
-  font-weight: 500;
-  letter-spacing: -.055em;
-  line-height: .9;
-  font-variant-numeric: tabular-nums;
-}
-
-.period {
-  font-family: var(--font-display);
-  font-size: clamp(24px, 3.4vw, 46px);
-  font-weight: 500;
-  color: color-mix(in oklab, currentColor 55%, transparent);
 }
 
 .weather {
@@ -157,7 +138,6 @@
 }
 
 .saver[data-red] .date,
-.saver[data-red] .period,
 .saver[data-red] .weather,
 .saver[data-red] .cardLabel {
   color: oklch(46% 0.13 25);
@@ -293,8 +273,8 @@
   text-shadow: 0 2px 28px oklch(0% 0 0 / .5);
 }
 
-.glance[data-frame] .time {
-  font-size: clamp(64px, 11vw, 168px);
+.glance[data-frame] .clock {
+  --size: clamp(64px, 11vw, 168px);
 }
 
 .glance[data-frame] .cards {

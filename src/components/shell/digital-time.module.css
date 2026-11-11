@@ -1,0 +1,48 @@
+.time {
+  --size: clamp(96px, 21vw, 280px);
+  display: inline-flex;
+  align-items: baseline;
+  gap: clamp(8px, 1.2vw, 18px);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.line {
+  font-size: calc(var(--size) * var(--digit-scale, 1));
+  letter-spacing: -.055em;
+  line-height: .9;
+}
+
+.period {
+  font-size: calc(var(--size) * .17 * var(--digit-scale, 1));
+  color: color-mix(in oklab, currentColor 55%, transparent);
+}
+
+/* Stacked: hours over minutes, tall and tight like a phone's lock screen. */
+.time[data-layout="stacked"] {
+  --size: clamp(120px, 34vh, 400px);
+  display: inline-grid;
+  justify-items: center;
+}
+
+.time[data-layout="stacked"] .line {
+  line-height: .8;
+  letter-spacing: -.04em;
+}
+
+.time[data-layout="stacked"] .period {
+  margin-top: .3em;
+  font-size: calc(var(--size) * .09 * var(--digit-scale, 1));
+  letter-spacing: .08em;
+}
+
+.time[data-weight="light"] { font-weight: 250; }
+.time[data-weight="regular"] { font-weight: 500; }
+.time[data-weight="bold"] { font-weight: 800; }
+
+.time[data-font="rounded"] { font-family: ui-rounded, "SF Pro Rounded", var(--font-display); }
+.time[data-font="serif"] { font-family: var(--font-serif), Georgia, serif; }
+.time[data-font="serif"] .line { letter-spacing: -.02em; }
+.time[data-font="mono"] { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.time[data-font="mono"] .line { letter-spacing: -.08em; }
