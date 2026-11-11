@@ -422,6 +422,7 @@
 /* Window: the lower sash slides up behind the upper one. */
 .windowBox {
   position: relative;
+  container-type: inline-size;
   width: 82%;
   aspect-ratio: 1;
 }
@@ -443,9 +444,6 @@
   height: 50%;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4%;
-  padding: 4%;
-  background: oklch(88% .01 250);
 }
 
 .sashUpper {
@@ -457,8 +455,22 @@
   top: 50%;
 }
 
+/* Each pane is glass in a white frame, so the sky shows through both sashes. */
 .pane {
-  background: linear-gradient(135deg, oklch(80% .03 230 / .28), oklch(80% .03 230 / .08) 55%, oklch(100% 0 0 / .18));
+  border: clamp(2px, .9cqw, 5px) solid oklch(88% .01 250);
+  background: linear-gradient(135deg, oklch(80% .03 230 / .22), oklch(80% .03 230 / .05) 55%, oklch(100% 0 0 / .14));
+}
+
+.star {
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  50% { opacity: .35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star { animation: none; }
 }
 
 .sashHandle {
@@ -482,8 +494,16 @@
   place-items: center;
   width: 100%;
   height: 100%;
-  overflow: hidden;
   isolation: isolate;
+}
+
+/* The lock and garage are drawn at the size of the notice card; a frame this size wants them smaller. */
+.preview .padlock {
+  width: 42%;
+}
+
+.preview .garageBox {
+  width: 90%;
 }
 
 .preview .stage {

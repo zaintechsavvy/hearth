@@ -5,15 +5,16 @@ import { Switch } from "@/components/arc/switch/switch";
 import { MomentScene, type MomentPreviewScene } from "@/components/shell/device-moment";
 import styles from "./moment-demo.module.css";
 
-const SCENES: { scene: MomentPreviewScene; name: string; words: [string, string] }[] = [
-  { scene: "light", name: "Lamp", words: ["On", "Off"] },
-  { scene: "chandelier", name: "Chandelier", words: ["On", "Off"] },
-  { scene: "fan", name: "Ceiling fan", words: ["On", "Off"] },
-  { scene: "standingFan", name: "Standing fan", words: ["On", "Off"] },
-  { scene: "lock", name: "Front door lock", words: ["Locked", "Unlocked"] },
-  { scene: "garage", name: "Garage door", words: ["Open", "Closed"] },
-  { scene: "door", name: "Back door", words: ["Open", "Closed"] },
-  { scene: "window", name: "Bedroom window", words: ["Open", "Closed"] },
+/** `label` is the list's plain name; `name` is the device as the tablet would show it. */
+const SCENES: { scene: MomentPreviewScene; label: string; name: string; words: [string, string] }[] = [
+  { scene: "light", label: "Lamp", name: "Lamp", words: ["On", "Off"] },
+  { scene: "chandelier", label: "Chandelier", name: "Chandelier", words: ["On", "Off"] },
+  { scene: "fan", label: "Ceiling fan", name: "Ceiling fan", words: ["On", "Off"] },
+  { scene: "standingFan", label: "Standing fan", name: "Standing fan", words: ["On", "Off"] },
+  { scene: "lock", label: "Door lock", name: "Front door lock", words: ["Locked", "Unlocked"] },
+  { scene: "garage", label: "Garage door", name: "Garage door", words: ["Open", "Closed"] },
+  { scene: "door", label: "Door", name: "Door", words: ["Open", "Closed"] },
+  { scene: "window", label: "Window", name: "Bedroom window", words: ["Open", "Closed"] },
 ];
 
 /** The wall tablet's moments to try: pick a device, flip its switch, and watch the change play on the tablet. */
@@ -28,7 +29,7 @@ export function MomentDemo() {
     <div className={styles.demo}>
       <div role="radiogroup" aria-label="Device" className={styles.list}>
         {SCENES.map((item, index) => (
-          <button key={item.scene} type="button" role="radio" aria-checked={index === chosen} className={styles.choice} onClick={() => choose(index)}>{item.name}</button>
+          <button key={item.scene} type="button" role="radio" aria-checked={index === chosen} className={styles.choice} onClick={() => choose(index)}>{item.label}</button>
         ))}
       </div>
       <div className={styles.side}>

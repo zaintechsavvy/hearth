@@ -351,7 +351,7 @@ export function GarageScene({ open, small = false }: { open: boolean; small?: bo
           <path d="M 40 196 L 200 196 L 238 220 L 2 220 Z" className={styles.drive} />
           <path d="M 8 80 L 104 34 Q 120 26 136 34 L 232 80 L 232 196 L 8 196 Z" className={styles.house} />
           {[96, 112, 128, 144, 160, 176].map(y => <line key={y} x1={10} x2={230} y1={y} y2={y} className={styles.siding} />)}
-          <path d="M 2 83 L 103 29 Q 120 20 137 29 L 238 83" className={styles.roof} />
+          <path d="M 2 86 L 103 32 Q 120 23 137 32 L 238 86" className={styles.roof} />
           <rect x={40} y={86} width={160} height={110} fill={`url(#${id}-inside)`} />
           <motion.g initial={{ opacity: open ? 0 : 1 }} animate={{ opacity: open ? 1 : 0 }} transition={light}>
             <rect x={40} y={86} width={160} height={110} fill={`url(#${id}-lamp)`} />
@@ -396,7 +396,6 @@ export function DoorScene({ open, small = false }: { open: boolean; small?: bool
               <stop offset="1" stopColor="oklch(85% .08 80)" stopOpacity="0" />
             </linearGradient>
           </defs>
-          <rect x={20} y={14} width={160} height={186} rx={4} className={styles.house} />
           <rect x={62} y={34} width={76} height={166} fill="oklch(10% .01 250)" />
           <motion.g initial={{ opacity: open ? 0 : 1 }} animate={{ opacity: open ? 1 : 0 }} transition={{ duration: reduce ? 0 : .7, delay: reduce ? 0 : open ? .35 : 1.1 }}>
             <rect x={62} y={34} width={76} height={166} fill={`url(#${id}-glow)`} />
@@ -434,8 +433,11 @@ export function WindowScene({ open, small = false }: { open: boolean; small?: bo
           </defs>
           <rect x={10} y={10} width={180} height={180} rx={6} className={styles.house} />
           <rect x={46} y={26} width={108} height={140} fill={`url(#${id}-sky)`} />
-          <circle cx={122} cy={58} r={11} fill="oklch(94% .04 95)" />
-          {[[66, 46], [84, 70], [138, 92], [70, 112], [108, 38]].map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r={1.6} fill="oklch(96% .02 95)" />)}
+          <circle cx={124} cy={124} r={12} fill="oklch(94% .04 95)" />
+          <circle cx={130} cy={119} r={10} fill="oklch(32% .065 255)" />
+          {[[60, 108], [78, 140], [100, 116], [146, 150], [66, 156], [112, 152], [92, 100], [140, 104], [70, 52], [118, 40], [136, 70]].map(([x, y], index) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r={index % 3 ? 1.3 : 1.9} fill="oklch(96% .02 95)" className={styles.star} style={{ animationDelay: `${(index * .37) % 2.4}s` }} />
+          ))}
           <path d="M 46 166 L 46 26 L 154 26 L 154 166" className={styles.frame} />
           <rect x={36} y={166} width={128} height={9} rx={2} className={styles.sill} />
         </svg>

@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import ipad from "./shots/ipad.webp";
 import ipadDark from "./shots/ipad-dark.webp";
 import analog from "./shots/wall-analog.webp";
-import analogWarm from "./shots/wall-analog-warm.webp";
+import luxury from "./shots/wall-luxury.webp";
 import thermostat from "./shots/thermostat-cool.webp";
 import thermostatDark from "./shots/thermostat-cool-dark.webp";
 import activity from "./shots/activity.webp";
@@ -119,10 +119,10 @@ export function Landing() {
           <motion.div className={styles.restCopy} {...rise()}>
             <h2 className={styles.heading}>When nobody is looking</h2>
             <p className={styles.body}>
-              After a few quiet minutes the wall tablet rests on a clock you can read across the room: an analog face in the colour you pick, or large digits. It dims at night, and wakes when someone walks by or rings the bell.
+              After a few quiet minutes the wall tablet rests on a clock you can read across the room: an analog face in the colour you pick, a luxury dial with Roman numerals, or large digits. It dims at night, and wakes when someone walks by or rings the bell.
             </p>
             <ul className={styles.points}>
-              <li>Analog or digital, in the colour and brightness you pick</li>
+              <li>Analog, luxury, or digital, in the colour and brightness you pick</li>
               <li>Night dim, and an optional red clock after dark</li>
               <li>A photo frame from your own pictures or Immich</li>
               <li>Wakes on motion, a door opening, or the doorbell</li>
@@ -130,7 +130,7 @@ export function Landing() {
           </motion.div>
           <motion.div className={styles.restShots} {...rise(0.1)}>
             <Image unoptimized src={analog} alt="The wall tablet resting on an analog face: large overlapping numerals behind white hands" className={styles.restShot} sizes="(min-width: 900px) 560px, 92vw" />
-            <Image unoptimized src={analogWarm} alt="The analog face in a warm colour" className={`${styles.restShot} ${styles.restShotBack}`} sizes="(min-width: 900px) 420px, 70vw" />
+            <Image unoptimized src={luxury} alt="The wall tablet resting on the luxury dial: Roman numerals and sword hands on a deep green face" className={`${styles.restShot} ${styles.restShotBack}`} sizes="(min-width: 900px) 420px, 70vw" />
           </motion.div>
         </section>
 

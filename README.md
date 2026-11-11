@@ -27,10 +27,12 @@ Hearth sits on top of the Home Assistant you already run. It does not replace it
 <table>
   <tr>
     <td><img src="docs/screenshots/wall-analog.png" alt="The wall tablet resting on the analog clock face"></td>
+    <td><img src="docs/screenshots/wall-luxury.png" alt="The wall tablet resting on the luxury dial"></td>
     <td><img src="docs/screenshots/dashboard-dark.png" alt="The dashboard in dark mode"></td>
   </tr>
   <tr>
     <td align="center">At rest</td>
+    <td align="center">Luxury dial</td>
     <td align="center">Dark mode</td>
   </tr>
 </table>
