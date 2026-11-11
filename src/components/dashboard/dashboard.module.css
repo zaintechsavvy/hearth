@@ -70,11 +70,18 @@
 }
 
 /* Both sit on the wallpaper beside the tiles, so each is wrapped in the tiles' glass and drops its own flat fill. */
+/* A nearly solid surface, so the room names read clearly over any wallpaper. */
 .screenGlass {
   display: inline-flex;
   min-width: 0;
   max-width: 100%;
   border-radius: var(--radius-control);
+  background: oklch(99% 0 0 / .9);
+  color: var(--foreground);
+}
+
+:global(:root[data-theme="dark"]) .screenGlass {
+  background: oklch(21% .006 260 / .92);
 }
 
 .screenGlass > button,

@@ -97,7 +97,7 @@
 .times {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-6);
+  gap: var(--space-4) calc(var(--space-10) + var(--space-2));
 }
 
 .times > * {

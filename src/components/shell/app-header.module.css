@@ -34,17 +34,21 @@
   border-radius: var(--radius-control);
 }
 
-.navGlass {
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .7), 0 10px 30px -10px oklch(30% .04 260 / .25);
-}
-
-:root[data-theme="dark"] .navGlass {
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .14), 0 12px 30px -10px oklch(0% 0 0 / .6);
-}
-
+/* A quiet bar: nearly solid, so its words never have to change colour with the wallpaper behind it. */
 .nav {
   display: flex;
-  gap: var(--space-1);
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid oklch(0% 0 0 / .06);
+  border-radius: var(--radius-pill);
+  background: oklch(99% 0 0 / .82);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+:root[data-theme="dark"] .nav {
+  border-color: oklch(100% 0 0 / .08);
+  background: oklch(20% .005 260 / .82);
 }
 
 .link {
@@ -61,34 +65,19 @@
 }
 
 .link:hover,
-.link[aria-current="page"] {
+.link[data-active] {
   color: var(--foreground);
-}
-
-/* The bar's glass is clear enough to show a dark backdrop through, so its links turn light; the active pill stays white with dark text. */
-:global(:root[data-backdrop="dark"]) .link {
-  color: oklch(98.5% 0 0 / .82);
-}
-
-:global(:root[data-backdrop="dark"]) .link:hover {
-  color: oklch(98.5% 0 0);
-}
-
-:global(:root[data-backdrop="dark"]) .link[aria-current="page"] {
-  color: oklch(20% .02 260);
 }
 
 .highlight {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: oklch(100% 0 0 / .72);
-  box-shadow: inset 0 1px 0 oklch(100% 0 0), 0 2px 8px oklch(30% .03 260 / .12);
+  background: oklch(50% 0 0 / .09);
 }
 
 :root[data-theme="dark"] .highlight {
-  background: oklch(100% 0 0 / .14);
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .18);
+  background: oklch(100% 0 0 / .1);
 }
 
 .label {
@@ -129,7 +118,7 @@
     padding-block: var(--space-3);
   }
 
-  .header .navGlass,
+  .header .nav,
   .header .account {
     display: none;
   }
@@ -159,20 +148,6 @@
 
 @media (max-width: 640px) {
   .household { display: none; }
-}
-
-/* Over a photo the bar takes a wash of the page colour, so its links read whatever is behind them. */
-:global(:root[data-wallpaper="photo"]) .navGlass {
-  box-shadow: inset 0 0 0 999px color-mix(in oklab, var(--background) 62%, transparent), inset 0 1px 0 oklch(100% 0 0 / .5), 0 10px 30px -12px oklch(0% 0 0 / .2);
-}
-
-:global(:root[data-wallpaper="photo"]) .link,
-:global(:root[data-wallpaper="photo"]) .link:hover {
-  color: var(--foreground);
-}
-
-:global(:root[data-wallpaper="photo"]) .link:not([aria-current="page"]) {
-  color: var(--text-secondary);
 }
 
 /* Over a photo the band follows what is behind the bar: a shade of dark where the photo is dark, so text under it is not washed grey. */

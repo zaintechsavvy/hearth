@@ -640,7 +640,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
 
       <WallRoomsBridge rooms={rooms} current={current} onWant={showRoom} />
       {rooms.length > 1 && (
-        <div className={styles.screens} data-on-wall data-wall-hide>
+        <div className={styles.screens} data-wall-hide>
           <span className={`${glassClass("pill")} ${styles.screenGlass}`}><SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...rooms.map(value => ({ value, label: value }))]} /></span>
         </div>
       )}

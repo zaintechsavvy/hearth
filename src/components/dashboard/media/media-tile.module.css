@@ -610,13 +610,13 @@ button.row:hover {
   .tile .head > .art { width: 56px; }
 }
 
+/* No blur behind the open player: it covers the screen, and a live blur redrawn on every frame of the morph is
+   what made opening and closing stutter. */
 .scrim {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: oklch(20% .01 260 / .22);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background: oklch(20% .01 260 / .3);
 }
 
 /* The open player is the whole screen, edge to edge, so the artwork and controls read from across a room. */
@@ -635,6 +635,18 @@ button.row:hover {
   height: 100%;
   overflow: hidden;
   pointer-events: auto;
+  will-change: transform;
+}
+
+/* The open player is a solid surface rather than frosted glass, for the same reason. */
+.stage .card {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: oklch(97% .003 260);
+}
+
+:root[data-theme="dark"] .stage .card {
+  background: oklch(17% .006 260);
 }
 
 .card .player {
