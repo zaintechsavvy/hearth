@@ -3,7 +3,7 @@ import {
 } from "@/lib/devices/types";
 import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
 import { unreachableMessage } from "./reach";
-import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type HistoryPoint, type IceCandidate, type LogbookEntry, type IceServer, type Provider, type WebRtcAnswer } from "./types";
+import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type HistoryPoint, type IceCandidate, type LogbookEntry, type IceServer, type MediaItem, type Provider, type WebRtcAnswer } from "./types";
 
 export interface HassState {
   entity_id: string;
@@ -280,6 +280,30 @@ function queuedTrack(item: Record<string, unknown> | null): PlayedTrack | null {
   const artists = Array.isArray(media.artists) ? media.artists as Record<string, unknown>[] : [];
   const uri = str(media.uri);
   return { title, artist: artists.length ? str(artists[0].name) : null, media: uri ? { id: uri, type: "music" } : null };
+}
+
+interface HassBrowse {
+  title?: string;
+  media_class?: string;
+  media_content_id?: string;
+  media_content_type?: string;
+  can_play?: boolean;
+  can_expand?: boolean;
+  thumbnail?: string | null;
+  children?: HassBrowse[];
+}
+
+const MEDIA_KINDS: Record<string, MediaItem["kind"]> = { track: "track", music: "track", album: "album", artist: "artist", playlist: "playlist" };
+
+/** Only covers on the open web are kept, since Home Assistant's own proxied ones need its token. */
+function mediaItem(item: HassBrowse): MediaItem[] {
+  const title = str(item.title), id = str(item.media_content_id), type = str(item.media_content_type);
+  if (!title || !id || !type) return [];
+  const thumbnail = str(item.thumbnail);
+  return [{
+    title, subtitle: null, kind: MEDIA_KINDS[item.media_class ?? ""] ?? "other", media: { id, type },
+    artwork: thumbnail && /^https:\/\//i.test(thumbnail) ? thumbnail : null, playable: item.can_play === true, expandable: item.can_expand === true,
+  }];
 }
 
 export interface TrackedPackage {
@@ -636,6 +660,22 @@ export class HomeAssistantProvider implements Provider {
         : Promise.resolve(null),
     ]);
     return { recent: recentTracks(history[0] ?? [], current), next: queuedTrack(queue?.service_response?.[entityId]?.next_item ?? null) };
+  }
+
+  /** Searches what the player can play, as Music Assistant and most streaming players can. The action only answers with data, so it needs `return_response`. */
+  async searchMedia(entityId: string, query: string): Promise<MediaItem[]> {
+    if (!entityId.startsWith("media_player.")) throw new IntegrationError("That device is not a media player.");
+    const result = await this.request<{ service_response?: Record<string, { result?: HassBrowse[] }> }>("api/services/media_player/search_media?return_response", {
+      method: "POST", body: JSON.stringify({ entity_id: entityId, search_query: query }),
+    }).catch(() => { throw new IntegrationError("This player cannot search for music."); });
+    return (result.service_response?.[entityId]?.result ?? []).flatMap(mediaItem);
+  }
+
+  async browseMedia(entityId: string, media: { id: string; type: string }) {
+    if (!entityId.startsWith("media_player.")) throw new IntegrationError("That device is not a media player.");
+    const answer = await this.live.request<HassBrowse>({ type: "media_player/browse_media", entity_id: entityId, media_content_id: media.id, media_content_type: media.type })
+      .catch(() => { throw new IntegrationError("This player could not open that."); });
+    return { title: str(answer.result.title) ?? "", items: (answer.result.children ?? []).flatMap(mediaItem) };
   }
 
   /** A shopping or to-do list's items. The action only answers with data, so it needs `return_response`. */

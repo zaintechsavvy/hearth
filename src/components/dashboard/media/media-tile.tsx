@@ -2,9 +2,9 @@
 
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import {
-  Bluetooth, Check, ChevronDown, ChevronLeft, Headphones, Heart, ListMusic, Music, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Speaker, Tv, Volume1, Volume2, X,
+  Bluetooth, Check, ChevronDown, ChevronLeft, ChevronRight, Disc3, Headphones, Heart, ListMusic, Music, Pause, Play, Repeat, Repeat1, Search, Shuffle, SkipBack, SkipForward, Speaker, Tv, User, Volume1, Volume2, X,
 } from "lucide-react";
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { Fragment, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import useSWR from "swr";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
@@ -15,6 +15,7 @@ import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import { paletteFromImage } from "@/components/shell/image-tools";
 import { hexToHsl, hslToHex } from "@/lib/backgrounds/palette";
 import { clamp, livePosition, type DeviceCommand, type MediaPlayerDevice, type RepeatMode } from "@/lib/devices/types";
+import type { MediaItem } from "@/lib/integrations/types";
 import { itemsOf } from "@/lib/widgets/items";
 import styles from "./media-tile.module.css";
 
@@ -153,7 +154,7 @@ function Player({ device, send, interactive, view, onView: setView, autoFocus, o
         )}
       </AnimatePresence>
       <div className={styles.foot}>
-        <button type="button" className={styles.footButton} aria-label="Up next, recently played, and favourites" aria-pressed={view === "queue"} disabled={!interactive} onClick={() => toggle("queue")}>
+        <button type="button" className={styles.footButton} aria-label="Search music, up next, recently played, and favourites" aria-pressed={view === "queue"} disabled={!interactive} onClick={() => toggle("queue")}>
           <ListMusic size={18} strokeWidth={1.75} aria-hidden="true" />
         </button>
         <span className={styles.where}>{where && <><OutputIcon name={device.output} size={14} /> {where}</>}</span>
@@ -302,10 +303,10 @@ function Volume({ device, send, disabled }: { device: MediaPlayerDevice; send: S
   );
 }
 
-function ViewHead({ title, onDone }: { title: string; onDone: () => void }) {
+function ViewHead({ title, onDone, backLabel = "Back to the controls" }: { title: string; onDone: () => void; backLabel?: string }) {
   return (
     <div className={styles.viewHead}>
-      <button type="button" className={styles.back} aria-label="Back to the controls" onClick={onDone}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" /></button>
+      <button type="button" className={styles.back} aria-label={backLabel} onClick={onDone}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" /></button>
       <span className={styles.viewTitle}>{title}</span>
     </div>
   );
@@ -352,18 +353,50 @@ function Outputs({ device, peers, send, onDone }: { device: MediaPlayerDevice; p
   );
 }
 
-const fetchJson = <T,>(url: string): Promise<T> => fetch(url).then(response => { if (!response.ok) throw new Error(); return response.json(); });
+const fetchJson = <T,>(url: string): Promise<T> => fetch(url).then(async response => {
+  const body = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(typeof body?.error === "string" ? body.error : "");
+  return body as T;
+});
 
-/** Up next and recently played, from the player, and favourites, saved in Hearth. Any of them with a known source plays again on tap. */
+function useDebounced<T>(value: T, ms: number) {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+}
+
+/**
+ * Search, up next and recently played, from the player, and favourites, saved in Hearth. Any of them with a known
+ * source plays again on tap. Albums, artists, and playlists search finds open into their songs.
+ */
 function Queue({ device, send, disabled, onDone }: { device: MediaPlayerDevice; send: Send; disabled: boolean; onDone: () => void }) {
   const { home, removeItem } = useHome();
+  const [query, setQuery] = useState("");
+  const [trail, setTrail] = useState<MediaItem[]>([]);
+  const searched = useDebounced(query.trim(), 300);
   const { data } = useSWR<{ recent: Track[]; next: Track | null }>(`/api/devices/${encodeURIComponent(device.id)}/media?title=${encodeURIComponent(device.title ?? "")}&queue=${device.can.queue ? 1 : 0}`, fetchJson, { refreshInterval: 30_000 });
   const favourites = itemsOf(home?.widgets ?? [], "favorite");
   const play = (track: Track) => { if (track.media && device.can.play) { void send({ type: "playMedia", id: track.media.id, mediaType: track.media.type }); onDone(); } };
   const playable = (track: Track) => Boolean(track.media && device.can.play && !disabled);
+  const playItem = (item: MediaItem) => { void send({ type: "playMedia", id: item.media.id, mediaType: item.media.type }); onDone(); };
+  const openItem = (item: MediaItem) => setTrail([...trail, item]);
+  const opened = trail.at(-1);
+  if (opened) return <Browse device={device} item={opened} onBack={() => setTrail(trail.slice(0, -1))} onOpen={openItem} onPlay={playItem} />;
   return (
     <div className={styles.list}>
-      <ViewHead title="Queue" onDone={onDone} />
+      <ViewHead title="Music" onDone={onDone} />
+      {device.can.play && !disabled && (
+        <label className={styles.search}>
+          <Search size={16} strokeWidth={1.75} aria-hidden="true" />
+          <input type="search" className={styles.searchInput} value={query} onChange={event => setQuery(event.target.value)}
+            placeholder="Songs, albums, artists" aria-label="Search music" enterKeyHint="search" autoComplete="off" spellCheck={false} />
+          {query && <button type="button" className={styles.searchClear} aria-label="Clear the search" onClick={() => setQuery("")}><X size={14} strokeWidth={1.75} aria-hidden="true" /></button>}
+        </label>
+      )}
+      {query.trim() ? <Results device={device} query={query.trim() === searched ? searched : ""} onOpen={openItem} onPlay={playItem} /> : <>
       {data?.next && (
         <>
           <span className={styles.groupLabel}>Up next</span>
@@ -384,8 +417,74 @@ function Queue({ device, send, disabled, onDone }: { device: MediaPlayerDevice; 
             return <TrackRow key={item.id} track={track} onPlay={playable(track) ? () => play(track) : undefined} onRemove={disabled ? undefined : () => void removeItem(item.id)} />;
           })}
       </div>
+      </>}
     </div>
   );
+}
+
+const SECTIONS = [["track", "Songs"], ["album", "Albums"], ["artist", "Artists"], ["playlist", "Playlists"], ["other", "More"]] as const;
+
+function Results({ device, query, onOpen, onPlay }: { device: MediaPlayerDevice; query: string; onOpen: (item: MediaItem) => void; onPlay: (item: MediaItem) => void }) {
+  const { data, error } = useSWR<{ items: MediaItem[] }>(query ? `/api/devices/${encodeURIComponent(device.id)}/media/search?q=${encodeURIComponent(query)}` : null, fetchJson, { revalidateOnFocus: false });
+  if (error) return <p className={styles.note}>{error.message || "Search did not work just now. Try again in a moment."}</p>;
+  if (!query || !data) return <p className={styles.note}>Searching…</p>;
+  if (!data.items.length) return <p className={styles.note}>Nothing found for “{query}”.</p>;
+  return SECTIONS.map(([kind, label]) => {
+    const items = data.items.filter(item => item.kind === kind);
+    return items.length > 0 && (
+      <Fragment key={kind}>
+        <span className={styles.groupLabel}>{label}</span>
+        <div className={styles.rows}>{items.map(item => <MediaRow key={`${item.media.type}:${item.media.id}`} item={item} onOpen={onOpen} onPlay={onPlay} />)}</div>
+      </Fragment>
+    );
+  });
+}
+
+/** An album's songs, an artist's albums, or a playlist's songs, with the whole of it playable at once. */
+function Browse({ device, item, onBack, onOpen, onPlay }: { device: MediaPlayerDevice; item: MediaItem; onBack: () => void; onOpen: (item: MediaItem) => void; onPlay: (item: MediaItem) => void }) {
+  const { data, error } = useSWR<{ title: string; items: MediaItem[] }>(
+    `/api/devices/${encodeURIComponent(device.id)}/media/browse?id=${encodeURIComponent(item.media.id)}&type=${encodeURIComponent(item.media.type)}`, fetchJson, { revalidateOnFocus: false },
+  );
+  return (
+    <div className={styles.list}>
+      <ViewHead title={data?.title || item.title} onDone={onBack} backLabel="Back" />
+      {item.subtitle && <span className={styles.groupLabel}>{item.subtitle}</span>}
+      {item.playable && (
+        <button type="button" className={styles.playAll} onClick={() => onPlay(item)}>
+          <Play size={14} strokeWidth={0} fill="currentColor" aria-hidden="true" />
+          {item.kind === "album" ? "Play the album" : item.kind === "playlist" ? "Play the playlist" : "Play all"}
+        </button>
+      )}
+      <div className={styles.rows}>
+        {error ? <p className={styles.note}>{error.message || "That did not open just now."}</p>
+          : !data ? <p className={styles.note}>Opening…</p>
+          : data.items.length === 0 ? <p className={styles.note}>Nothing in here yet.</p>
+          : data.items.map(child => <MediaRow key={`${child.media.type}:${child.media.id}`} item={child.subtitle === item.subtitle || child.subtitle === item.title ? { ...child, subtitle: null } : child} onOpen={onOpen} onPlay={onPlay} />)}
+      </div>
+    </div>
+  );
+}
+
+const KIND_ICONS = { track: Music, album: Disc3, artist: User, playlist: ListMusic, other: Music };
+
+function MediaRow({ item, onOpen, onPlay }: { item: MediaItem; onOpen: (item: MediaItem) => void; onPlay: (item: MediaItem) => void }) {
+  const opens = item.expandable && item.kind !== "track";
+  const Icon = KIND_ICONS[item.kind];
+  const body = (
+    <>
+      <span className={styles.rowIcon} data-art={item.artwork ? true : undefined}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- covers come from the music service as they are */}
+        {item.artwork ? <img src={item.artwork} alt="" className={styles.rowArt} referrerPolicy="no-referrer" loading="lazy" />
+          : !opens && item.playable ? <Play size={14} strokeWidth={0} fill="currentColor" className={styles.playGlyph} aria-hidden="true" />
+          : <Icon size={15} strokeWidth={1.75} aria-hidden="true" />}
+      </span>
+      <span className={styles.rowName}>{item.title}{item.subtitle && <span className={styles.rowMeta}> · {item.subtitle}</span>}</span>
+      {opens && <ChevronRight size={16} strokeWidth={1.75} className={styles.rowChevron} aria-hidden="true" />}
+    </>
+  );
+  if (opens) return <button type="button" className={styles.row} aria-label={`Open ${item.title}`} onClick={() => onOpen(item)}>{body}</button>;
+  if (item.playable) return <button type="button" className={styles.row} aria-label={`Play ${item.title}`} onClick={() => onPlay(item)}>{body}</button>;
+  return <div className={styles.row} data-static>{body}</div>;
 }
 
 function TrackRow({ track, onPlay, onRemove }: { track: Track; onPlay?: () => void; onRemove?: () => void }) {

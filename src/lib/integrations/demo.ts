@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { db } from "@/lib/db";
 import { demoState } from "@/lib/db/schema";
 import { DEMO_CAN, seedDemoDevices, TRACKS } from "./demo-devices";
+import { browseLibrary, searchLibrary, songsOf } from "./demo-library";
 import { IntegrationError, type DeviceList, type HistoryPoint, type Provider } from "./types";
 
 const DEMO_CAMERA_PICTURES: Record<string, string> = { "front-camera": "front-door-doorbell.jpg", "backyard-camera": "backyard-wyze.jpg" };
@@ -207,6 +208,16 @@ export class DemoProvider implements Provider {
     return { recent: [pick(at - 1), pick(at - 2), pick(at - 3)], next: pick(at + 1) };
   }
 
+  async searchMedia(_nativeId: string, query: string) {
+    return searchLibrary(query);
+  }
+
+  async browseMedia(_nativeId: string, media: { id: string }) {
+    const found = browseLibrary(media.id);
+    if (!found) throw new IntegrationError("That is not in the demo's music.");
+    return found;
+  }
+
   /** The demo's Evening scene: low warm lights, the porch on, and the coffee machine off. */
   private evening(home: DemoHome) {
     const set = (nativeId: string, command: DeviceCommand) => {
@@ -229,7 +240,9 @@ export class DemoProvider implements Provider {
       home.devices.set(leaderId, playTrack(leader, command.action === "next" ? 1 : back));
     } else if (command.type === "playMedia") {
       const at = TRACKS.findIndex(track => track.media.id === command.id);
+      const song = songsOf(command.id)[0];
       if (at >= 0) home.devices.set(leaderId, playTrack(leader, 0, at));
+      else if (song) home.devices.set(leaderId, { ...leader, title: song.title, artist: song.artist, duration: song.duration, artwork: song.artwork, media: song.media, state: "playing", position: 0, positionAt: new Date().toISOString() });
     } else if (command.type === "join") {
       home.devices.set(device.id, applyCommand(device, command));
     } else if (command.type === "unjoin") {

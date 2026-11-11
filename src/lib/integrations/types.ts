@@ -32,6 +32,10 @@ export interface Provider {
   cameraHls?(nativeId: string): Promise<string>;
   /** What a media player played recently, and what it plays next when it knows. */
   mediaQueue?(nativeId: string, current: string | null, askQueue: boolean): Promise<{ recent: { title: string; artist: string | null; media: { id: string; type: string } | null }[]; next: { title: string; artist: string | null; media: { id: string; type: string } | null } | null }>;
+  /** Music a media player can find by name: songs, albums, artists, and playlists. */
+  searchMedia?(nativeId: string, query: string): Promise<MediaItem[]>;
+  /** What is inside an album, artist, or playlist that search found. */
+  browseMedia?(nativeId: string, media: { id: string; type: string }): Promise<{ title: string; items: MediaItem[] }>;
   /** The items on a shopping or to-do list. */
   todoItems?(nativeId: string): Promise<{ uid: string; summary: string; done: boolean }[]>;
   /** The cover art of what a media player is playing. */
@@ -43,6 +47,20 @@ export interface Provider {
   logbook?(from: Date, to: Date, nativeIds?: string[]): Promise<LogbookEntry[]>;
   /** Fetches a playlist or segment of a stream `cameraHls` started. */
   cameraHlsFetch?(path: string, search: string, signal: AbortSignal): Promise<Response>;
+}
+
+export interface MediaItem {
+  title: string;
+  /** The artist, or the album's artist, when the integration says. */
+  subtitle: string | null;
+  kind: "track" | "album" | "artist" | "playlist" | "other";
+  /** How to ask the player for it, with `playMedia` or `browseMedia`. */
+  media: { id: string; type: string };
+  /** A cover the browser can load as it is, or null. */
+  artwork: string | null;
+  playable: boolean;
+  /** It holds more items, such as an album's songs. */
+  expandable: boolean;
 }
 
 export interface LogbookEntry {

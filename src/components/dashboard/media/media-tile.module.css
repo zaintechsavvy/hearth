@@ -478,6 +478,89 @@ button.row:hover {
   line-height: 1.4;
 }
 
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 6px 0 12px;
+  border-radius: 12px;
+  background: oklch(50% 0 0 / .08);
+  color: var(--text-secondary);
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.search:focus-within {
+  background: oklch(50% 0 0 / .12);
+  color: var(--foreground);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-sm);
+  outline: 0;
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.searchInput::-webkit-search-cancel-button {
+  display: none;
+}
+
+.searchClear {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+}
+
+.searchClear:hover {
+  color: var(--foreground);
+  background: oklch(50% 0 0 / .08);
+}
+
+.rowIcon[data-art] {
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.rowArt {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rowChevron {
+  color: var(--text-muted);
+}
+
+.playAll {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.playAll:active {
+  scale: .97;
+}
+
 /* The cover's own colour washes the glass, so the tile changes with the music. It is state, like a light's glow. */
 .tile[data-tinted]::after,
 .card[data-tinted]::after {
