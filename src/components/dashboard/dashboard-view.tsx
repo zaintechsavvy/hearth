@@ -14,7 +14,6 @@ import { Glass, glassClass } from "@/components/glass/glass";
 import { addDemoHome, deleteScene, saveLayout, updateDevice } from "@/lib/actions";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { useTick } from "./household/use-tick";
-import { startTour, startTourOnce } from "@/components/shell/hearth-tour";
 import { PageTabs } from "./page-tabs";
 import { ADD_TILE_EVENT } from "@/components/shell/command-menu";
 import type { HomeCamera } from "@/lib/home";
@@ -762,7 +761,6 @@ const FIRST_STEPS = [
 function Welcome({ name, onCreated, onWidgets }: { name: string; onCreated: () => void; onWidgets: () => void }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
-  useEffect(() => { startTourOnce(); }, []);
   return (
     <section className={styles.welcome} aria-labelledby="welcome-title">
       <div className={styles.welcomeHeading} data-on-wall>
@@ -798,7 +796,7 @@ function Welcome({ name, onCreated, onWidgets }: { name: string; onCreated: () =
         ))}
       </ol>
       <div className={styles.welcomeLinks}>
-        <Button variant="ghost" onClick={startTour}><Compass size={16} strokeWidth={1.75} aria-hidden="true" />Take the tour</Button>
+        <Button variant="ghost" onClick={() => router.push("/guide")}><Compass size={16} strokeWidth={1.75} aria-hidden="true" />How setting up goes</Button>
         <Button variant="ghost" onClick={onWidgets}><Sun size={16} strokeWidth={1.75} aria-hidden="true" />Or start with weather, a calendar, and reminders</Button>
       </div>
     </section>

@@ -7,7 +7,6 @@ import { Activity, Compass, House, Settings, Sparkles, Workflow, type LucideIcon
 import { askHearth } from "@/components/assistant/assistant-dock";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
-import { startTour } from "./hearth-tour";
 import { UserMenu } from "@/components/arc/user-menu/user-menu";
 import { Logo } from "@/components/brand/logo";
 import GlassSurface from "@/components/reactbits/GlassSurface";
@@ -69,7 +68,7 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
           showTheme={false}
           items={role === "guest" ? [] : [
             { label: "Settings", icon: <Settings size={16} strokeWidth={1.75} />, onSelect: () => router.push("/settings") },
-            { label: "Take the tour", icon: <Compass size={16} strokeWidth={1.75} />, onSelect: () => startTour() },
+            { label: "Setting up Hearth", icon: <Compass size={16} strokeWidth={1.75} />, onSelect: () => router.push("/guide") },
           ]}
           onSignOut={async () => {
             await authClient.signOut();

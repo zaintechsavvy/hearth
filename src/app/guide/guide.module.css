@@ -1,0 +1,286 @@
+.jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.jumpLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .08);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.jumpLink:hover {
+  background: oklch(50% 0 0 / .14);
+}
+
+.number {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+/* Words on the left, the picture on the right, swapping sides each step on a wide screen. */
+.step {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 64px);
+}
+
+.step:nth-of-type(even) .copy { order: 2; }
+
+@container (max-width: 760px) {
+  .step { grid-template-columns: minmax(0, 1fr); }
+  .step:nth-of-type(even) .copy { order: 0; }
+}
+
+.copy {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+.points {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.points li {
+  display: grid;
+  grid-template-columns: 6px 1fr;
+  gap: var(--space-3);
+}
+
+.points li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-top: .55em;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.open {
+  margin-top: var(--space-2);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.figure {
+  padding: clamp(16px, 3vw, 28px);
+  border-radius: var(--radius-panel);
+}
+
+.panel {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: oklch(50% 0 0 / .06);
+}
+
+.rowIcon,
+.tileIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: oklch(50% 0 0 / .1);
+}
+
+.rowText {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.rowMeta {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: oklch(72% .15 150 / .16);
+  color: oklch(62% .14 150);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.fieldLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.fieldValue {
+  letter-spacing: .12em;
+}
+
+.toggle {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .25);
+}
+
+.toggle[data-on] {
+  background: var(--foreground);
+}
+
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--background);
+}
+
+.toggle[data-on]::after {
+  left: 21px;
+}
+
+.choice {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.tile {
+  display: grid;
+  gap: 2px;
+  aspect-ratio: 1;
+  align-content: end;
+  padding: var(--space-3);
+  border-radius: 20px;
+  background: oklch(50% 0 0 / .08);
+  box-shadow: inset 0 0 0 1px var(--border-subtle, oklch(50% 0 0 / .1));
+}
+
+.tile .tileIcon {
+  margin-bottom: auto;
+}
+
+/* Editing: tiles wobble a little, as they do on the home screen. */
+.tile[data-wobble="a"] { animation: wobble-a .5s ease-in-out infinite alternate; }
+.tile[data-wobble="b"] { animation: wobble-b .55s ease-in-out infinite alternate; }
+
+@keyframes wobble-a { from { rotate: -.6deg; } to { rotate: .6deg; } }
+@keyframes wobble-b { from { rotate: .6deg; } to { rotate: -.6deg; } }
+
+.faces {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.face {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* Each face in a screen-shaped frame, the way it looks on a tablet on its side. */
+.screen {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1400 / 984;
+  overflow: hidden;
+  border-radius: 14px;
+  background: oklch(8% .004 250);
+  box-shadow: 0 0 0 3px oklch(22% .004 250), 0 12px 30px -12px oklch(0% 0 0 / .5);
+}
+
+.digital {
+  color: oklch(84% .1 70);
+}
+
+.digital .digitalTime.digitalTime {
+  --size: clamp(18px, 2.9vw, 32px);
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.action {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+}
+
+.actionIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: oklch(50% 0 0 / .12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile { animation: none; }
+}

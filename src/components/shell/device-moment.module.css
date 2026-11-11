@@ -6,7 +6,7 @@
   place-items: center;
   align-content: center;
   gap: clamp(16px, 4vh, 40px);
-  background: radial-gradient(80% 80% at 50% 45%, oklch(14% .006 250 / .94), oklch(5% .004 250 / .98));
+  background: radial-gradient(80% 80% at 50% 45%, oklch(13% .006 250), oklch(5% .004 250));
   color: oklch(96% 0 0);
   pointer-events: none;
 }

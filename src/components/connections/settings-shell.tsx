@@ -91,6 +91,7 @@ export function SettingsShell({ groups, children }: { groups: SettingsGroup[]; c
               </section>
             ))}
           </div>
+          <Link href="/guide" className={styles.about} data-on-wall>Setting up Hearth</Link>
           <Link href="/how-it-works" className={styles.about} data-on-wall>How Hearth works</Link>
         </nav>
         <div className={styles.main}>

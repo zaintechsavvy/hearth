@@ -8,6 +8,8 @@ import styles from "./luxury-face.module.css";
 
 const H = 1000;
 const rad = (angle: number) => (angle - 90) * Math.PI / 180;
+/** Two decimals, so the server and the browser, whose trigonometry can differ in the last digits, draw the same marks. */
+const round = (value: number) => Math.round(value * 100) / 100;
 
 /** How far from the centre a ray at `angle` meets a rectangle `hx` wide by `hy` tall either side, so a mark or a hand fits the screen's shape rather than a circle. */
 const toEdge = (angle: number, hx: number, hy: number) => {
@@ -51,7 +53,7 @@ export function LuxuryFace({ night, settings, inline = false }: { night: boolean
     ...(settings.handColor ? { "--metal": settings.handColor } : {}),
   } as CSSProperties;
 
-  const at = (angle: number, distance: number) => [cx + distance * Math.cos(rad(angle)), cy + distance * Math.sin(rad(angle))] as const;
+  const at = (angle: number, distance: number) => [round(cx + distance * Math.cos(rad(angle))), round(cy + distance * Math.sin(rad(angle)))] as const;
   const marker = (hour: number) => {
     const angle = hour * 30;
     const edge = toEdge(angle, mx, my);
@@ -67,9 +69,9 @@ export function LuxuryFace({ night, settings, inline = false }: { night: boolean
     );
     return <g key={hour} transform={`rotate(${angle} ${x} ${y})`}>{hour === 0 ? [body(-w * .7), body(w * .7)] : body(0)}</g>;
   };
-  const hourLength = toEdge(hours * 30, mx, my) * .58;
-  const minuteLength = toEdge(minutes * 6, mx, my) * .9;
-  const secondLength = Math.min(mx, my) * .96;
+  const hourLength = round(toEdge(hours * 30, mx, my) * .58);
+  const minuteLength = round(toEdge(minutes * 6, mx, my) * .9);
+  const secondLength = round(Math.min(mx, my) * .96);
   const [dateX, dateY] = at(90, mx * .74);
 
   const secondHand = (
