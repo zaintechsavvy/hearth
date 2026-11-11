@@ -16,10 +16,10 @@
 The stock Home Assistant dashboard, Mushroom and Bubble Card are great if you enjoy building cards in YAML. Hearth is for a screen the whole household uses, and it does a few things card stacks do not:
 
 - **Arrange by dragging.** Tiles snap into any cell, gaps and all, from 1×1 to 4×3. Each screen width keeps its own layout. No YAML.
-- **Rests like a clock.** After a few quiet minutes the wall tablet shows the date and a large clock, dims at night, and wakes on motion, a door, or the doorbell.
+- **Rests like a clock.** After a few quiet minutes the wall tablet rests on an analog face, a luxury dial, or large digits, dims at night, and wakes on motion, a door, or the doorbell.
+- **Shows what changed.** When someone switches a light or a fan, or opens a door, a window, the lock, or the garage from elsewhere, the tablet plays it full screen: a bulb on its cord, a pull-string lamp, a chandelier, a ceiling or standing fan, a padlock, a garage door rolling up.
 - **Doorbell takeover.** A ring fills the screen with that doorbell's camera.
 - **Activity that reads like a sentence.** "Garage door closed by Alex." Noisy devices fold into one line, and changes made while no screen was open are kept.
-- **Ask in plain words.** Type or say "turn off the kitchen lights" with the AI provider you choose, or none.
 - **Works on your phone too**, with the same tiles.
 
 Hearth sits on top of the Home Assistant you already run. It does not replace it, and your automations stay where they are.
@@ -81,9 +81,9 @@ Open http://localhost:3000. Without `DATABASE_URL`, Hearth keeps its data in an 
 
 ## Privacy
 
-- **Self-hosted.** Hearth talks to your Home Assistant and nothing else, unless you turn on an AI provider for plain-word commands.
+- **Self-hosted.** Hearth talks to your Home Assistant and nothing else.
 - **No telemetry, no analytics, no account with us.**
-- **Secrets are encrypted at rest.** Home Assistant tokens, camera passwords and AI keys are sealed with a key derived from `BETTER_AUTH_SECRET` before they reach the database. Passwords are hashed with scrypt.
+- **Secrets are encrypted at rest.** Home Assistant tokens and camera passwords are sealed with a key derived from `BETTER_AUTH_SECRET` before they reach the database. Passwords are hashed with scrypt.
 - **HTTPS** is needed for phones to install Hearth and get alerts; [docs/https.md](docs/https.md) walks through it.
 
 ## Features
@@ -130,17 +130,17 @@ Open http://localhost:3000. Without `DATABASE_URL`, Hearth keeps its data in an 
 | Cameras | `camera` (streamed through Home Assistant) | Recognised, not streamed | Live view |
 | Scenes and scripts | `scene`, `script`, `button` | | Run |
 
-For safety, the assistant and scenes can lock doors and close garage doors and gates, but never unlock or open them; that stays a deliberate press and hold on its tile.
+For safety, scenes and automations can lock doors and close garage doors and gates, but never unlock or open them; that stays a deliberate press and hold on its tile.
 
 ### Where your data lives
 
-Hearth stores accounts, sessions, connections, cameras, layouts, and assistants in Postgres.
+Hearth stores accounts, sessions, connections, cameras, and layouts in Postgres.
 
 - **With Docker Compose**, a Postgres server runs beside Hearth (the `db` service) and Hearth connects to it automatically. This is the setup to use at home: Postgres recovers cleanly from crashes and power cuts.
 - **With `npm run dev`**, Hearth runs [PGlite](https://pglite.dev), Postgres compiled to WebAssembly, inside the app, saving to `data/pglite`. Nothing to install, which makes it ideal for trying Hearth and for development. Stop it with Ctrl C so it can close the database cleanly; a process that is killed outright can leave PGlite unable to open its folder.
 - **Set `DATABASE_URL`** to use any Postgres instead, such as [Neon](https://neon.tech) or [Supabase](https://supabase.com). Hearth creates its tables on the next start.
 
-Passwords are hashed (scrypt) by Better Auth and never stored in readable form. Home Assistant tokens, camera passwords, and AI keys are encrypted with a key derived from `BETTER_AUTH_SECRET` before they reach the database, so a hosted database only ever sees ciphertext. Keep that secret on your server: lose it and the stored secrets cannot be decrypted.
+Passwords are hashed (scrypt) by Better Auth and never stored in readable form. Home Assistant tokens and camera passwords are encrypted with a key derived from `BETTER_AUTH_SECRET` before they reach the database, so a hosted database only ever sees ciphertext. Keep that secret on your server: lose it and the stored secrets cannot be decrypted.
 
 To use Neon, create a project, copy the **pooled** connection string, and add it to `.env.local`:
 
@@ -217,22 +217,6 @@ On the wall tablet, open **Settings**, then **Wall tablet**, and turn on **Show 
 
 The secret address reads the calendar without signing in, so Hearth encrypts it like a password. iCloud and Outlook links that start with `webcal://` work too. Events refresh every five minutes, and recurring events, moved instances, and cancellations follow the feed.
 
-### AI assistants
-
-Open **Settings**, then **AI assistants**, and add a provider with your own API key. Hearth checks the key and the model with the provider before saving: a model named the way the provider's site shows it, such as "OpenAI GPT OSS 120B", is saved as its id (`openai/gpt-oss-120b`), and a Groq key added under Grok, or the reverse, goes to the right one. **Edit** changes the model or the key later. Usage is billed to your account with that provider.
-
-| Provider | Default model | Key from |
-| --- | --- | --- |
-| Claude (Anthropic) | `claude-opus-5-5` | console.anthropic.com |
-| ChatGPT (OpenAI) | `gpt-6.1-sol` | platform.openai.com |
-| Grok (xAI) | `grok-4.3` | console.x.ai |
-| Gemini (Google) | `gemini-3.8-flash` | aistudio.google.com |
-| Muse (Meta) | `muse-spark-1.3` | dev.meta.ai |
-| Groq | `openai/gpt-oss-120b` | console.groq.com |
-| Custom | any | Ollama, LM Studio, vLLM, OpenRouter, or anything that speaks Chat Completions with tools |
-
-You can change the model on each connection. For Claude, Hearth turns on Anthropic's server-side refusal fallback (`fallbacks: "default"`), so a declined request is retried on the model Anthropic recommends.
-
 ## How it works
 
 The best way to learn this codebase is to follow one request end to end. Here is where each idea lives.
@@ -250,10 +234,9 @@ The best way to learn this codebase is to follow one request end to end. Here is
 | Demo home | `src/lib/integrations/demo.ts` |
 | Dashboard layout (sizes, order, icons, colours) | `src/lib/dashboard/layout.ts`, rendered by `src/components/dashboard/home-grid.tsx` |
 | Tiles and the vertical slider | `src/components/dashboard/tiles` |
-| Assistant (prompt, tools, provider adapters) | `src/lib/assistant`, UI in `src/components/assistant` |
 | Scenes | `src/lib/scenes`, editor in `src/components/dashboard/scene-editor.tsx` |
 | Server actions (forms) | `src/lib/actions.ts` |
-| API routes (snapshot, live stream, commands, assistant) | `src/app/api` |
+| API routes (snapshot, live stream, commands) | `src/app/api` |
 | Adding and linking tiles | `src/components/dashboard/tile-dialog.tsx`, `entity-chooser.tsx`, `tiles/placeholder-tile.tsx` |
 | Weather, calendar, reminders, clock | `src/lib/widgets`, tiles in `src/components/dashboard/widgets` |
 | Camera signalling (go2rtc) | `src/app/api/cameras/[id]/webrtc/route.ts` and `src/components/dashboard/camera-tile.tsx` |
@@ -266,9 +249,9 @@ The best way to learn this codebase is to follow one request end to end. Here is
 | Web Push alerts | `src/lib/push.ts`, `public/sw.js`, Settings in `src/components/connections/alerts-section.tsx` |
 | Households, members, and guests | `src/lib/household.ts`, `src/lib/household-actions.ts`, `getHome` in `src/lib/session.ts` |
 | Wall tablet and the installable app | `src/components/shell/wall-mode.tsx`, `src/app/manifest.ts`, `src/app/icons` |
+| Full-screen moments (bulb, lamp, chandelier, fans, lock, garage, door, window) | `src/components/shell/device-moment.tsx`, `hanging-bulb.tsx`, `desk-lamp.tsx`, notices in `state-notice.tsx` |
 | Timers, presets, and spoken timer requests | `src/lib/widgets/schedules.ts` (`applyTimerControl`, `parseTimerRequest`), `src/components/dashboard/household/timers-tile.tsx`, `timer-takeover.tsx` |
 | Activity, merged with Home Assistant's logbook | `src/lib/activity-feed.ts`, `logbook` in `src/lib/integrations/home-assistant.ts` |
-| Voice and the voice glow | `src/components/assistant/speech.ts`, `assistant-dock.tsx` ([voice-glow](https://libraries.dev)) |
 
 ### One provider interface, three integrations
 
@@ -285,21 +268,11 @@ interface Provider {
 }
 ```
 
-The dashboard and the assistant only know about `Device` and `DeviceCommand`. Adding an integration (Philips Hue, a Zigbee bridge, Shelly) means one more class that maps its API onto those types.
+The dashboard only knows about `Device` and `DeviceCommand`. Adding an integration (Philips Hue, a Zigbee bridge, Shelly) means one more class that maps its API onto those types.
 
 ### The layout is data
 
 A layout is an ordered list of tiles, `{ id, kind, link, size, icon, color, label, options }`. `kind` says what the tile is; `link` is the device, camera, or scene it shows, or null for a placeholder or a widget; `options` holds a weather place or the calendars to show. `resolveLayout` never adds tiles: it keeps their order, fixes sizes a kind cannot use, and upgrades layouts saved in the older one-tile-per-device shape. A tile whose device has gone shows as a placeholder to relink. The grid is CSS: row height equals column width (container query units), so every size lines up, and dense packing fills gaps.
-
-### How the assistant decides what to do
-
-Each request sends the model a short system prompt that lists every device (id, name, room, kind, and state) and one tool, `control_device`. The model calls the tool once per device. Hearth validates each call, runs it through the same path as a tile press, tells the model what happened, and shows the changes under the reply. The three API styles live in `src/lib/assistant/run.ts`:
-
-- **Claude** through the official Anthropic SDK.
-- **ChatGPT and Grok** through the Responses API, which OpenAI's current models need for tool calling.
-- **Gemini, Muse, Groq, and custom servers** through Chat Completions. Gemini's assistant messages are sent back unchanged, because it rejects a tool turn that lost its thought signature; for the others only the role, text, and tool calls go back, because Groq refuses extra fields such as `reasoning`.
-
-Voice input uses the browser's Web Speech API, and a spoken request gets a spoken reply.
 
 ### Cameras: why go2rtc
 
@@ -319,7 +292,7 @@ The dashboard does not poll. The browser opens one Server-Sent Events stream (`/
 - **Matter Server**: the `attribute_updated` and `node_updated` events it already streams.
 - **Demo home**: its own simulation.
 
-Each push sends a fresh snapshot, throttled to a few per second, to every open dashboard. Changes made in Hearth (a tile press, the assistant, a new connection) publish too, so two open tabs or a wall tablet stay in sync. Taps still update instantly and roll back if a device refuses (`src/components/dashboard/use-home.ts`). If the stream drops, the browser reconnects on its own and polls every 15 seconds until it is back. The pieces are `src/lib/live/bus.ts`, `src/lib/integrations/home-assistant-live.ts`, and `src/app/api/home/stream/route.ts`.
+Each push sends a fresh snapshot, throttled to a few per second, to every open dashboard. Changes made in Hearth (a tile press, a scene, a new connection) publish too, so two open tabs or a wall tablet stay in sync. Taps still update instantly and roll back if a device refuses (`src/components/dashboard/use-home.ts`). If the stream drops, the browser reconnects on its own and polls every 15 seconds until it is back. The pieces are `src/lib/live/bus.ts`, `src/lib/integrations/home-assistant-live.ts`, and `src/app/api/home/stream/route.ts`.
 
 ## UI
 
@@ -334,7 +307,7 @@ Each push sends a fresh snapshot, throttled to a few per second, to every open d
 | --- | --- |
 | `npm run dev` | Development server with hot reload |
 | `npm run build` and `npm start` | Production build and server |
-| `npm test` | Unit tests (Vitest): integration mappings, layout, assistant adapters, encryption, wire formats |
+| `npm test` | Unit tests (Vitest): integration mappings, layout, encryption, wire formats |
 | `npm run lint` and `npm run typecheck` | ESLint and TypeScript |
 | `npm run db:generate` | New migration after editing `src/lib/db/schema.ts` |
 
