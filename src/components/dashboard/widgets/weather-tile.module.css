@@ -97,7 +97,7 @@
   .where { display: none; }
 }
 
-/* Wide: the week fills the tile under today, each day a soft cell whose icon and numbers grow with the tile's height. */
+/* Wide: the week fills the tile under today, each day's icon and numbers growing with the tile's height. */
 .tile[data-size="4x2"] {
   grid-template-rows: auto minmax(0, 1fr);
   align-content: stretch;
@@ -114,14 +114,8 @@
 .tile[data-size="4x2"] .day {
   align-content: space-evenly;
   padding: var(--space-2) var(--space-1);
-  border-radius: 14px;
-  background: oklch(50% 0 0 / .06);
   font-size: clamp(var(--text-sm), 7cqh, var(--text-lg));
   font-weight: 500;
-}
-
-.tile[data-size="4x2"] .day:first-child {
-  background: oklch(50% 0 0 / .12);
 }
 
 .tile[data-size="4x2"] .day :global(svg) {

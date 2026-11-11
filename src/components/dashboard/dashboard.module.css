@@ -56,12 +56,25 @@
   min-width: 0;
 }
 
-/* The page menu takes the rooms' height, corners, and surface, so the two read as one row of the same kind of control. */
-.screens > button {
+/* The page menu takes the rooms' height and corners, so the two read as one row of the same kind of control. */
+.screenGlass > button {
   flex: none;
   min-height: calc(var(--control-height-sm) + 8px);
   border-radius: var(--radius-control);
-  background: var(--surface-muted);
+}
+
+/* Both sit on the wallpaper beside the tiles, so each is wrapped in the tiles' glass and drops its own flat fill. */
+.screenGlass {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  border-radius: var(--radius-control);
+}
+
+.screenGlass > button,
+.screenGlass > .rooms {
+  border-color: transparent;
+  background: transparent;
 }
 
 .rooms {
