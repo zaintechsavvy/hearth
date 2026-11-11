@@ -258,6 +258,14 @@
   width: min(100%, 460px);
 }
 
+/* The live thermostat fills the square its screenshot used to. */
+.liveThermostat {
+  display: grid;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
 .shot {
   display: block;
   width: 100%;

@@ -7,14 +7,13 @@ import { motion, useReducedMotion, type HTMLMotionProps } from "motion/react";
 import { Button } from "@/components/arc/button/button";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { Logo } from "@/components/brand/logo";
+import { LiveThermostat } from "./live-thermostat";
 import { MomentDemo } from "./moment-demo";
 import { useRouter } from "next/navigation";
 import ipad from "./shots/ipad.webp";
 import ipadDark from "./shots/ipad-dark.webp";
 import analog from "./shots/wall-analog.webp";
 import luxury from "./shots/wall-luxury.webp";
-import thermostat from "./shots/thermostat-cool.webp";
-import thermostatDark from "./shots/thermostat-cool-dark.webp";
 import activity from "./shots/activity.webp";
 import activityDark from "./shots/activity-dark.webp";
 import customize from "./shots/customize.webp";
@@ -26,7 +25,8 @@ import styles from "./landing.module.css";
 
 const GITHUB = "https://github.com/zaintechsavvy/hearth";
 
-const FEATURES: { title: string; body: string; points: string[]; shot: StaticImageData; dark: StaticImageData; alt: string; small?: boolean; radius?: string }[] = [
+/** A feature shows two screenshots, light and dark, or `live`, the real thermostat to try. */
+const FEATURES: ({ title: string; body: string; points: string[]; small?: boolean; radius?: string } & ({ live?: false; shot: StaticImageData; dark: StaticImageData; alt: string } | { live: true }))[] = [
   {
     title: "A grid you arrange yourself",
     body: "Start empty and add what you reach for. Drag tiles into any cell, gaps and all, and pick a size from 1×1 to 4×3. No YAML.",
@@ -39,9 +39,7 @@ const FEATURES: { title: string; body: string; points: string[]; shot: StaticIma
     title: "Climate you can feel",
     body: "The thermostat glows warm from the top when you raise it and cool from the bottom when you lower it, and stays softly lit while the system runs.",
     points: ["Heat, cool and auto with one tap", "History chart one press away", "Celsius or Fahrenheit"],
-    shot: thermostat,
-    dark: thermostatDark,
-    alt: "The thermostat tile glowing cool while cooling",
+    live: true,
     small: true,
     radius: "12.06%",
   },
@@ -153,8 +151,12 @@ export function Landing() {
                 <ul className={styles.points}>{f.points.map(p => <li key={p}>{p}</li>)}</ul>
               </div>
               <div className={`${styles.featureShot} ${f.small ? styles.featureShotSmall : ""} ${f.radius ? styles.featureShotRound : ""}`} style={f.radius ? { "--shot-radius": f.radius } as CSSProperties : undefined}>
-                <Image unoptimized src={f.shot} alt={f.alt} className={`${styles.shot} ${styles.lightOnly}`} sizes="(min-width: 900px) 760px, 92vw" />
-                <Image unoptimized src={f.dark} alt="" aria-hidden="true" className={`${styles.shot} ${styles.darkOnly}`} sizes="(min-width: 900px) 760px, 92vw" />
+                {f.live ? <LiveThermostat /> : (
+                  <>
+                    <Image unoptimized src={f.shot} alt={f.alt} className={`${styles.shot} ${styles.lightOnly}`} sizes="(min-width: 900px) 760px, 92vw" />
+                    <Image unoptimized src={f.dark} alt="" aria-hidden="true" className={`${styles.shot} ${styles.darkOnly}`} sizes="(min-width: 900px) 760px, 92vw" />
+                  </>
+                )}
               </div>
             </motion.article>
           ))}
