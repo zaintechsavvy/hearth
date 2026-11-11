@@ -37,12 +37,4 @@
   letter-spacing: .08em;
 }
 
-.time[data-weight="light"] { font-weight: 250; }
-.time[data-weight="regular"] { font-weight: 500; }
-.time[data-weight="bold"] { font-weight: 800; }
 
-.time[data-font="rounded"] { font-family: ui-rounded, "SF Pro Rounded", var(--font-display); }
-.time[data-font="serif"] { font-family: var(--font-serif), Georgia, serif; }
-.time[data-font="serif"] .line { letter-spacing: -.02em; }
-.time[data-font="mono"] { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
-.time[data-font="mono"] .line { letter-spacing: -.08em; }

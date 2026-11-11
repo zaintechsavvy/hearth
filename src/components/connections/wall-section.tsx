@@ -58,7 +58,7 @@ export function WallSection() {
         </div>
         <div className={`${styles.row} ${styles.stacked}`}>
           <Slider label="Rest after" value={settings.idleMinutes} min={0} max={30} format={value => value === 0 ? "Never" : `${value} min`} onValueChange={idleMinutes => set({ idleMinutes })} />
-          <div className={styles.inline}>
+          <div className={styles.times}>
             <Input label="Dim from" type="time" value={settings.dimFrom} onChange={event => set({ dimFrom: event.target.value })} />
             <Input label="Until" type="time" value={settings.dimTo} onChange={event => set({ dimTo: event.target.value })} />
           </div>
@@ -86,10 +86,6 @@ export function WallSection() {
             <>
               <SegmentedControl label="Digits" value={settings.digitLayout} onValueChange={value => set({ digitLayout: value as WallSettings["digitLayout"] })}
                 options={[{ value: "inline", label: "Side by side" }, { value: "stacked", label: "Stacked" }]} />
-              <SegmentedControl label="Weight" value={settings.digitWeight} onValueChange={value => set({ digitWeight: value as WallSettings["digitWeight"] })}
-                options={[{ value: "light", label: "Light" }, { value: "regular", label: "Regular" }, { value: "bold", label: "Bold" }]} />
-              <SegmentedControl label="Typeface" value={settings.digitFont} onValueChange={value => set({ digitFont: value as WallSettings["digitFont"] })}
-                options={[{ value: "display", label: "Sans" }, { value: "rounded", label: "Rounded" }, { value: "serif", label: "Serif" }, { value: "mono", label: "Mono" }]} />
               <Slider label="Size" value={Math.round(settings.digitScale * 100)} min={70} max={130} step={5} format={value => `${value}%`} onValueChange={value => set({ digitScale: value / 100 })} />
             </>
           )}

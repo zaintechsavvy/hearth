@@ -48,7 +48,8 @@ const isWide = () => matchMedia(WIDE).matches;
  * the open section, the first one when none is chosen; on a phone the list comes first and a section replaces it,
  * with a way back. The open section is the URL's hash, so `/settings#alerts` arrives on Alerts.
  */
-export function SettingsShell({ groups, children }: { groups: SettingsGroup[]; children: ReactNode }) {
+/** `heading` names the page beside the first group's title, as "Your home · Settings", and is the page's heading. */
+export function SettingsShell({ groups, heading, children }: { groups: SettingsGroup[]; heading?: string; children: ReactNode }) {
   const hash = useSyncExternalStore(subscribe, currentHash, () => "");
   const wide = useSyncExternalStore(subscribe, isWide, () => true);
   const items = groups.flatMap(group => group.items);
@@ -69,9 +70,11 @@ export function SettingsShell({ groups, children }: { groups: SettingsGroup[]; c
       <div className={styles.shell} data-open={chosen ? "" : undefined}>
         <nav className={styles.list} aria-label="Settings sections">
           <div className={styles.pane}>
-            {groups.map(group => (
+            {groups.map((group, index) => (
               <section key={group.title} className={styles.group} aria-label={group.title}>
-                <h2 className={styles.groupTitle}>{group.title}</h2>
+                {heading && index === 0
+                  ? <h1 className={styles.groupTitle}>{group.title}<span className={styles.headingDot} aria-hidden="true">·</span>{heading}</h1>
+                  : <h2 className={styles.groupTitle}>{group.title}</h2>}
                 <div className={styles.items}>
                   {group.items.map(item => {
                     const Icon = SETTINGS_ICONS[item.id];

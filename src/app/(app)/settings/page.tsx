@@ -53,10 +53,7 @@ export default async function ConnectionsPage() {
 
   return (
     <div className={styles.page}>
-      <header data-on-wall>
-        <h1 className={styles.pageTitle}>Settings</h1>
-      </header>
-      <SettingsShell groups={[
+      <SettingsShell heading="Settings" groups={[
         { title: "Your home", items: [
           ...(owner ? [{ id: "connections" as const, label: "Connections", summary: integrations.length ? integrations.map(row => row.name).join(", ") : "Nothing connected yet" }] : []),
           { id: "rooms", label: "Rooms", summary: "Names and order" },

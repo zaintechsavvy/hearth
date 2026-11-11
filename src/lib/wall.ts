@@ -23,10 +23,8 @@ export interface WallSettings {
   handColor: string | null;
   /** The seconds hand ticks once a second, sweeps smoothly, or is left off. */
   secondHand: "tick" | "smooth" | "off";
-  /** The digital clock: hours and minutes side by side or stacked, its weight, typeface, and size (0.7 to 1.3). */
+  /** The digital clock: hours and minutes side by side or stacked, and its size (0.7 to 1.3). */
   digitLayout: "inline" | "stacked";
-  digitWeight: "light" | "regular" | "bold";
-  digitFont: "display" | "rounded" | "serif" | "mono";
   digitScale: number;
   /** Turn the resting clock a dim red in the night window, instead of the chosen colour. */
   nightRed: boolean;
@@ -105,7 +103,7 @@ export const WALL_KEY = "hearth-wall";
 
 export const DEFAULT_WALL: WallSettings = {
   enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: true, showAssistant: true,
-  clockColor: "white", customColor: "#7aa7ff", clockBrightness: 0.85, clockFace: "digital", handColor: null, secondHand: "tick", digitLayout: "inline", digitWeight: "regular", digitFont: "display", digitScale: 1, nightRed: true, openReminder: true, openMinutes: 15,
+  clockColor: "white", customColor: "#7aa7ff", clockBrightness: 0.85, clockFace: "digital", handColor: null, secondHand: "tick", digitLayout: "inline", digitScale: 1, nightRed: false, openReminder: true, openMinutes: 15,
   frame: false, frameSource: "uploads", frameSeconds: 20, frameAtNight: false, frameClock: "corner",
 };
 

@@ -59,7 +59,7 @@ export function FacesVisual() {
   return (
     <div className={styles.faces}>
       <figure className={styles.face}>
-        <span className={`${styles.screen} ${styles.digital}`} aria-hidden="true"><DigitalTime now={now} settings={{ ...face, digitLayout: "stacked", digitWeight: "bold" }} className={styles.digitalTime} /></span>
+        <span className={`${styles.screen} ${styles.digital}`} aria-hidden="true"><DigitalTime now={now} settings={{ ...face, digitLayout: "stacked" }} className={styles.digitalTime} /></span>
         <figcaption>Digital</figcaption>
       </figure>
       <figure className={styles.face}>
