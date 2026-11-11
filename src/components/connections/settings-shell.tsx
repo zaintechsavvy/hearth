@@ -46,9 +46,9 @@ const isWide = () => matchMedia(WIDE).matches;
 /**
  * Settings as a short list in a few groups, and one section open at a time. On a wide screen the list sits beside
  * the open section, the first one when none is chosen; on a phone the list comes first and a section replaces it,
- * with a way back. The open section is the URL's hash, so `/settings#alerts` arrives on Alerts.
+ * with a way back. The open section is the URL's hash, so `/settings#alerts` arrives on Alerts. `heading` names the
+ * page beside the first group's title, as "Your home · Settings", and is the page's heading.
  */
-/** `heading` names the page beside the first group's title, as "Your home · Settings", and is the page's heading. */
 export function SettingsShell({ groups, heading, children }: { groups: SettingsGroup[]; heading?: string; children: ReactNode }) {
   const hash = useSyncExternalStore(subscribe, currentHash, () => "");
   const wide = useSyncExternalStore(subscribe, isWide, () => true);

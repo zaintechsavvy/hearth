@@ -8,7 +8,7 @@ const DRAG_THRESHOLD = 4;
 /** A press held this long without moving is a hold, which the tile handles, not a tap that toggles. Matches `useLongPress`. */
 const HOLD_MS = 450;
 /** A finger must rest this long before it drags the level, so a swipe that starts on the pill scrolls the page instead. */
-const ARM_MS = 180;
+const ARM_MS = 280;
 const KEY_STEPS: Record<string, number> = { ArrowUp: 5, ArrowRight: 5, ArrowDown: -5, ArrowLeft: -5, PageUp: 25, PageDown: -25 };
 
 interface LevelPillProps {
@@ -26,7 +26,8 @@ interface LevelPillProps {
 
 /**
  * A vertical level control: drag anywhere to move the level relative to where you started, tap to toggle. On a touch
- * screen the finger rests a moment before it drags, since the pill sits in a page that scrolls the same way.
+ * screen the finger rests a moment before it drags, since the pill sits in a page that scrolls the same way. It has
+ * no hidden switch for an iPhone's tick, which would hold the swipe for itself.
  */
 export function LevelPill({ label, value, on, disabled, onToggle, onCommit, className, children }: LevelPillProps) {
   const [drag, setDrag] = useState<number | null>(null);
@@ -73,7 +74,7 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
     const delta = current.y - event.clientY;
     if (!current.moved && Math.abs(delta) < DRAG_THRESHOLD) return;
     if (!current.armed) return end();
-    // Held only once it drags: a tap must still land on what is under the finger, such as the switch that ticks on an iPhone.
+    // Held only once it drags, so a tap still lands on whatever is under the finger.
     if (!current.moved) event.currentTarget.setPointerCapture(event.pointerId);
     current.moved = true;
     setDrag(clamp(Math.round(current.from + delta / event.currentTarget.clientHeight * 100), 0, 100));
@@ -114,7 +115,6 @@ export function LevelPill({ label, value, on, disabled, onToggle, onCommit, clas
       ref={pill}
       data-dragging={drag !== null || undefined}
       data-armed={(armed && drag === null) || undefined}
-      data-haptic
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}

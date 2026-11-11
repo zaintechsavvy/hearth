@@ -24,6 +24,11 @@
   gap: var(--space-4);
 }
 
+/* On the wall the greeting and date get room above and below, level with the clock in the corner. */
+:global(:root[data-wall]) .intro {
+  padding-block: var(--space-3) var(--space-4);
+}
+
 /* On the wall the greeting matches the clock in the corner. */
 :global(:root[data-wall]) .title {
   font-size: var(--text-xl);

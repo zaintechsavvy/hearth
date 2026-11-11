@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useAnimationFrame, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { lightTint } from "@/components/dashboard/light-controls";
 import type { Device } from "@/lib/devices/types";
@@ -120,15 +120,13 @@ function LightScene({ on, tint }: { on: boolean; tint: string | null }) {
 
 const ARMS = 6;
 
-/** Candle arms on a ring seen from a little above, turning slowly, so the far ones pass behind the column. */
+/** Candle arms on a ring seen from a little above, the far ones behind the column, swaying gently as it lights. */
 function ChandelierScene({ on, tint }: { on: boolean; tint: string | null }) {
   const shown = useFlip(on);
   const reduce = useReducedMotion();
   const id = useId();
-  const [phase, setPhase] = useState(0.3);
-  useAnimationFrame(time => { if (!reduce) setPhase(0.3 + time / 9000); });
   const arms = Array.from({ length: ARMS }, (_, index) => {
-    const angle = phase + (index / ARMS) * Math.PI * 2;
+    const angle = 0.3 + (index / ARMS) * Math.PI * 2;
     const depth = Math.cos(angle);
     return { index, x: Math.sin(angle) * 112, y: 18 + depth * 30, depth, scale: 1 + depth * 0.12 };
   }).sort((a, b) => a.depth - b.depth);
@@ -185,7 +183,7 @@ function FanScene({ on }: { on: boolean }) {
   const reduce = useReducedMotion();
   const id = useId();
   return (
-    <div className={`${styles.stage} ${styles.depth}`}>
+    <div className={`${styles.stage} ${styles.depth} ${styles.fanStage}`}>
       <motion.span className={styles.breeze} initial={{ opacity: 0 }} animate={{ opacity: on ? [0, .7, .4] : [.4, 0] }} transition={{ duration: 2 }} aria-hidden="true" />
       <div className={styles.fanRig}>
         <svg viewBox="0 0 100 92" className={styles.fanMount} aria-hidden="true">
@@ -235,7 +233,7 @@ function StandingFanScene({ on }: { on: boolean }) {
   const reduce = useReducedMotion();
   const id = useId();
   return (
-    <div className={`${styles.stage} ${styles.depth}`}>
+    <div className={`${styles.stage} ${styles.depth} ${styles.fanStage}`}>
       <motion.span className={styles.breeze} initial={{ opacity: 0 }} animate={{ opacity: on ? [0, .7, .4] : [.4, 0] }} transition={{ duration: 2 }} aria-hidden="true" />
       <svg viewBox="0 0 100 100" className={styles.standBase} aria-hidden="true">
         <defs>

@@ -30,6 +30,15 @@
   backdrop-filter: blur(22px) saturate(170%);
 }
 
+/* A wall tablet hides the header, so the page starts lower to clear the corner menu, level with the pinned list. */
+:global(:root[data-wall]) .shell {
+  padding-top: 72px;
+}
+
+:global(:root[data-wall]) .list {
+  top: 86px;
+}
+
 :root[data-theme="dark"] .pane {
   border-color: oklch(100% 0 0 / .1);
   background: linear-gradient(180deg, oklch(28% .005 260 / .82), oklch(20% .005 260 / .74));

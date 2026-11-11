@@ -102,6 +102,12 @@
   fill: oklch(97% .05 90);
 }
 
+/* Fans take a smaller stage than a light, which fills the room. */
+.fanStage {
+  width: min(40vh, 46vw);
+  height: min(40vh, 46vw);
+}
+
 /* Fan: the mount stands upright and the blades turn in a plane tipped toward you. */
 .fanRig {
   position: relative;

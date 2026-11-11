@@ -88,7 +88,8 @@ export function LuxuryFace({ night, settings, inline = false }: { night: boolean
   const reach = (angle: number, hx: number, hy: number, r: number) => { const point = onEdge(angle, hx, hy, r); return Math.hypot(point.x, point.y); };
   const hourLength = round(reach(hours * 30, ring.hx, ring.hy, ring.r) - numeral * .75);
   const minuteLength = round(reach(minutes * 6, track.hx, track.hy, track.r) - track.half * 1.4);
-  const secondLength = round(reach(seconds * 6, track.hx, track.hy, track.r) + track.half * .6);
+  // One length all the way round: the shortest reach to the track, so the tip never crosses it or changes size.
+  const secondLength = round(Math.min(track.hx, track.hy) - track.half * 1.4);
 
   const secondHand = (
     <g className={styles.second}>

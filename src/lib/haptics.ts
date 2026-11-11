@@ -67,7 +67,8 @@ export function addTapSwitches(root: ParentNode) {
     input.setAttribute(SWITCH_ATTR, "");
     input.setAttribute("aria-hidden", "true");
     input.tabIndex = -1;
-    input.style.cssText = "position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;padding:0;border:0;-webkit-appearance:switch;appearance:auto;opacity:0;cursor:inherit";
+    input.style.cssText = "position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;padding:0;border:0;-webkit-appearance:switch;appearance:auto;opacity:0;cursor:inherit;touch-action:pan-y";
+    // `touch-action` leaves an up-and-down swipe to the page, which a switch would otherwise keep for its thumb.
     // A finger that scrolled or slid can still end in a click on the switch. The control never hears of it, but the
     // switch is left to flip: cancelling a switch's click on iOS holds the touch and stops the page scrolling.
     input.addEventListener("click", event => {
