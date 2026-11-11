@@ -5,7 +5,7 @@ export type Accent = (typeof ACCENTS)[number];
 export const DEFAULT_ACCENT: Accent = "neutral";
 
 export const STILL_WALLPAPERS = ["studio", "linen", "slate"] as const;
-export const MESH_WALLPAPERS = ["aurora", "dusk", "meadow"] as const;
+export const MESH_WALLPAPERS = ["aurora", "dusk", "meadow", "graphite", "midnight", "ember"] as const;
 export const PRESET_WALLPAPERS = [...STILL_WALLPAPERS, ...MESH_WALLPAPERS] as const;
 /** `gradient` and `photo` are the person's own, described by `GRADIENT_KEY` and `PHOTO_KEY`. */
 export const WALLPAPERS = [...PRESET_WALLPAPERS, "gradient", "photo"] as const;
@@ -78,6 +78,9 @@ export const MESH_PALETTES: Record<MeshWallpaper, { light: string[]; dark: strin
   aurora: { light: ["#dfe7ff", "#c3d0fb", "#cdeee9", "#ecdfff"], dark: ["#0c1430", "#1f2f66", "#0f3f45", "#33225a"] },
   dusk: { light: ["#ffe6d8", "#fbcfd2", "#efd9fb", "#ffecc9"], dark: ["#26121a", "#552235", "#36204d", "#4f3018"] },
   meadow: { light: ["#e3f3df", "#cbe9da", "#f1efd2", "#d6e7f2"], dark: ["#0d1f16", "#1b4430", "#373f17", "#12303b"] },
+  graphite: { light: ["#eef0f3", "#dfe3e9", "#e9e7ef", "#f3f1ec"], dark: ["#0a0b0d", "#1b1e24", "#262a32", "#121418"] },
+  midnight: { light: ["#e2e6f7", "#cfd8f2", "#dcd4f0", "#d6ebf0"], dark: ["#080d1c", "#1b3263", "#2c2462", "#0e3f4a"] },
+  ember: { light: ["#fbe7dc", "#f6d3c1", "#f9e3c4", "#f0d6d6"], dark: ["#100a08", "#4a2310", "#6b3a14", "#2a1418"] },
 };
 
 export const WALLPAPER_LABELS: Record<PresetWallpaper, { name: string; note: string }> = {
@@ -87,6 +90,9 @@ export const WALLPAPER_LABELS: Record<PresetWallpaper, { name: string; note: str
   aurora: { name: "Aurora", note: "Drifting blue" },
   dusk: { name: "Dusk", note: "Drifting peach" },
   meadow: { name: "Meadow", note: "Drifting sage" },
+  graphite: { name: "Graphite", note: "Drifting charcoal" },
+  midnight: { name: "Midnight", note: "Drifting indigo" },
+  ember: { name: "Ember", note: "Drifting copper" },
 };
 
 export const THEME_KEY = "hearth-theme";
