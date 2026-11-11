@@ -1,10 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { lightTint } from "@/components/dashboard/light-controls";
 import type { Device } from "@/lib/devices/types";
 import { sentHere } from "@/lib/sent-here";
+import { DeskLamp } from "./desk-lamp";
 import { HangingBulb } from "./hanging-bulb";
 import styles from "./device-moment.module.css";
 
@@ -12,7 +13,7 @@ import styles from "./device-moment.module.css";
 const HOLD_MS = 3200;
 
 type Moment =
-  | { key: string; kind: "light"; name: string; room: string | null; on: boolean; tint: string | null; chandelier: boolean }
+  | { key: string; kind: "light"; name: string; room: string | null; on: boolean; tint: string | null; chandelier: boolean; lamp: boolean }
   | { key: string; kind: "fan"; name: string; room: string | null; on: boolean; standing: boolean };
 
 /** The settled state worth a moment, or null for a device that has none or is still moving. */
@@ -25,11 +26,13 @@ function stateOf(device: Device): string | null {
 function momentOf(device: Device, state: string): Moment | null {
   const key = `${device.id}-${state}-${Date.now()}`;
   // A white light glows warm, as its tile does; only a coloured one takes its colour.
-  if (device.kind === "light") return { key, kind: "light", name: device.name, room: device.room, on: state === "on", tint: device.colorMode === "color" ? lightTint(device) : null, chandelier: /chandelier/i.test(device.name) };
+  if (device.kind === "light") return { key, kind: "light", name: device.name, room: device.room, on: state === "on", tint: device.colorMode === "color" ? lightTint(device) : null, chandelier: /chandelier/i.test(device.name), lamp: TABLE_LAMP.test(device.name) && !/floor|ceiling/i.test(device.name) };
   if (device.kind === "fan") return { key, kind: "fan", name: device.name, room: device.room, on: state === "on", standing: STANDING.test(device.name) };
   return null;
 }
 
+/** Lights named like these are table lamps with a pull string; floor and ceiling lamps keep the hanging bulb. */
+const TABLE_LAMP = /\blamps?\b/i;
 /** Fans named like these stand on the floor or a table; any other fan hangs from the ceiling. */
 const STANDING = /\b(stand(ing)?|pedestal|floor|desk|table|tower|box|oscillating|portable)\b/i;
 
@@ -97,7 +100,7 @@ function useFlip(target: boolean) {
 
 function Scene({ moment }: { moment: Moment }) {
   if (moment.kind === "fan") return moment.standing ? <StandingFanScene on={moment.on} /> : <FanScene on={moment.on} />;
-  return moment.chandelier ? <ChandelierScene on={moment.on} tint={moment.tint} /> : <LightScene on={moment.on} tint={moment.tint} />;
+  return moment.chandelier ? <ChandelierScene on={moment.on} tint={moment.tint} /> : moment.lamp ? <DeskLampScene on={moment.on} tint={moment.tint} /> : <LightScene on={moment.on} tint={moment.tint} />;
 }
 
 function Bloom({ shown }: { shown: boolean }) {
@@ -108,12 +111,23 @@ function Bloom({ shown }: { shown: boolean }) {
   );
 }
 
-function LightScene({ on, tint, size = 360 }: { on: boolean; tint: string | null; size?: number }) {
+function LightScene({ on, tint, size = 360 }: { on: boolean; tint: string | null; size?: number | string }) {
   const shown = useFlip(on);
   return (
     <div className={styles.stage} style={{ "--glow": tint ?? "var(--lit-warm)" } as CSSProperties}>
       <Bloom shown={shown} />
       <span className={styles.bulb}><HangingBulb on={shown} size={size} tint={tint} /></span>
+    </div>
+  );
+}
+
+/** A table lamp on a desk: its string is pulled, and the light pools under the shade. */
+function DeskLampScene({ on, tint, size = 340 }: { on: boolean; tint: string | null; size?: number | string }) {
+  const shown = useFlip(on);
+  return (
+    <div className={styles.stage} style={{ "--glow": tint ?? "var(--lit-warm)" } as CSSProperties}>
+      <Bloom shown={shown} />
+      <span className={styles.deskLamp}><DeskLamp on={shown} size={size} tint={tint} /></span>
     </div>
   );
 }
@@ -233,7 +247,7 @@ function StandingFanScene({ on }: { on: boolean }) {
   const reduce = useReducedMotion();
   const id = useId();
   return (
-    <div className={`${styles.stage} ${styles.depth} ${styles.fanStage}`}>
+    <div className={`${styles.stage} ${styles.depth} ${styles.fanStage} ${styles.standStage}`}>
       <motion.span className={styles.breeze} initial={{ opacity: 0 }} animate={{ opacity: on ? [0, .7, .4] : [.4, 0] }} transition={{ duration: 2 }} aria-hidden="true" />
       <svg viewBox="0 0 100 100" className={styles.standBase} aria-hidden="true">
         <defs>
@@ -416,9 +430,14 @@ export function DoorScene({ open, small = false }: { open: boolean; small?: bool
   );
 }
 
-/** A sash window whose lower half slides up to let the night in, or slides back down. */
+/** A sash window whose lower half slides up onto the day or the night outside, or slides back down. */
+/** Day from six in the morning until six at night, so a window opens onto the sun or onto the stars. */
+const subscribeHour = () => () => {};
+const isNight = () => { const hour = new Date().getHours(); return hour < 6 || hour >= 18; };
+
 export function WindowScene({ open, small = false }: { open: boolean; small?: boolean }) {
   const reduce = useReducedMotion();
+  const night = useSyncExternalStore(subscribeHour, isNight, () => true);
   const id = useId();
   const slide = { duration: reduce ? 0 : 1.8, ease: [.42, 0, .2, 1] as const, delay: reduce ? 0 : .25 };
   return (
@@ -427,17 +446,34 @@ export function WindowScene({ open, small = false }: { open: boolean; small?: bo
         <svg viewBox="0 0 200 200" className={styles.garageArt} aria-hidden="true">
           <defs>
             <linearGradient id={`${id}-sky`} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0" stopColor="oklch(22% .06 265)" />
-              <stop offset="1" stopColor="oklch(38% .07 250)" />
+              <stop offset="0" stopColor={night ? "oklch(22% .06 265)" : "oklch(62% .12 245)"} />
+              <stop offset="1" stopColor={night ? "oklch(38% .07 250)" : "oklch(86% .06 225)"} />
             </linearGradient>
+            <radialGradient id={`${id}-sun`}>
+              <stop offset="0" stopColor="oklch(97% .08 95)" />
+              <stop offset=".45" stopColor="oklch(92% .14 90 / .6)" />
+              <stop offset="1" stopColor="oklch(92% .14 90 / 0)" />
+            </radialGradient>
           </defs>
-          <rect x={10} y={10} width={180} height={180} rx={6} className={styles.house} />
           <rect x={46} y={26} width={108} height={140} fill={`url(#${id}-sky)`} />
-          <circle cx={124} cy={124} r={12} fill="oklch(94% .04 95)" />
-          <circle cx={130} cy={119} r={10} fill="oklch(32% .065 255)" />
-          {[[60, 108], [78, 140], [100, 116], [146, 150], [66, 156], [112, 152], [92, 100], [140, 104], [70, 52], [118, 40], [136, 70]].map(([x, y], index) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r={index % 3 ? 1.3 : 1.9} fill="oklch(96% .02 95)" className={styles.star} style={{ animationDelay: `${(index * .37) % 2.4}s` }} />
-          ))}
+          {night ? (
+            <>
+              <circle cx={124} cy={124} r={12} fill="oklch(94% .04 95)" />
+              <circle cx={130} cy={119} r={10} fill="oklch(32% .065 255)" />
+              {[[60, 108], [78, 140], [100, 116], [146, 150], [66, 156], [112, 152], [92, 100], [140, 104], [70, 52], [118, 40], [136, 70]].map(([x, y], index) => (
+                <circle key={`${x}-${y}`} cx={x} cy={y} r={index % 3 ? 1.3 : 1.9} fill="oklch(96% .02 95)" className={styles.star} style={{ animationDelay: `${(index * .37) % 2.4}s` }} />
+              ))}
+            </>
+          ) : (
+            <>
+              <circle cx={116} cy={124} r={30} fill={`url(#${id}-sun)`} />
+              <circle cx={116} cy={124} r={11} fill="oklch(95% .11 92)" />
+              <g className={styles.cloud}>
+                <ellipse cx={74} cy={146} rx={16} ry={6} />
+                <ellipse cx={84} cy={142} rx={10} ry={7} />
+              </g>
+            </>
+          )}
           <path d="M 46 166 L 46 26 L 154 26 L 154 166" className={styles.frame} />
           <rect x={36} y={166} width={128} height={9} rx={2} className={styles.sill} />
         </svg>
@@ -453,13 +489,14 @@ export function WindowScene({ open, small = false }: { open: boolean; small?: bo
   );
 }
 
-export type MomentPreviewScene = "light" | "chandelier" | "fan" | "standingFan" | "lock" | "garage" | "door" | "window";
+export type MomentPreviewScene = "light" | "deskLamp" | "chandelier" | "fan" | "standingFan" | "lock" | "garage" | "door" | "window";
 
 /** One moment on its own, sized to whatever holds it, as in the landing page's demo. Mount it afresh to play a change. */
 export function MomentScene({ scene, on }: { scene: MomentPreviewScene; on: boolean }) {
   return (
     <div className={styles.preview} aria-hidden="true">
-      {scene === "light" ? <LightScene on={on} tint={null} size={220} />
+      {scene === "light" ? <LightScene on={on} tint={null} size="62cqmin" />
+        : scene === "deskLamp" ? <DeskLampScene on={on} tint={null} size="58cqmin" />
         : scene === "chandelier" ? <ChandelierScene on={on} tint={null} />
         : scene === "fan" ? <FanScene on={on} />
         : scene === "standingFan" ? <StandingFanScene on={on} />

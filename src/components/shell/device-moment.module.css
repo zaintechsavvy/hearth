@@ -53,6 +53,13 @@
   opacity: 0;
 }
 
+.deskLamp {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: oklch(86% 0 0);
+}
+
 /* The glass sits in the middle of the stage, and the cord fades out on its way up to the ceiling. */
 .bulb {
   position: relative;
@@ -232,11 +239,13 @@
   stroke-width: 4;
 }
 
+/* The air a fan moves: a wide, faint wash that fades long before any edge. */
 .breeze {
   position: absolute;
-  inset: -20%;
+  inset: -80%;
   border-radius: 50%;
-  background: radial-gradient(closest-side, oklch(80% .06 220 / .35), transparent);
+  background: radial-gradient(closest-side, oklch(80% .06 220 / .26), oklch(80% .06 220 / .1) 45%, transparent);
+  pointer-events: none;
 }
 
 /* Lock: the shackle and body are layers, so the shackle can swing round behind the body. */
@@ -487,6 +496,10 @@
   fill: oklch(80% .01 250);
 }
 
+.cloud {
+  fill: oklch(98% .005 250 / .9);
+}
+
 /* A moment shrunk into a frame, as on the landing page: the scene fills the frame and its glow stays inside it. */
 .preview {
   position: relative;
@@ -494,12 +507,19 @@
   place-items: center;
   width: 100%;
   height: 100%;
+  container-type: size;
   isolation: isolate;
+}
+
+.preview .standStage {
+  width: 74%;
+  height: 74%;
 }
 
 /* The lock and garage are drawn at the size of the notice card; a frame this size wants them smaller. */
 .preview .padlock {
   width: 42%;
+  translate: 0 14%;
 }
 
 .preview .garageBox {

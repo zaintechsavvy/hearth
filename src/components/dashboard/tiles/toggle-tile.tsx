@@ -11,6 +11,7 @@ import { TILE_ICON_COMPONENTS } from "./tile-icons";
 import styles from "./tile.module.css";
 import level from "./level-tile.module.css";
 import { LevelOverlay } from "./level-overlay";
+import { DeskLamp } from "@/components/shell/desk-lamp";
 import { HangingBulb } from "@/components/shell/hanging-bulb";
 import { useLongPress } from "./use-long-press";
 
@@ -62,10 +63,14 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
   const toggle = () => run({ type: "power", on: !device.on });
   const commitLevel = (value: number) => run(device.kind === "fan" ? { type: "fanSpeed", value } : value === 0 ? { type: "power", on: false } : { type: "brightness", value });
 
-  const bulb = device.kind === "light" && (config.icon ?? style.icon) === "lightbulb";
+  const shown = config.icon ?? style.icon;
+  const bulb = device.kind === "light" && shown === "lightbulb";
+  const lamp = device.kind === "light" && (shown === "lamp" || shown === "lamp-desk");
   const icon = (size: number) => (
     <span className={styles.icon} data-spin={spin ? "" : undefined} style={spin} aria-hidden="true">
-      {bulb ? <HangingBulb on={device.on && device.available} size={Math.round(size * 1.3)} tint={tint} /> : <Icon size={size} strokeWidth={1.75} />}
+      {bulb ? <HangingBulb on={device.on && device.available} size={Math.round(size * 1.3)} tint={tint} />
+        : lamp ? <DeskLamp on={device.on && device.available} size={Math.round(size * 1.25)} tint={tint} />
+        : <Icon size={size} strokeWidth={1.75} />}
     </span>
   );
   const shared = { "data-kind": device.kind, "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-tinted": tint ? "" : undefined, "data-glow": config.options?.glow || undefined, style: tint ? { "--tile-color": tint } as CSSProperties : undefined };

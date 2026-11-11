@@ -7,7 +7,8 @@ import styles from "./moment-demo.module.css";
 
 /** `label` is the list's plain name; `name` is the device as the tablet would show it. */
 const SCENES: { scene: MomentPreviewScene; label: string; name: string; words: [string, string] }[] = [
-  { scene: "light", label: "Lamp", name: "Lamp", words: ["On", "Off"] },
+  { scene: "light", label: "Bulb", name: "Hallway light", words: ["On", "Off"] },
+  { scene: "deskLamp", label: "Lamp", name: "Desk lamp", words: ["On", "Off"] },
   { scene: "chandelier", label: "Chandelier", name: "Chandelier", words: ["On", "Off"] },
   { scene: "fan", label: "Ceiling fan", name: "Ceiling fan", words: ["On", "Off"] },
   { scene: "standingFan", label: "Standing fan", name: "Standing fan", words: ["On", "Off"] },

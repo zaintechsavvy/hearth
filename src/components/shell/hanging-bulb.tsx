@@ -8,7 +8,7 @@ import styles from "./hanging-bulb.module.css";
  * A light bulb hanging on its cord. Turning it on drops it in on a little swing and it flickers to life; turning it
  * off makes it flicker out and sway to a stop. `tint` colours the glow for a coloured light.
  */
-export function HangingBulb({ on, size, tint }: { on: boolean; size: number; tint?: string | null }) {
+export function HangingBulb({ on, size, tint }: { on: boolean; size: number | string; tint?: string | null }) {
   const reduce = useReducedMotion();
   const [scope, animate] = useAnimate<HTMLSpanElement>();
   const id = useId();
@@ -25,7 +25,7 @@ export function HangingBulb({ on, size, tint }: { on: boolean; size: number; tin
 
   return (
     <span ref={scope} className={styles.bulb} data-on={on || undefined} style={{ width: size, height: size, ...(tint ? { "--bulb": tint } : {}) } as CSSProperties} aria-hidden="true">
-      <svg viewBox="0 0 48 48" width={size} height={size} overflow="visible">
+      <svg viewBox="0 0 48 48" width={typeof size === "number" ? size : "100%"} height={typeof size === "number" ? size : "100%"} overflow="visible">
         <defs>
           <radialGradient id={`${id}-glass`} cx="40%" cy="35%" r="65%">
             <stop offset="0" className={styles.glassHi} />
