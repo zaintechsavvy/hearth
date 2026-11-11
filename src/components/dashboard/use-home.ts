@@ -51,8 +51,20 @@ async function fetchHome(url: string): Promise<HomeSnapshot> {
   return steady(await response.json());
 }
 
+/** Each light's last brightness while on, since an integration reports a light that is off at 0. */
+const levels = new Map<string, number>();
+function rememberLevels(devices: Device[]) {
+  for (const device of devices) if (device.kind === "light" && device.on && device.brightness > 0) levels.set(device.id, device.brightness);
+}
+
+/** What a command will look like once done: a light switched on comes back at its last brightness rather than 0. */
+function predict(device: Device, command: DeviceCommand): Device {
+  const next = applyCommand(device, command);
+  return next.kind === "light" && next.dimmable && next.on && next.brightness === 0 ? { ...next, brightness: levels.get(device.id) ?? 100 } : next;
+}
+
 function patch(snapshot: HomeSnapshot, id: string, command: DeviceCommand): HomeSnapshot {
-  return { ...snapshot, devices: snapshot.devices.map(device => device.id === id ? applyCommand(device, command) : device) };
+  return { ...snapshot, devices: snapshot.devices.map(device => device.id === id ? predict(device, command) : device) };
 }
 
 /** How long a command just sent outranks a pushed snapshot that still shows the device as it was. */
@@ -66,19 +78,19 @@ const same = (a: Device, b: Device) => JSON.stringify(a) === JSON.stringify(b);
  * back for a moment. While a command is fresh, such a snapshot keeps the commanded state; one that agrees retires it.
  */
 function reconcile(snapshot: HomeSnapshot): HomeSnapshot {
+  rememberLevels(snapshot.devices);
   if (!recent.size) return snapshot;
   const now = Date.now();
   let changed = false;
   const devices = snapshot.devices.map(device => {
     const sent = recent.get(device.id);
     if (!sent) return device;
-    const expected = applyCommand(device, sent.command);
-    if (same(expected, device) || now - sent.at > SETTLE_MS) {
+    if (same(applyCommand(device, sent.command), device) || now - sent.at > SETTLE_MS) {
       recent.delete(device.id);
       return device;
     }
     changed = true;
-    return expected;
+    return predict(device, sent.command);
   });
   return changed ? { ...snapshot, devices } : snapshot;
 }
@@ -202,6 +214,7 @@ export function useHome() {
     markSent(device.id);
     shared.inFlight++;
     recent.set(device.id, { command, at: Date.now() });
+    rememberLevels([device]);
     try {
       await mutate(async current => {
         const response = await fetch(`/api/devices/${encodeURIComponent(device.id)}`, {
