@@ -118,7 +118,7 @@ export function Landing() {
           <motion.div className={styles.restCopy} {...rise()}>
             <h2 className={styles.heading}>When nobody is looking</h2>
             <p className={styles.body}>
-              After a few quiet minutes the wall tablet rests on a clock you can read across the room: an analog face in the colour you pick, or large digits. It drifts a little so nothing burns in, dims at night, and wakes when someone walks by or rings the bell.
+              After a few quiet minutes the wall tablet rests on a clock you can read across the room: an analog face in the colour you pick, or large digits. It dims at night, and wakes when someone walks by or rings the bell.
             </p>
             <ul className={styles.points}>
               <li>Analog or digital, in the colour and brightness you pick</li>

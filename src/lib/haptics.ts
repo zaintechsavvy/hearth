@@ -67,7 +67,7 @@ export function addTapSwitches(root: ParentNode) {
     const label = document.createElement("label");
     label.setAttribute(SWITCH_ATTR, "");
     label.setAttribute("aria-hidden", "true");
-    label.style.cssText = "position:absolute;inset:0;z-index:1;margin:0;padding:0;cursor:inherit;-webkit-tap-highlight-color:transparent";
+    label.style.cssText = "position:absolute;inset:0;z-index:1;margin:0;padding:0;cursor:inherit;touch-action:pan-y;-webkit-tap-highlight-color:transparent";
     const input = document.createElement("input");
     input.type = "checkbox";
     input.setAttribute("switch", "");

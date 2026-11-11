@@ -5,14 +5,14 @@ import { useEffect, useRef, useState } from "react";
 import type { Device } from "@/lib/devices/types";
 import { haptic } from "@/lib/haptics";
 import { sentHere } from "@/lib/sent-here";
-import { GarageScene, LockScene } from "./device-moment";
+import { DoorScene, GarageScene, LockScene, WindowScene } from "./device-moment";
 import styles from "./state-notice.module.css";
 
 const SHOW_MS = 5000;
 const OPENINGS = new Set(["door", "window", "garage", "opening"]);
 const ENTRY_COVERS = new Set(["garage", "gate", "door"]);
 
-type Picture = "garage" | "lock" | "door" | "leak";
+type Picture = "garage" | "lock" | "door" | "window" | "leak";
 
 interface Notice {
   key: string;
@@ -43,7 +43,7 @@ function stateOf(device: Device): { open: boolean; words: string; picture: Pictu
     return null;
   }
   if (device.kind === "binary_sensor" && OPENINGS.has(device.sensorClass)) {
-    return { open: device.active, words: device.active ? "opened" : "closed", picture: device.sensorClass === "garage" ? "garage" : "door" };
+    return { open: device.active, words: device.active ? "opened" : "closed", picture: device.sensorClass === "garage" ? "garage" : device.sensorClass === "window" ? "window" : "door" };
   }
   return null;
 }
@@ -93,7 +93,7 @@ export function StateNotices({ devices }: { devices: Device[] | undefined }) {
           onClick={() => setNotice(null)} aria-label={`${notice.name} ${notice.words}. Tap to close.`}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.35 }}>
           <motion.span className={styles.card} initial={reduce ? false : { y: 16, scale: .97 }} animate={{ y: 0, scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 26 }}>
-            <span className={styles.art} aria-hidden="true">{notice.picture === "garage" ? <GarageScene small open={notice.open} /> : notice.picture === "lock" ? <LockScene small locked={!notice.open} /> : notice.picture === "leak" ? <Leak /> : <Door />}</span>
+            <span className={styles.art} aria-hidden="true">{notice.picture === "garage" ? <GarageScene small open={notice.open} /> : notice.picture === "lock" ? <LockScene small locked={!notice.open} /> : notice.picture === "leak" ? <Leak /> : notice.picture === "window" ? <WindowScene small open={notice.open} /> : <DoorScene small open={notice.open} />}</span>
             <span className={styles.words}>
               <span className={styles.title}>{notice.alarm ? "Water leak" : `${notice.name} ${notice.words}`}</span>
               <span className={styles.meta}>
@@ -119,16 +119,3 @@ function Leak() {
   );
 }
 
-/** A door that swings open or shut in its frame. */
-function Door() {
-  return (
-    <svg viewBox="0 0 120 100" className={styles.svg}>
-      <path d="M38 90 V12 H82 V90" className={styles.line} />
-      <path d="M28 90 H92" className={styles.line} />
-      <g className={styles.swinging}>
-        <rect x="38" y="12" width="44" height="78" rx="1" className={styles.thin} />
-        <path d="M74 52 V56" className={styles.line} />
-      </g>
-    </svg>
-  );
-}

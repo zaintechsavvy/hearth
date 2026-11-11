@@ -96,6 +96,7 @@ export function SettingsShell({ groups, heading, children }: { groups: SettingsG
           </div>
           <Link href="/guide" className={styles.about} data-on-wall>Setting up Hearth</Link>
           <Link href="/how-it-works" className={styles.about} data-on-wall>How Hearth works</Link>
+          <span className={styles.build} data-on-wall>Build {process.env.NEXT_PUBLIC_HEARTH_BUILD}</span>
         </nav>
         <div className={styles.main}>
           <button type="button" className={styles.back} onClick={() => select(null)} data-on-wall>

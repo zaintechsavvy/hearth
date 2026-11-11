@@ -46,14 +46,6 @@
 .line { stroke-width: 3; }
 .thin { stroke-width: 2; opacity: .55; }
 
-/* Each picture plays from the state before to the state after: open runs forwards, closed runs back. */
-
-
-.swinging { transform-origin: 38px 52px; transform-box: view-box; animation: swing-open 1.1s var(--ease-standard) .2s both; }
-.notice:not([data-open]) .swinging { animation-name: swing-shut; }
-@keyframes swing-open { from { transform: perspective(300px) rotateY(0); } to { transform: perspective(300px) rotateY(-64deg); } }
-@keyframes swing-shut { from { transform: perspective(300px) rotateY(-64deg); } to { transform: perspective(300px) rotateY(0); } }
-
 .words {
   display: grid;
   justify-items: center;
@@ -100,7 +92,6 @@
 
 @keyframes run-out { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
-.notice[data-still] .swinging,
 .notice[data-still] .timer {
   animation-duration: 0s;
   animation-delay: 0s;

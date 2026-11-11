@@ -27,8 +27,6 @@
   justify-items: center;
   width: min(92vw, 1100px);
   opacity: var(--saver-dim, 1);
-  transform: translate(var(--drift-x, 0), var(--drift-y, 0));
-  transition: transform 4s var(--ease-standard);
 }
 
 .date {
@@ -163,7 +161,7 @@
 
 .corner {
   position: fixed;
-  top: max(var(--space-6), env(safe-area-inset-top));
+  top: max(calc(var(--space-10) + var(--space-1)), env(safe-area-inset-top));
   right: max(var(--space-3), env(safe-area-inset-right));
   z-index: 50;
   display: flex;

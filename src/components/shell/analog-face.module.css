@@ -13,8 +13,6 @@
   width: min(100vw, 142vh);
   height: auto;
   max-height: 100vh;
-  transform: translate(var(--drift-x, 0), var(--drift-y, 0));
-  transition: transform 4s var(--ease-standard);
 }
 
 .numeral {

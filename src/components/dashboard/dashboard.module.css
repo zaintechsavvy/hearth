@@ -26,7 +26,7 @@
 
 /* On the wall the greeting and date get room above, clear of the status bar, and a little below. */
 :global(:root[data-wall]) .intro {
-  padding-block: var(--space-6) var(--space-5);
+  padding-block: var(--space-10) var(--space-8);
 }
 
 /* On the wall the greeting matches the clock in the corner. */

@@ -378,3 +378,77 @@ export function GarageScene({ open, small = false, inTile = false }: { open: boo
     </div>
   );
 }
+
+/** A panelled door that swings open toward you on its hinge, letting the light from inside spill out, or swings shut. */
+export function DoorScene({ open, small = false, inTile = false }: { open: boolean; small?: boolean; inTile?: boolean }) {
+  const reduce = useReducedMotion();
+  const id = useId();
+  const swing = { duration: reduce ? 0 : 1.6, ease: [.4, 0, .2, 1] as const, delay: reduce ? 0 : .25 };
+  return (
+    <div className={`${styles.stage} ${small || inTile ? styles.small : ""}`}>
+      <div className={styles.doorBox}>
+        <svg viewBox="0 0 200 220" className={styles.garageArt} aria-hidden="true">
+          <defs>
+            <radialGradient id={`${id}-glow`} cx="50%" cy="35%" r="80%">
+              <stop offset="0" stopColor="oklch(86% .09 80)" />
+              <stop offset="1" stopColor="oklch(52% .08 60)" />
+            </radialGradient>
+            <linearGradient id={`${id}-spill`} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stopColor="oklch(85% .08 80)" stopOpacity=".55" />
+              <stop offset="1" stopColor="oklch(85% .08 80)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <rect x={20} y={14} width={160} height={186} rx={4} className={styles.house} />
+          <rect x={62} y={34} width={76} height={166} fill="oklch(10% .01 250)" />
+          <motion.g initial={inTile ? false : { opacity: open ? 0 : 1 }} animate={{ opacity: open ? 1 : 0 }} transition={{ duration: reduce ? 0 : .7, delay: reduce ? 0 : open ? .35 : 1.1 }}>
+            <rect x={62} y={34} width={76} height={166} fill={`url(#${id}-glow)`} />
+            <path d="M 62 200 L 138 200 L 176 218 L 24 218 Z" fill={`url(#${id}-spill)`} />
+          </motion.g>
+          <path d="M 58 200 L 58 30 L 142 30 L 142 200" className={styles.frame} />
+          <path d="M 14 200 L 186 200" className={styles.frame} />
+        </svg>
+        <div className={styles.doorOpening}>
+          <motion.div className={styles.doorLeaf} initial={inTile ? false : { rotateY: open ? 0 : -70 }} animate={{ rotateY: open ? -70 : 0 }} transition={swing}>
+            <span className={styles.doorInset} />
+            <span className={styles.doorInset} />
+            <span className={styles.doorKnob} />
+          </motion.div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A sash window whose lower half slides up to let the night in, or slides back down. */
+export function WindowScene({ open, small = false, inTile = false }: { open: boolean; small?: boolean; inTile?: boolean }) {
+  const reduce = useReducedMotion();
+  const id = useId();
+  const slide = { duration: reduce ? 0 : 1.8, ease: [.42, 0, .2, 1] as const, delay: reduce ? 0 : .25 };
+  return (
+    <div className={`${styles.stage} ${small || inTile ? styles.small : ""}`}>
+      <div className={styles.windowBox}>
+        <svg viewBox="0 0 200 200" className={styles.garageArt} aria-hidden="true">
+          <defs>
+            <linearGradient id={`${id}-sky`} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stopColor="oklch(22% .06 265)" />
+              <stop offset="1" stopColor="oklch(38% .07 250)" />
+            </linearGradient>
+          </defs>
+          <rect x={10} y={10} width={180} height={180} rx={6} className={styles.house} />
+          <rect x={46} y={26} width={108} height={140} fill={`url(#${id}-sky)`} />
+          <circle cx={122} cy={58} r={11} fill="oklch(94% .04 95)" />
+          {[[66, 46], [84, 70], [138, 92], [70, 112], [108, 38]].map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r={1.6} fill="oklch(96% .02 95)" />)}
+          <path d="M 46 166 L 46 26 L 154 26 L 154 166" className={styles.frame} />
+          <rect x={36} y={166} width={128} height={9} rx={2} className={styles.sill} />
+        </svg>
+        <div className={styles.windowOpening}>
+          <span className={styles.sashUpper}><span className={styles.pane} /><span className={styles.pane} /></span>
+          <motion.span className={styles.sashLower} initial={inTile ? false : { y: open ? "0%" : "-86%" }} animate={{ y: open ? "-86%" : "0%" }} transition={slide}>
+            <span className={styles.pane} /><span className={styles.pane} />
+            <span className={styles.sashHandle} />
+          </motion.span>
+        </div>
+      </div>
+    </div>
+  );
+}

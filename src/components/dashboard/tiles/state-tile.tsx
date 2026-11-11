@@ -6,7 +6,7 @@ import { Button } from "@/components/arc/button/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { HoldToConfirm } from "@/components/arc/hold-to-confirm/hold-to-confirm";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
-import { GarageScene, LockScene } from "@/components/shell/device-moment";
+import { DoorScene, GarageScene, LockScene, WindowScene } from "@/components/shell/device-moment";
 import type { TileConfig } from "@/lib/dashboard/layout";
 import { defaultStyle } from "@/lib/dashboard/style";
 import {
@@ -182,12 +182,15 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   const Icon = TILE_ICON_COMPONENTS[config.icon ?? style.icon];
   const color = config.color ?? style.color;
   const { text, active } = describe(device, now);
-  // A lock or garage door on its own icon shows itself moving, as a light shows its bulb.
+  // A lock, garage door, door, or window on its own icon shows itself moving, as a light shows its bulb.
   const plain = (config.icon ?? style.icon) === style.icon;
   const scene = !plain ? null : device.kind === "lock" ? <LockScene inTile locked={device.state === "locked" || device.state === "locking"} />
-    : device.kind === "cover" && device.coverClass === "garage" ? <GarageScene inTile open={device.state !== "closed" && device.state !== "closing"} /> : null;
-  // The garage is wide, so it draws smaller than the padlock to sit inside the round badge.
-  const sceneSize = (size: number) => Math.round(size * (device.kind === "cover" ? 1.15 : 1.5));
+    : device.kind === "cover" && device.coverClass === "garage" ? <GarageScene inTile open={device.state !== "closed" && device.state !== "closing"} />
+    : device.kind === "binary_sensor" && device.sensorClass === "door" ? <DoorScene inTile open={device.active} />
+    : device.kind === "binary_sensor" && device.sensorClass === "window" ? <WindowScene inTile open={device.active} />
+    : device.kind === "binary_sensor" && device.sensorClass === "garage" ? <GarageScene inTile open={device.active} /> : null;
+  // Scenes wider than the padlock draw smaller, so they sit inside the round badge.
+  const sceneSize = (size: number) => Math.round(size * (device.kind === "lock" ? 1.5 : 1.2));
   const icon = (size: number) => scene ? <span className={styles.sceneIcon} style={{ width: sceneSize(size), height: sceneSize(size) }}>{scene}</span> : <Icon size={size} strokeWidth={1.75} />;
   const command = tapCommand(device);
   const disabled = !device.available || !interactive || !command;

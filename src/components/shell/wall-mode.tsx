@@ -34,9 +34,6 @@ import type { Forecast } from "@/lib/widgets/weather";
 import { RestActivity } from "./rest-activity";
 import styles from "./wall-mode.module.css";
 
-const SHIFT_EVERY_MS = 10 * 60_000;
-const SHIFT_PX = 4;
-const DRIFT_EVERY_MS = 60_000;
 const NIGHT_RED = "oklch(52% 0.16 25)";
 const ACTIVITY = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
 /** How long a finger rests on the wallpaper before the page shrinks to the quick actions. */
@@ -146,21 +143,6 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
       void lock?.release();
     };
   }, [settings.keepAwake]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    const shift = () => {
-      root.style.setProperty("--wall-shift-x", `${Math.round((Math.random() * 2 - 1) * SHIFT_PX)}px`);
-      root.style.setProperty("--wall-shift-y", `${Math.round((Math.random() * 2 - 1) * SHIFT_PX)}px`);
-    };
-    shift();
-    const timer = setInterval(shift, SHIFT_EVERY_MS);
-    return () => {
-      clearInterval(timer);
-      root.style.removeProperty("--wall-shift-x");
-      root.style.removeProperty("--wall-shift-y");
-    };
-  }, []);
 
   // Holding the wallpaper, not a tile, shrinks the page like a watch face and offers the quick actions underneath.
   useEffect(() => {
@@ -299,19 +281,16 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
   );
 }
 
-/** The resting screen: the date over a large clock, the weather, then running timers and what needs doing next as cards. It drifts a little each minute so nothing burns in. */
+/** The resting screen: the date over a large clock, the weather, then running timers and what needs doing next as cards. */
 function Glance({ night, settings, leftOpen }: { night: boolean; settings: WallSettings; leftOpen: LeftOpen[] }) {
   const now = useTick(1000) ?? 0;
   const { home } = useHome();
   const [frameEmpty, setFrameEmpty] = useState(false);
   const photos = settings.frame && !(night && !settings.frameAtNight);
   const date = new Date(now || 0);
-  const drift = Math.floor(now / DRIFT_EVERY_MS);
   const red = night && settings.nightRed;
   const brightness = settings.clockBrightness * (night ? 1 - settings.dimLevel * 0.6 : 1);
   const offset = {
-    "--drift-x": `${((drift * 37) % 41) - 20}px`,
-    "--drift-y": `${((drift * 53) % 31) - 15}px`,
     "--saver-dim": brightness,
     color: red ? undefined : clockColorOf(settings),
   } as CSSProperties;
