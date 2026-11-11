@@ -231,6 +231,18 @@ body {
   transition: scale 420ms var(--ease-spring);
 }
 
+/* A wall tablet is touched, never read closely: nothing on it selects, except the fields you type into. */
+:root[data-wall] body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+:root[data-wall] :is(input, textarea, [contenteditable="true"]) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* A held button never selects its words or opens the long-press callout on a phone. */
 button,
 [role="button"] {

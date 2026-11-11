@@ -38,9 +38,9 @@ const STANDING = /\b(stand(ing)?|pedestal|floor|desk|table|tower|box|oscillating
 
 /**
  * Full-screen moments on a wall tablet, resting or awake: a light or fan someone changes elsewhere plays a short scene
- * of it changing. Several play one after another, each fading out before the next fades in. A change made on this
- * screen plays on its own tile instead. It never wakes the screen. Locks and garage doors have their own notice,
- * `StateNotices`, which plays `LockScene` and `GarageScene`.
+ * of it changing. Several play one after another, each fading out before the next fades in, and a tap puts them all
+ * away. A change made on this screen plays on its own tile instead. It never wakes the screen. Locks and garage doors
+ * have their own notice, `StateNotices`, which plays `LockScene` and `GarageScene`.
  */
 export function DeviceMoments({ devices }: { devices: Device[] | undefined }) {
   const seen = useRef<Map<string, string> | null>(null);
@@ -77,7 +77,7 @@ export function DeviceMoments({ devices }: { devices: Device[] | undefined }) {
   return (
     <AnimatePresence>
       {moment && (
-        <motion.div key="moments" className={styles.moment} role="status" aria-live="polite"
+        <motion.div key="moments" className={styles.moment} role="status" aria-live="polite" onClick={() => setQueue([])}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
           <AnimatePresence mode="wait">
             <motion.div key={moment.key} className={styles.momentContent}
