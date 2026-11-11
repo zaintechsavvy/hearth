@@ -78,20 +78,12 @@
 }
 
 /* Mesh presets: a static blend of the palette first, then the shader canvas on top once it loads. */
-:root[data-wallpaper="aurora"] .wallpaper { --m1: #dfe7ff; --m2: #c3d0fb; --m3: #cdeee9; --m4: #ecdfff; }
-:root[data-wallpaper="dusk"] .wallpaper { --m1: #ffe6d8; --m2: #fbcfd2; --m3: #efd9fb; --m4: #ffecc9; }
-:root[data-wallpaper="meadow"] .wallpaper { --m1: #e3f3df; --m2: #cbe9da; --m3: #f1efd2; --m4: #d6e7f2; }
-:root[data-theme="dark"][data-wallpaper="aurora"] .wallpaper { --m1: #0c1430; --m2: #1f2f66; --m3: #0f3f45; --m4: #33225a; }
-:root[data-theme="dark"][data-wallpaper="dusk"] .wallpaper { --m1: #26121a; --m2: #552235; --m3: #36204d; --m4: #4f3018; }
-:root[data-theme="dark"][data-wallpaper="meadow"] .wallpaper { --m1: #0d1f16; --m2: #1b4430; --m3: #373f17; --m4: #12303b; }
-:root[data-wallpaper="graphite"] .wallpaper { --m1: #eef0f3; --m2: #dfe3e9; --m3: #e9e7ef; --m4: #f3f1ec; }
-:root[data-theme="dark"][data-wallpaper="graphite"] .wallpaper { --m1: #0a0b0d; --m2: #1b1e24; --m3: #262a32; --m4: #121418; }
-:root[data-wallpaper="midnight"] .wallpaper { --m1: #e2e6f7; --m2: #cfd8f2; --m3: #dcd4f0; --m4: #d6ebf0; }
-:root[data-theme="dark"][data-wallpaper="midnight"] .wallpaper { --m1: #080d1c; --m2: #1b3263; --m3: #2c2462; --m4: #0e3f4a; }
-:root[data-wallpaper="ember"] .wallpaper { --m1: #fbe7dc; --m2: #f6d3c1; --m3: #f9e3c4; --m4: #f0d6d6; }
-:root[data-theme="dark"][data-wallpaper="ember"] .wallpaper { --m1: #100a08; --m2: #4a2310; --m3: #6b3a14; --m4: #2a1418; }
+:root[data-wallpaper="graphite"] .wallpaper { --m1: #060709; --m2: #2b2f37; --m3: #525863; --m4: #14161a; }
+:root[data-wallpaper="nightfall"] .wallpaper { --m1: #06080e; --m2: #1b2740; --m3: #3d5682; --m4: #0f1420; }
+:root[data-wallpaper="orchid"] .wallpaper { --m1: #09070f; --m2: #272038; --m3: #54457a; --m4: #15111f; }
+:root[data-wallpaper="blush"] .wallpaper { --m1: #0c0809; --m2: #33202a; --m3: #6e4459; --m4: #171013; }
 
-:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="graphite"], [data-wallpaper="midnight"], [data-wallpaper="ember"], [data-wallpaper="gradient"]) .wallpaper::before {
+:root:is([data-wallpaper="graphite"], [data-wallpaper="nightfall"], [data-wallpaper="orchid"], [data-wallpaper="blush"], [data-wallpaper="gradient"]) .wallpaper::before {
   background:
     radial-gradient(60% 60% at 15% 20%, var(--m2), transparent 70%),
     radial-gradient(55% 55% at 85% 25%, var(--m4), transparent 70%),
@@ -119,12 +111,12 @@
   display: none;
 }
 
-:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="graphite"], [data-wallpaper="midnight"], [data-wallpaper="ember"], [data-wallpaper="gradient"]) .veil {
+:root:is([data-wallpaper="graphite"], [data-wallpaper="nightfall"], [data-wallpaper="orchid"], [data-wallpaper="blush"], [data-wallpaper="gradient"]) .veil {
   display: block;
   background: oklch(100% 0 0 / .18);
 }
 
-:root[data-theme="dark"]:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="graphite"], [data-wallpaper="midnight"], [data-wallpaper="ember"], [data-wallpaper="gradient"]) .veil {
+:root[data-theme="dark"]:is([data-wallpaper="graphite"], [data-wallpaper="nightfall"], [data-wallpaper="orchid"], [data-wallpaper="blush"], [data-wallpaper="gradient"]) .veil {
   background: oklch(0% 0 0 / .28);
 }
 
@@ -140,7 +132,7 @@
   opacity: .12;
 }
 
-:root:is([data-wallpaper="aurora"], [data-wallpaper="dusk"], [data-wallpaper="meadow"], [data-wallpaper="graphite"], [data-wallpaper="midnight"], [data-wallpaper="ember"], [data-wallpaper="gradient"], [data-wallpaper="photo"]) .light {
+:root:is([data-wallpaper="graphite"], [data-wallpaper="nightfall"], [data-wallpaper="orchid"], [data-wallpaper="blush"], [data-wallpaper="gradient"], [data-wallpaper="photo"]) .light {
   opacity: .5;
 }
 

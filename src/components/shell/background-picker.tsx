@@ -79,14 +79,15 @@ export function BackgroundPicker({ showTheme = true }: { showTheme?: boolean }) 
       <section className={styles.group} aria-labelledby="backgrounds-presets">
         <h3 id="backgrounds-presets" className={styles.heading}>Presets</h3>
         <div role="radiogroup" aria-labelledby="backgrounds-presets" className={styles.options}>
-          {PRESET_WALLPAPERS.map(option => (
+          {PRESET_WALLPAPERS.filter(option => resolved === "dark" || !isMesh(option)).map(option => (
             <button key={option} type="button" role="radio" aria-checked={wallpaper === option} className={styles.option} onClick={() => setWallpaper(option)}>
-              <span className={styles.swatch} data-preview={option} style={isMesh(option) ? meshPreview(MESH_PALETTES[option][resolved]) : undefined} aria-hidden="true" />
+              <span className={styles.swatch} data-preview={option} style={isMesh(option) ? meshPreview(MESH_PALETTES[option]) : undefined} aria-hidden="true" />
               <span className={styles.label}>{WALLPAPER_LABELS[option].name}</span>
               <span className={styles.note}>{WALLPAPER_LABELS[option].note}</span>
             </button>
           ))}
         </div>
+        {resolved === "light" && <p className={styles.note}>The drifting backgrounds appear in dark mode.</p>}
       </section>
       <section className={styles.group} aria-labelledby="backgrounds-gradients">
         <h3 id="backgrounds-gradients" className={styles.heading}>Gradients</h3>

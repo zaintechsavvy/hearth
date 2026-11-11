@@ -8,7 +8,7 @@ import { usePrefersReducedMotion } from "@/components/shell/use-reduced-motion-p
 import { useResolvedTheme } from "@/components/shell/use-resolved-theme";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import {
-  DEFAULT_GRADIENT, DEFAULT_WALLPAPER, GRADIENT_KEY, isMesh, MESH_PALETTES, PHOTO_KEY, WALLPAPER_KEY,
+  DEFAULT_GRADIENT, DEFAULT_WALLPAPER, GRADIENT_KEY, isMesh, MESH_PALETTES, PHOTO_KEY, shownWallpaper, WALLPAPER_KEY,
   type CustomGradient, type PhotoBackground, type Wallpaper as WallpaperName,
 } from "@/lib/theme";
 import { usePhotoInk } from "./photo-ink";
@@ -27,9 +27,9 @@ export function Wallpaper({ plain = false }: { plain?: boolean }) {
   const [gradient] = useStoredJson<CustomGradient>(GRADIENT_KEY, DEFAULT_GRADIENT);
   const [storedPhoto] = useStoredJson<PhotoBackground | null>(PHOTO_KEY, null);
   // Signed-out pages, the landing and sign-in, wear the plain backdrop: a photo of someone's own cannot load there.
-  const wallpaper = plain ? DEFAULT_WALLPAPER : stored;
-  const photo = plain ? null : storedPhoto;
   const theme = useResolvedTheme();
+  const wallpaper = plain ? DEFAULT_WALLPAPER : shownWallpaper(stored, theme);
+  const photo = plain ? null : storedPhoto;
   const still = usePrefersReducedMotion();
   usePhotoInk(wallpaper === "photo" ? photo : null, theme);
   useEffect(() => {
@@ -41,7 +41,7 @@ export function Wallpaper({ plain = false }: { plain?: boolean }) {
   return (
     <>
       <div className={styles.wallpaper} aria-hidden="true">
-        {isMesh(wallpaper) && <MeshBackdrop key={`${wallpaper}-${theme}`} colors={MESH_PALETTES[wallpaper][theme]} still={still} />}
+        {isMesh(wallpaper) && <MeshBackdrop key={wallpaper} colors={MESH_PALETTES[wallpaper]} still={still} />}
         {wallpaper === "gradient" && styleOf(gradient) === "flowing" && (
           <MeshBackdrop colors={shownColors(gradient, theme)} still={still || gradient.motion === 0} motion={gradient.motion} swirl={gradient.swirl} distortion={gradient.distortion} grain={gradient.grain} />
         )}

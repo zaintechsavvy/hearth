@@ -5,8 +5,10 @@ export type Accent = (typeof ACCENTS)[number];
 export const DEFAULT_ACCENT: Accent = "neutral";
 
 export const STILL_WALLPAPERS = ["studio", "linen", "slate"] as const;
-export const MESH_WALLPAPERS = ["aurora", "dusk", "meadow", "graphite", "midnight", "ember"] as const;
+export const MESH_WALLPAPERS = ["graphite", "nightfall", "orchid", "blush"] as const;
 export const PRESET_WALLPAPERS = [...STILL_WALLPAPERS, ...MESH_WALLPAPERS] as const;
+/** Drifting backdrops that were offered once; a device that saved one shows the default instead. */
+export const RETIRED_WALLPAPERS = ["aurora", "dusk", "meadow", "midnight", "ember"];
 /** `gradient` and `photo` are the person's own, described by `GRADIENT_KEY` and `PHOTO_KEY`. */
 export const WALLPAPERS = [...PRESET_WALLPAPERS, "gradient", "photo"] as const;
 export type Wallpaper = (typeof WALLPAPERS)[number];
@@ -72,27 +74,26 @@ export const DEFAULT_GRADIENT: CustomGradient = {
 export const DEFAULT_WALLPAPER: Wallpaper = "studio";
 
 export const isMesh = (wallpaper: Wallpaper): wallpaper is MeshWallpaper => (MESH_WALLPAPERS as readonly string[]).includes(wallpaper);
+/** The backdrop actually shown: a retired one becomes the default, and a drifting one is dark mode only. */
+export const shownWallpaper = (wallpaper: string, theme: "light" | "dark"): Wallpaper =>
+  !(WALLPAPERS as readonly string[]).includes(wallpaper) ? DEFAULT_WALLPAPER : isMesh(wallpaper as Wallpaper) && theme === "light" ? DEFAULT_WALLPAPER : wallpaper as Wallpaper;
 
-/** Soft, low-chroma palettes, so text on glass stays legible over every part of the gradient. */
-export const MESH_PALETTES: Record<MeshWallpaper, { light: string[]; dark: string[] }> = {
-  aurora: { light: ["#dfe7ff", "#c3d0fb", "#cdeee9", "#ecdfff"], dark: ["#0c1430", "#1f2f66", "#0f3f45", "#33225a"] },
-  dusk: { light: ["#ffe6d8", "#fbcfd2", "#efd9fb", "#ffecc9"], dark: ["#26121a", "#552235", "#36204d", "#4f3018"] },
-  meadow: { light: ["#e3f3df", "#cbe9da", "#f1efd2", "#d6e7f2"], dark: ["#0d1f16", "#1b4430", "#373f17", "#12303b"] },
-  graphite: { light: ["#eef0f3", "#dfe3e9", "#e9e7ef", "#f3f1ec"], dark: ["#0a0b0d", "#1b1e24", "#262a32", "#121418"] },
-  midnight: { light: ["#e2e6f7", "#cfd8f2", "#dcd4f0", "#d6ebf0"], dark: ["#080d1c", "#1b3263", "#2c2462", "#0e3f4a"] },
-  ember: { light: ["#fbe7dc", "#f6d3c1", "#f9e3c4", "#f0d6d6"], dark: ["#100a08", "#4a2310", "#6b3a14", "#2a1418"] },
+/** Drifting backdrops, for dark mode only: mostly charcoal, with a wide spread from near black to a light charcoal and, in all but Graphite, a quiet tint. */
+export const MESH_PALETTES: Record<MeshWallpaper, string[]> = {
+  graphite: ["#060709", "#2b2f37", "#525863", "#14161a"],
+  nightfall: ["#06080e", "#1b2740", "#3d5682", "#0f1420"],
+  orchid: ["#09070f", "#272038", "#54457a", "#15111f"],
+  blush: ["#0c0809", "#33202a", "#6e4459", "#171013"],
 };
 
 export const WALLPAPER_LABELS: Record<PresetWallpaper, { name: string; note: string }> = {
   studio: { name: "Studio", note: "Neutral grey" },
   linen: { name: "Linen", note: "Warm stone" },
   slate: { name: "Slate", note: "Cool blue grey" },
-  aurora: { name: "Aurora", note: "Drifting blue" },
-  dusk: { name: "Dusk", note: "Drifting peach" },
-  meadow: { name: "Meadow", note: "Drifting sage" },
   graphite: { name: "Graphite", note: "Drifting charcoal" },
-  midnight: { name: "Midnight", note: "Drifting indigo" },
-  ember: { name: "Ember", note: "Drifting copper" },
+  nightfall: { name: "Nightfall", note: "Drifting blue" },
+  orchid: { name: "Orchid", note: "Drifting violet" },
+  blush: { name: "Blush", note: "Drifting rose" },
 };
 
 export const THEME_KEY = "hearth-theme";
@@ -105,4 +106,4 @@ export const GLASS_LEVELS = ["frosted", "clear", "solid"] as const;
 export type GlassLevel = (typeof GLASS_LEVELS)[number];
 
 /** Runs before first paint so the page never flashes the wrong theme or backdrop. Keep it dependency free. */
-export const THEME_BOOTSTRAP = `(()=>{try{var r=document.documentElement,s=localStorage,p=s.getItem("${THEME_KEY}")||"system",d=p==="dark"||(p==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.dataset.theme=d?"dark":"light";var a=s.getItem("${ACCENT_KEY}");if(a)r.dataset.accent=a;var gl=s.getItem("${GLASS_KEY}");if(gl)r.dataset.glass=gl;var to=+s.getItem("${TILE_OPACITY_KEY}");if(to>0&&to<=1)r.style.setProperty("--tile-opacity",String(to));var w=/^\\/(sign-in|sign-up|setup)?(\\/|$)/.test(location.pathname)?null:s.getItem("${WALLPAPER_KEY}");if(w)r.dataset.wallpaper=w;if(w==="gradient"){var g=JSON.parse(s.getItem("${GRADIENT_KEY}")||"null");var c=g&&(d&&g.dimAtNight&&g.night||g.colors);if(c&&c.length){for(var i=0;i<4;i++)r.style.setProperty("--m"+(i+1),c[i%c.length]);var t=g.style||"flowing",L=function(h){var n=parseInt(h.slice(1),16);return [n>>16,n>>8&255,n&255].map(function(v){v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)}).reduce(function(x,v,j){return x+v*[.2126,.7152,.0722][j]},0)},v=t==="smooth"?L(c[0])*.8+L(c[c.length-1])*.2:c.reduce(function(x,h){return x+L(h)},0)/c.length;r.dataset.gradientStyle=t;r.style.setProperty("--gradient","linear-gradient(180deg,"+c.join(",")+")");r.style.setProperty("--g-last",c[c.length-1]);if(v<.2)r.dataset.backdrop="dark"}}if(w==="photo"){var f=JSON.parse(s.getItem("${PHOTO_KEY}")||"null");if(f&&/^[\\w-]+$/.test(f.id)){r.style.setProperty("--photo","url(/api/backgrounds/"+f.id+")");r.style.setProperty("--photo-blur",(+f.blur||0)+"px");r.style.setProperty("--photo-dim",String(+f.dim||0));var e=JSON.parse(s.getItem("${PHOTO_EDGES_KEY}")||"null");if(e&&e.id===f.id&&e.dim===(+f.dim||0)&&e.theme===(d?"dark":"light")){r.style.setProperty("--edge-top",e.top);r.style.setProperty("--edge-bottom",e.bottom);r.style.setProperty("--page-floor",e.bottom)}}}}catch(e){}})()`;
+export const THEME_BOOTSTRAP = `(()=>{try{var r=document.documentElement,s=localStorage,p=s.getItem("${THEME_KEY}")||"system",d=p==="dark"||(p==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.dataset.theme=d?"dark":"light";var a=s.getItem("${ACCENT_KEY}");if(a)r.dataset.accent=a;var gl=s.getItem("${GLASS_KEY}");if(gl)r.dataset.glass=gl;var to=+s.getItem("${TILE_OPACITY_KEY}");if(to>0&&to<=1)r.style.setProperty("--tile-opacity",String(to));var w=/^\\/(sign-in|sign-up|setup)?(\\/|$)/.test(location.pathname)?null:s.getItem("${WALLPAPER_KEY}");if(w&&${JSON.stringify(RETIRED_WALLPAPERS)}.indexOf(w)>=0)w=null;if(w&&!d&&${JSON.stringify(MESH_WALLPAPERS)}.indexOf(w)>=0)w="${DEFAULT_WALLPAPER}";if(w)r.dataset.wallpaper=w;if(w==="gradient"){var g=JSON.parse(s.getItem("${GRADIENT_KEY}")||"null");var c=g&&(d&&g.dimAtNight&&g.night||g.colors);if(c&&c.length){for(var i=0;i<4;i++)r.style.setProperty("--m"+(i+1),c[i%c.length]);var t=g.style||"flowing",L=function(h){var n=parseInt(h.slice(1),16);return [n>>16,n>>8&255,n&255].map(function(v){v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)}).reduce(function(x,v,j){return x+v*[.2126,.7152,.0722][j]},0)},v=t==="smooth"?L(c[0])*.8+L(c[c.length-1])*.2:c.reduce(function(x,h){return x+L(h)},0)/c.length;r.dataset.gradientStyle=t;r.style.setProperty("--gradient","linear-gradient(180deg,"+c.join(",")+")");r.style.setProperty("--g-last",c[c.length-1]);if(v<.2)r.dataset.backdrop="dark"}}if(w==="photo"){var f=JSON.parse(s.getItem("${PHOTO_KEY}")||"null");if(f&&/^[\\w-]+$/.test(f.id)){r.style.setProperty("--photo","url(/api/backgrounds/"+f.id+")");r.style.setProperty("--photo-blur",(+f.blur||0)+"px");r.style.setProperty("--photo-dim",String(+f.dim||0));var e=JSON.parse(s.getItem("${PHOTO_EDGES_KEY}")||"null");if(e&&e.id===f.id&&e.dim===(+f.dim||0)&&e.theme===(d?"dark":"light")){r.style.setProperty("--edge-top",e.top);r.style.setProperty("--edge-bottom",e.bottom);r.style.setProperty("--page-floor",e.bottom)}}}}catch(e){}})()`;
