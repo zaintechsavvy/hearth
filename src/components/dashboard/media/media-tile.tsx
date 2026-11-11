@@ -83,7 +83,7 @@ export function MediaTile({ tileId, device, layout, interactive, onCommand }: Me
           )}
           {open && (
             <div key="stage" className={styles.stage}>
-              <motion.div layoutId="card" role="dialog" aria-modal="true" aria-label={`${device.name}, now playing`} className={`${glassSheetClass} ${styles.card}`} {...look} style={{ ...look.style, borderRadius: 30 }} transition={transition}>
+              <motion.div layoutId="card" role="dialog" aria-modal="true" aria-label={`${device.name}, now playing`} className={`${glassSheetClass} ${styles.card}`} {...look} style={{ ...look.style, borderRadius: 0 }} transition={transition}>
                 <Player device={device} send={send} interactive={interactive} view={view} onView={setView} autoFocus onCollapse={close} />
               </motion.div>
             </div>

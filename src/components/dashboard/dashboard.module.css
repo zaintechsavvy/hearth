@@ -24,8 +24,9 @@
   gap: var(--space-4);
 }
 
+/* On the wall the greeting matches the clock in the corner. */
 :global(:root[data-wall]) .title {
-  font-size: calc(var(--text-2xl) * 1.2);
+  font-size: var(--text-xl);
 }
 
 .summary {

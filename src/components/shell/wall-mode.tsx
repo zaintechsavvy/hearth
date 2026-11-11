@@ -1,10 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CalendarDays, DoorOpen, History, House, Leaf, LogOut, MonitorPause, Moon, MoreHorizontal, Package, Paintbrush, Pill, Recycle, Settings, Sparkles, Thermometer } from "lucide-react";
+import { CalendarDays, Check, DoorOpen, History, House, LayoutGrid, Leaf, LogOut, MonitorPause, Moon, MoreHorizontal, Package, Paintbrush, Pill, Recycle, Settings, Sparkles, Thermometer } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import useSWR from "swr";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
 import { askHearth } from "@/components/assistant/assistant-dock";
@@ -25,6 +25,7 @@ import { LuxuryFace } from "./luxury-face";
 import { DigitalTime } from "./digital-time";
 import { DeviceMoments } from "./device-moment";
 import { clockColorOf, DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
+import { subscribeWallRooms, wallRooms, wantWallRoom } from "@/lib/wall-rooms";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { itemsOf } from "@/lib/widgets/items";
 import { doseSlots, groupPickups, pickupWords, timerColors, timerRemaining, formatDuration } from "@/lib/widgets/schedules";
@@ -72,7 +73,15 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
   const [resting, setResting] = useState(false);
   /** When the screen last went to rest, so its activity notes show only what happened since. */
   const [restedAt, setRestedAt] = useState(0);
-  const [menu, setMenu] = useState(false);
+  const [menu, setMenuOpen] = useState(false);
+  const [choosingRoom, setChoosingRoom] = useState(false);
+  const setMenu = (open: boolean) => { setMenuOpen(open); if (!open) setChoosingRoom(false); };
+  const rooms = useSyncExternalStore(subscribeWallRooms, wallRooms, wallRooms);
+  const chooseRoom = (room: string | null) => {
+    setMenu(false);
+    wantWallRoom(room);
+    if (!path.startsWith("/dashboard")) router.push("/dashboard");
+  };
   const [overview, setOverview] = useState(false);
   const lastActive = useRef(0);
   const wasResting = useRef(false);
@@ -250,19 +259,39 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><MoreHorizontal size={18} strokeWidth={1.75} aria-hidden="true" /></button>
         </PopoverTrigger>
         <PopoverContent align="end" className={`${glassSheetClass} ${styles.menuContent}`}>
-          <nav aria-label="Pages" className={styles.pages}>
+          <nav aria-label="Pages" className={styles.pages} data-rooms={rooms.rooms.length > 1 || undefined}>
             {PAGES.map(({ href, label, icon: Icon }) => (
-              <Link key={href} href={href} className={styles.page} aria-current={path.startsWith(href) ? "page" : undefined} onClick={() => setMenu(false)}>
+              <Link key={href} href={href} className={styles.page} aria-current={!choosingRoom && path.startsWith(href) ? "page" : undefined} onClick={() => setMenu(false)}>
                 <Icon size={18} strokeWidth={1.75} aria-hidden="true" />{label}
               </Link>
             ))}
+            {rooms.rooms.length > 1 && (
+              <button type="button" className={styles.page} aria-pressed={choosingRoom} onClick={() => setChoosingRoom(!choosingRoom)}>
+                <LayoutGrid size={18} strokeWidth={1.75} aria-hidden="true" />Rooms
+              </button>
+            )}
           </nav>
           <span className={styles.menuDivider} aria-hidden="true" />
-          {settings.showAssistant && <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); askHearth(); }}>Ask Hearth</button>}
-          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night</button>
-          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); rest(); }}>Rest the screen</button>
-          <span className={styles.menuDivider} aria-hidden="true" />
-          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); leave(); }}>Leave wall tablet mode</button>
+          {choosingRoom ? (
+            <div className={styles.menuGroup} role="radiogroup" aria-label="Room">
+              {[{ value: null, label: "All rooms" }, ...rooms.rooms.map(value => ({ value, label: value }))].map(({ value, label }) => {
+                const chosen = (value ?? "all") === rooms.current;
+                return (
+                  <button key={label} type="button" role="radio" aria-checked={chosen} className={`${styles.menuItem} ${styles.roomItem}`} onClick={() => chooseRoom(value)}>
+                    {label}{chosen && <Check size={16} strokeWidth={1.75} aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <>
+              {settings.showAssistant && <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); askHearth(); }}>Ask Hearth</button>}
+              <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night</button>
+              <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); rest(); }}>Rest the screen</button>
+              <span className={styles.menuDivider} aria-hidden="true" />
+              <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); leave(); }}>Leave wall tablet mode</button>
+            </>
+          )}
         </PopoverContent>
       </Popover>
       </div>

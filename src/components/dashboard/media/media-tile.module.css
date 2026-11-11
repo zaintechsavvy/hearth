@@ -619,14 +619,13 @@ button.row:hover {
   backdrop-filter: blur(6px);
 }
 
-/* The open player fills the screen, a small inset from each edge, so the artwork and controls read from across a room. */
+/* The open player is the whole screen, edge to edge, so the artwork and controls read from across a room. */
 .stage {
   position: fixed;
   inset: 0;
   z-index: 61;
   display: grid;
   place-items: stretch;
-  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   pointer-events: none;
 }
 
@@ -645,7 +644,7 @@ button.row:hover {
   align-content: center;
   column-gap: clamp(32px, 6vw, 96px);
   row-gap: 28px;
-  padding: clamp(28px, 6vh, 72px) clamp(28px, 6vw, 96px);
+  padding: max(clamp(28px, 6vh, 72px), env(safe-area-inset-top)) max(clamp(28px, 6vw, 96px), env(safe-area-inset-right)) max(clamp(28px, 6vh, 72px), env(safe-area-inset-bottom)) max(clamp(28px, 6vw, 96px), env(safe-area-inset-left));
 }
 
 .card .head,

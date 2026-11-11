@@ -76,6 +76,7 @@ import { DeparturesTile } from "./transit/departures-tile";
 import { StopsDialog } from "./transit/stops-dialog";
 import { WifiTile } from "./household/wifi-tile";
 import { itemsOf } from "@/lib/widgets/items";
+import { publishWallRooms, subscribeWallRooms, takeWantedRoom, wallRooms } from "@/lib/wall-rooms";
 import styles from "./dashboard.module.css";
 
 const SAVE_DELAY_MS = 500;
@@ -108,6 +109,18 @@ type Linked =
 function Greeting({ hour, name }: { hour: number | null; name: string }) {
   const words = hour === null ? "Welcome home" : hour < 5 ? "Good evening" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   return <>{words}<span data-wall-hide>, {name.split(" ")[0]}</span></>;
+}
+
+/** Tells the wall tablet's menu which rooms there are, and switches to the one it asks for. */
+function WallRoomsBridge({ rooms, current, onWant }: { rooms: string[]; current: string; onWant: (room: string) => void }) {
+  useEffect(() => publishWallRooms(rooms, current), [rooms, current]);
+  const wanted = useSyncExternalStore(subscribeWallRooms, () => wallRooms().wanted, () => null);
+  useEffect(() => {
+    if (wanted === null) return;
+    const room = takeWantedRoom();
+    if (room !== null) onWant(room || ALL_ROOMS);
+  }, [wanted, onWant]);
+  return null;
 }
 
 function summarize(devices: Device[]) {
@@ -627,8 +640,9 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         </div>
       </header>
 
+      <WallRoomsBridge rooms={linkedRooms} current={current} onWant={showRoom} />
       {linkedRooms.length > 1 && (
-        <div className={styles.screens} data-on-wall>
+        <div className={styles.screens} data-on-wall data-wall-hide>
           <span className={`${glassClass("pill")} ${styles.screenGlass}`}><SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} /></span>
         </div>
       )}

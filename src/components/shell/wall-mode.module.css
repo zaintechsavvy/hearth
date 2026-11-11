@@ -221,6 +221,17 @@
   background: var(--surface-muted);
 }
 
+.roomItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.roomItem[aria-checked="true"] {
+  font-weight: 500;
+}
+
 .menuGroup {
   display: grid;
   gap: 2px;
@@ -320,7 +331,12 @@
   color: var(--foreground);
 }
 
-.page[aria-current="page"] {
+.pages[data-rooms] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.page[aria-current="page"],
+.page[aria-pressed="true"] {
   background: var(--surface-muted);
   color: var(--foreground);
 }
