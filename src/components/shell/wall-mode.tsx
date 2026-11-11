@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CalendarDays, DoorOpen, History, House, Leaf, Moon, MoreHorizontal, Package, Pill, Recycle, Settings, Thermometer } from "lucide-react";
+import { CalendarDays, DoorOpen, History, House, Leaf, LogOut, MonitorPause, Moon, MoreHorizontal, Package, Paintbrush, Pill, Recycle, Settings, Sparkles, Thermometer } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -11,6 +11,7 @@ import { listenToHearth } from "@/components/assistant/assistant-dock";
 import { useHome } from "@/components/dashboard/use-home";
 import { useTick } from "@/components/dashboard/household/use-tick";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
+import { haptic } from "@/lib/haptics";
 import { WAKE_EVENT } from "@/components/dashboard/doorbell-call";
 import { startBedtime } from "@/components/shell/bedtime-check";
 import { LeftOpenBanner, leftOpenWords, useLeftOpen, type LeftOpen } from "@/components/shell/left-open";
@@ -34,6 +35,11 @@ const SHIFT_PX = 4;
 const DRIFT_EVERY_MS = 60_000;
 const NIGHT_RED = "oklch(52% 0.16 25)";
 const ACTIVITY = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
+/** How long a finger rests on the wallpaper before the page shrinks to the quick actions. */
+const OVERVIEW_HOLD_MS = 550;
+const OVERVIEW_SLOP_PX = 10;
+/** What counts as a control rather than the wallpaper: holding one of these never opens the quick actions. */
+const NOT_BACKGROUND = "button, a, input, textarea, select, label, [role=button], [role=slider], [role=switch], [role=radio], [role=checkbox], [data-tile], [data-radix-popper-content-wrapper], [role=dialog]";
 
 const fetchJson = <T,>(url: string): Promise<T> => fetch(url).then(response => { if (!response.ok) throw new Error(); return response.json(); });
 
@@ -63,6 +69,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
   /** When the screen last went to rest, so its activity notes show only what happened since. */
   const [restedAt, setRestedAt] = useState(0);
   const [menu, setMenu] = useState(false);
+  const [overview, setOverview] = useState(false);
   const lastActive = useRef(0);
   const wasResting = useRef(false);
   const sensorState = useRef<Map<string, boolean>>(new Map());
@@ -142,9 +149,76 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
     };
   }, []);
 
+  // Holding the wallpaper, not a tile, shrinks the page like a watch face and offers the quick actions underneath.
+  useEffect(() => {
+    if (!path.startsWith("/dashboard") || resting || overview) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let from: { x: number; y: number } | null = null;
+    const cancel = () => { clearTimeout(timer); from = null; };
+    const down = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      if (!event.isPrimary || !target?.closest("main") || target.closest(NOT_BACKGROUND)) return;
+      from = { x: event.clientX, y: event.clientY };
+      timer = setTimeout(() => { from = null; haptic("press"); setMenu(false); setOverview(true); }, OVERVIEW_HOLD_MS);
+    };
+    const move = (event: PointerEvent) => {
+      if (from && Math.hypot(event.clientX - from.x, event.clientY - from.y) > OVERVIEW_SLOP_PX) cancel();
+    };
+    window.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", cancel);
+    window.addEventListener("pointercancel", cancel);
+    return () => {
+      cancel();
+      window.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", cancel);
+      window.removeEventListener("pointercancel", cancel);
+    };
+  }, [path, resting, overview]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (overview) root.dataset.overview = "";
+    else delete root.dataset.overview;
+    if (!overview) return;
+    const close = (event: KeyboardEvent) => event.key === "Escape" && setOverview(false);
+    window.addEventListener("keydown", close);
+    return () => { delete root.dataset.overview; window.removeEventListener("keydown", close); };
+  }, [overview]);
+
+  const rest = () => { setResting(true); setRestedAt(now); };
+  const leave = () => { void document.exitFullscreen?.().catch(() => {}); onLeave(); };
+  const actions = [
+    { label: "Customize", icon: Paintbrush, run: () => router.push("/settings#wall") },
+    { label: "Settings", icon: Settings, run: () => router.push("/settings") },
+    ...(settings.showAssistant ? [{ label: "Ask Hearth", icon: Sparkles, run: () => listenToHearth() }] : []),
+    { label: "Good night", icon: Moon, run: () => startBedtime() },
+    { label: "Rest the screen", icon: MonitorPause, run: rest },
+    { label: "Leave wall mode", icon: LogOut, run: leave },
+  ];
+
   return (
     <>
       <div className={styles.dim} style={{ opacity: night && !resting ? settings.dimLevel : 0 }} aria-hidden="true" />
+      <AnimatePresence>
+        {overview && (
+          <motion.div key="overview" className={styles.overview} role="dialog" aria-modal="true" aria-label="Quick actions"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.2 }}>
+            <button type="button" className={styles.overviewBack} onClick={() => setOverview(false)} aria-label="Back to the home" />
+            <motion.nav className={styles.overviewActions} aria-label="Quick actions"
+              initial={reduce ? false : { y: 32, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={reduce ? undefined : { y: 24, opacity: 0 }}
+              transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34, delay: 0.04 }}>
+              {actions.map(({ label, icon: Icon, run }) => (
+                <button key={label} type="button" className={styles.overviewAction} onClick={() => { setOverview(false); run(); }}>
+                  <span className={`${glassClass("pill")} ${styles.overviewIcon}`}><Icon size={24} strokeWidth={1.75} aria-hidden="true" /></span>
+                  <span className={styles.overviewLabel}>{label}</span>
+                </button>
+              ))}
+            </motion.nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {resting && (
           <motion.button type="button" key="saver" className={styles.saver} data-night={night || undefined} data-red={(night && settings.nightRed) || undefined} aria-label="Wake the screen"
@@ -181,9 +255,9 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           <span className={styles.menuDivider} aria-hidden="true" />
           {settings.showAssistant && <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); listenToHearth(); }}>Ask Hearth</button>}
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night</button>
-          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setResting(true); setRestedAt(now); }}>Rest the screen</button>
+          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); rest(); }}>Rest the screen</button>
           <span className={styles.menuDivider} aria-hidden="true" />
-          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); void document.exitFullscreen?.().catch(() => {}); onLeave(); }}>Leave wall tablet mode</button>
+          <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); leave(); }}>Leave wall tablet mode</button>
         </PopoverContent>
       </Popover>
       </div>

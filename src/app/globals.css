@@ -217,7 +217,7 @@ body {
   padding-inline: max(var(--space-5), calc(env(safe-area-inset-left) + var(--space-3))) max(var(--space-5), calc(env(safe-area-inset-right) + var(--space-3)));
   padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
   translate: var(--wall-shift-x, 0) var(--wall-shift-y, 0);
-  transition: translate 2s ease;
+  transition: translate 2s ease, scale 420ms var(--ease-spring), border-radius 420ms var(--ease-spring);
 }
 
 /* A held button never selects its words or opens the long-press callout on a phone. */

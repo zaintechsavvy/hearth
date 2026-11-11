@@ -179,6 +179,7 @@ function GridTile({ tile, index, cells, editing, name, held, onCustomize, picked
       ref={setNodeRef}
       style={style}
       className={styles.cell}
+      data-tile
       data-link={tile.link ?? undefined}
       data-held={held || undefined}
       data-wobble={editing && !held && !selecting ? (index % 2 ? "b" : "a") : undefined}
