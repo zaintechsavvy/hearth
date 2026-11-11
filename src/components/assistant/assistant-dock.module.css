@@ -97,6 +97,14 @@
   font-size: var(--text-xs);
 }
 
+/* Buttons and fields in the dark panel take a tint of it, like controls on any dark glass. */
+:root[data-theme="dark"] .panel {
+  --surface: oklch(100% 0 0 / .08);
+  --surface-raised: oklch(100% 0 0 / .1);
+  --surface-muted: oklch(100% 0 0 / .13);
+  --border: oklch(100% 0 0 / .12);
+}
+
 .panel {
   width: min(400px, calc(100vw - 32px));
   height: min(600px, calc(100dvh - 120px));
@@ -326,7 +334,7 @@
 }
 
 :global(:root[data-wall]) .anchor {
-  top: calc(max(var(--space-3), env(safe-area-inset-top)) + 96px);
+  top: calc(max(var(--space-3), env(safe-area-inset-top)) + 128px);
   bottom: auto;
   left: max(var(--space-5), calc(env(safe-area-inset-left) + var(--space-3)));
   right: auto;

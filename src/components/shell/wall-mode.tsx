@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import useSWR from "swr";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
-import { listenToHearth } from "@/components/assistant/assistant-dock";
+import { askHearth } from "@/components/assistant/assistant-dock";
 import { useHome } from "@/components/dashboard/use-home";
 import { useTick } from "@/components/dashboard/household/use-tick";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
@@ -194,7 +194,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
   const actions = [
     { label: "Customize", icon: Paintbrush, run: () => router.push("/settings#wall") },
     { label: "Settings", icon: Settings, run: () => router.push("/settings") },
-    ...(settings.showAssistant ? [{ label: "Ask Hearth", icon: Sparkles, run: () => listenToHearth() }] : []),
+    ...(settings.showAssistant ? [{ label: "Ask Hearth", icon: Sparkles, run: () => askHearth() }] : []),
     { label: "Good night", icon: Moon, run: () => startBedtime() },
     { label: "Rest the screen", icon: MonitorPause, run: rest },
     { label: "Leave wall mode", icon: LogOut, run: leave },
@@ -255,7 +255,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
             ))}
           </nav>
           <span className={styles.menuDivider} aria-hidden="true" />
-          {settings.showAssistant && <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); listenToHearth(); }}>Ask Hearth</button>}
+          {settings.showAssistant && <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); askHearth(); }}>Ask Hearth</button>}
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night</button>
           <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); rest(); }}>Rest the screen</button>
           <span className={styles.menuDivider} aria-hidden="true" />
