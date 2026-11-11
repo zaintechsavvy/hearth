@@ -217,6 +217,21 @@ body {
   display: none;
 }
 
+/* Holding the wallpaper on a wall tablet shrinks the page back like a watch face, above the quick actions. */
+:root[data-overview] main {
+  height: 100dvh;
+  scale: .7;
+  transform-origin: 50% 4%;
+  border-radius: 36px;
+  outline: 1px solid oklch(100% 0 0 / .18);
+  overflow: clip;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-wall] main { transition: none; }
+}
+
 /* Text on a big wall screen grows with it, so it reads from across the room; up to a laptop's width nothing changes. */
 :root[data-wall] {
   font-size: clamp(16px, calc(.5vw + 9px), 19px);

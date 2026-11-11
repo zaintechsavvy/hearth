@@ -403,15 +403,6 @@
   text-wrap: balance;
 }
 
-:global(:root[data-overview]) main {
-  height: 100dvh;
-  scale: .7;
-  transform-origin: 50% 4%;
-  border-radius: 36px;
-  outline: 1px solid oklch(100% 0 0 / .18);
-  overflow: clip;
-  pointer-events: none;
-}
 
 :global(:root[data-overview]) .corner {
   opacity: 0;
@@ -419,6 +410,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :global(:root[data-wall]) main,
   .overviewIcon { transition: none; }
 }
