@@ -4,12 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Activity, Compass, House, Settings, Workflow, type LucideIcon } from "lucide-react";
+import { Activity, House, Settings, Workflow, type LucideIcon } from "lucide-react";
 import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
-import { UserMenu } from "@/components/arc/user-menu/user-menu";
 import { Logo } from "@/components/brand/logo";
-import { authClient } from "@/lib/auth-client";
 import { CommandMenuButton } from "./command-menu";
+import { ProfileMenu } from "./profile-menu";
 import styles from "./app-header.module.css";
 
 const LINKS: { href: string; label: string; icon: LucideIcon }[] = [
@@ -32,7 +31,9 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
   const links = LINKS.filter(link => role !== "guest" || link.href === "/dashboard");
   // The highlight moves on the tap, not when the next page has loaded; the tap only counts while still on this page.
   const [tapped, setTapped] = useState<{ href: string; from: string } | null>(null);
-  const chosen = tapped?.from === pathname ? tapped.href : links.find(link => pathname.startsWith(link.href))?.href;
+  // A page reached any other way, such as from the account menu, forgets the tap, so an old one never comes back.
+  if (tapped && tapped.from !== pathname) setTapped(null);
+  const chosen = tapped?.href ?? links.find(link => pathname.startsWith(link.href))?.href;
   const current = links.find(link => pathname.startsWith(link.href)) ?? links[0];
 
   return (
@@ -62,19 +63,7 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
       )}
       <div className={styles.account} data-on-wall>
         <CommandMenuButton className={styles.search} />
-        <UserMenu
-          user={user}
-          showTheme={false}
-          items={role === "guest" ? [] : [
-            { label: "Settings", icon: <Settings size={16} strokeWidth={1.75} />, onSelect: () => router.push("/settings") },
-            { label: "Setting up Hearth", icon: <Compass size={16} strokeWidth={1.75} />, onSelect: () => router.push("/guide") },
-          ]}
-          onSignOut={async () => {
-            await authClient.signOut();
-            router.replace("/sign-in");
-            router.refresh();
-          }}
-        />
+        <ProfileMenu user={user} guest={role === "guest"} />
       </div>
     </header>
   );
