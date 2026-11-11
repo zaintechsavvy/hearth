@@ -481,3 +481,30 @@
 .sill {
   fill: oklch(80% .01 250);
 }
+
+/* A moment shrunk into a card, as on the landing page: the scene fills the card and its glow stays inside it. */
+.preview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.preview .stage {
+  width: 100%;
+  height: 100%;
+}
+
+.preview .bloom {
+  position: absolute;
+  inset: -30%;
+  z-index: -1;
+}
+
+.preview .chandelier {
+  width: 92%;
+  translate: 0 0;
+}

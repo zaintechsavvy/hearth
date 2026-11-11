@@ -7,6 +7,7 @@ import { motion, useReducedMotion, type HTMLMotionProps } from "motion/react";
 import { Button } from "@/components/arc/button/button";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { Logo } from "@/components/brand/logo";
+import { MomentPreview, type MomentPreviewScene } from "@/components/shell/device-moment";
 import { useRouter } from "next/navigation";
 import ipad from "./shots/ipad.webp";
 import ipadDark from "./shots/ipad-dark.webp";
@@ -24,6 +25,11 @@ import { ConnectsDiagram } from "@/app/how-it-works/diagrams";
 import styles from "./landing.module.css";
 
 const GITHUB = "https://github.com/zaintechsavvy/hearth";
+
+const MOMENTS: { scene: MomentPreviewScene; name: string }[] = [
+  { scene: "light", name: "A lamp" }, { scene: "chandelier", name: "The chandelier" }, { scene: "fan", name: "A ceiling fan" }, { scene: "standingFan", name: "A standing fan" },
+  { scene: "lock", name: "The front door lock" }, { scene: "garage", name: "The garage door" }, { scene: "door", name: "A door" }, { scene: "window", name: "A window" },
+];
 
 const FEATURES: { title: string; body: string; points: string[]; shot: StaticImageData; dark: StaticImageData; alt: string; small?: boolean; radius?: string }[] = [
   {
@@ -131,6 +137,23 @@ export function Landing() {
             <Image unoptimized src={analog} alt="The wall tablet resting on an analog face: large overlapping numerals behind white hands" className={styles.restShot} sizes="(min-width: 900px) 560px, 92vw" />
             <Image unoptimized src={analogWarm} alt="The analog face in a warm colour" className={`${styles.restShot} ${styles.restShotBack}`} sizes="(min-width: 900px) 420px, 70vw" />
           </motion.div>
+        </section>
+
+        <section className={styles.moments}>
+          <motion.div className={styles.momentsCopy} {...rise()}>
+            <h2 className={styles.heading}>When something changes</h2>
+            <p className={styles.body}>
+              When someone switches a light, a fan, or a lock from another room, the wall tablet shows it happening, full screen, then goes back to what it was showing. A change made on the tablet itself plays on its own tile.
+            </p>
+          </motion.div>
+          <motion.ul className={styles.momentGrid} {...(rise(0.1) as HTMLMotionProps<"ul">)}>
+            {MOMENTS.map(({ scene, name }) => (
+              <li key={scene} className={styles.momentCard}>
+                <span className={styles.momentArt}><MomentPreview scene={scene} /></span>
+                <span className={styles.momentName}>{name}</span>
+              </li>
+            ))}
+          </motion.ul>
         </section>
 
         <section className={styles.features} aria-label="Features">

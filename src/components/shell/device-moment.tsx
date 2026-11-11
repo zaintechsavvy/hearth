@@ -108,12 +108,12 @@ function Bloom({ shown }: { shown: boolean }) {
   );
 }
 
-function LightScene({ on, tint }: { on: boolean; tint: string | null }) {
+function LightScene({ on, tint, size = 360 }: { on: boolean; tint: string | null; size?: number }) {
   const shown = useFlip(on);
   return (
     <div className={styles.stage} style={{ "--glow": tint ?? "var(--lit-warm)" } as CSSProperties}>
       <Bloom shown={shown} />
-      <span className={styles.bulb}><HangingBulb on={shown} size={360} tint={tint} /></span>
+      <span className={styles.bulb}><HangingBulb on={shown} size={size} tint={tint} /></span>
     </div>
   );
 }
@@ -448,6 +448,35 @@ export function WindowScene({ open, small = false }: { open: boolean; small?: bo
           </motion.span>
         </div>
       </div>
+    </div>
+  );
+}
+
+export type MomentPreviewScene = "light" | "chandelier" | "fan" | "standingFan" | "lock" | "garage" | "door" | "window";
+
+/** How long a preview holds each state before it plays the change back. */
+const PREVIEW_MS = 4200;
+
+/** A moment playing over and over, switching on and off, as an example on the landing page. */
+export function MomentPreview({ scene }: { scene: MomentPreviewScene }) {
+  const reduce = useReducedMotion();
+  const [cycle, setCycle] = useState(0);
+  useEffect(() => {
+    if (reduce) return;
+    const timer = setInterval(() => setCycle(current => current + 1), PREVIEW_MS);
+    return () => clearInterval(timer);
+  }, [reduce]);
+  const on = cycle % 2 === 0;
+  return (
+    <div className={styles.preview} aria-hidden="true">
+      {scene === "light" ? <LightScene key={cycle} on={on} tint={null} size={170} />
+        : scene === "chandelier" ? <ChandelierScene key={cycle} on={on} tint={null} />
+        : scene === "fan" ? <FanScene key={cycle} on={on} />
+        : scene === "standingFan" ? <StandingFanScene key={cycle} on={on} />
+        : scene === "lock" ? <LockScene key={cycle} small locked={on} />
+        : scene === "garage" ? <GarageScene key={cycle} small open={on} />
+        : scene === "door" ? <DoorScene key={cycle} small open={on} />
+        : <WindowScene key={cycle} small open={on} />}
     </div>
   );
 }
