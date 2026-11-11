@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
-import { Activity, House, Settings, Sparkles, Workflow, type LucideIcon } from "lucide-react";
+import { Activity, Compass, House, Settings, Sparkles, Workflow, type LucideIcon } from "lucide-react";
 import { askHearth } from "@/components/assistant/assistant-dock";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
+import { startTour } from "./hearth-tour";
 import { UserMenu } from "@/components/arc/user-menu/user-menu";
 import { Logo } from "@/components/brand/logo";
 import GlassSurface from "@/components/reactbits/GlassSurface";
@@ -66,7 +67,10 @@ export function AppHeader({ user, role, ownerName }: AppHeaderProps) {
         <UserMenu
           user={user}
           showTheme={false}
-          items={role === "guest" ? [] : [{ label: "Settings", icon: <Settings size={16} strokeWidth={1.75} />, onSelect: () => router.push("/settings") }]}
+          items={role === "guest" ? [] : [
+            { label: "Settings", icon: <Settings size={16} strokeWidth={1.75} />, onSelect: () => router.push("/settings") },
+            { label: "Take the tour", icon: <Compass size={16} strokeWidth={1.75} />, onSelect: () => startTour() },
+          ]}
           onSignOut={async () => {
             await authClient.signOut();
             router.replace("/sign-in");

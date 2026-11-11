@@ -4,6 +4,7 @@ import { HouseholdAlerts } from "@/components/dashboard/household/household-aler
 import { Wallpaper } from "@/components/glass/wallpaper";
 import { AppHeader } from "@/components/shell/app-header";
 import { BedtimeCheck } from "@/components/shell/bedtime-check";
+import { HearthTour } from "@/components/shell/hearth-tour";
 import { BackgroundStudio } from "@/components/shell/background-studio";
 import { BackgroundSync } from "@/components/shell/background-sync";
 import { CommandMenu } from "@/components/shell/command-menu";
@@ -29,6 +30,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <WallMode />
       <HouseholdAlerts />
       {home.role !== "guest" && <BedtimeCheck />}
+      {home.role !== "guest" && <HearthTour />}
       <DoorbellCall />
       <TapHaptics />
     </>

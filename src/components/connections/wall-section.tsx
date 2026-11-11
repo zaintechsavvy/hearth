@@ -17,6 +17,7 @@ import styles from "./connections.module.css";
 import { PhotoFrameSettings } from "./photo-frame-settings";
 import { AnalogFace } from "@/components/shell/analog-face";
 import { LuxuryFace } from "@/components/shell/luxury-face";
+import { startTour } from "@/components/shell/hearth-tour";
 import { SettingsSection } from "./settings-section";
 
 const WAKE_CLASSES = new Set(["motion", "occupancy", "door", "opening", "garage"]);
@@ -45,7 +46,7 @@ export function WallSection() {
           <Tablet className={styles.rowIcon} size={20} strokeWidth={1.75} aria-hidden="true" />
           <div className={styles.rowText}>
             <span className={styles.rowTitle}>Use this screen as a wall tablet</span>
-            <span className={styles.rowMeta}>Hides the menus, keeps the screen awake, dims at night, and rests on a clock.</span>
+            <span className={styles.rowMeta}>Hides the menus, keeps the screen awake, dims at night, and rests on a clock. <button type="button" className={styles.ledeLink} onClick={startTour}>How it works</button></span>
           </div>
           <div className={styles.rowActions}>
             <Switch aria-label="Use this screen as a wall tablet" checked={settings.enabled} onCheckedChange={enabled => {

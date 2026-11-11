@@ -1,0 +1,127 @@
+.tour.tour {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.step {
+  display: grid;
+  gap: var(--space-4);
+  min-height: 300px;
+  align-content: start;
+}
+
+.hero {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 28px;
+  background: oklch(50% 0 0 / .1);
+  color: var(--foreground);
+}
+
+.body {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.points {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.point {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  line-height: 1.5;
+}
+
+.pointIcon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: oklch(50% 0 0 / .1);
+  color: var(--foreground);
+}
+
+.num {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.action {
+  justify-self: start;
+}
+
+.faces {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.face {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.digital,
+.analog,
+.luxury {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 20px;
+  background: oklch(8% .004 250);
+}
+
+.digital {
+  color: oklch(78% .1 240);
+  font-family: var(--font-display);
+  font-size: clamp(28px, 7vw, 44px);
+  font-weight: 400;
+  letter-spacing: var(--tracking-display);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .3);
+  transition: width var(--duration-standard) var(--ease-standard), background-color var(--duration-standard) var(--ease-standard);
+}
+
+.dot[aria-selected="true"] {
+  width: 22px;
+  background: var(--foreground);
+}
+
+.buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot { transition: none; }
+}
