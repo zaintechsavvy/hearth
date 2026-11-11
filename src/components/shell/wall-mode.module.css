@@ -159,8 +159,10 @@
   opacity: .35;
 }
 
+/* Its own layer, so iPad Safari keeps it still through momentum scrolling instead of redrawing it a frame behind. */
 .corner {
   position: fixed;
+  transform: translateZ(0);
   /* Level with the greeting: the page's top margin and the greeting's own padding, less half the gap between the
      44px buttons and the greeting's line. */
   top: calc(max(var(--space-3), env(safe-area-inset-top)) + var(--space-10) - 9px);

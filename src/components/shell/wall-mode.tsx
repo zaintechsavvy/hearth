@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CalendarDays, Check, DoorOpen, History, House, LayoutGrid, Leaf, LogOut, MonitorPause, Moon, MoreHorizontal, Package, Paintbrush, Pill, Recycle, Settings, Thermometer } from "lucide-react";
+import { CalendarDays, Check, DoorOpen, History, House, LayoutGrid, Leaf, LogOut, MonitorPause, Moon, Package, Paintbrush, Pill, Recycle, Settings, Thermometer } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
@@ -236,7 +236,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
         {now > 0 && path.startsWith("/dashboard") && <time className={styles.cornerTime} dateTime={new Date(now).toISOString()}>{new Date(now).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>}
       <Popover open={menu} onOpenChange={setMenu}>
         <PopoverTrigger asChild>
-          <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><MoreHorizontal size={18} strokeWidth={1.75} aria-hidden="true" /></button>
+          <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><LayoutGrid size={18} strokeWidth={1.75} aria-hidden="true" /></button>
         </PopoverTrigger>
         <PopoverContent align="end" className={`${glassSheetClass} ${styles.menuContent}`}>
           <nav aria-label="Pages" className={styles.pages} data-rooms={rooms.rooms.length > 1 || undefined}>
@@ -247,7 +247,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
             ))}
             {rooms.rooms.length > 1 && (
               <button type="button" className={styles.page} aria-pressed={choosingRoom} onClick={() => setChoosingRoom(!choosingRoom)}>
-                <LayoutGrid size={18} strokeWidth={1.75} aria-hidden="true" />Rooms
+                <DoorOpen size={18} strokeWidth={1.75} aria-hidden="true" />Rooms
               </button>
             )}
           </nav>

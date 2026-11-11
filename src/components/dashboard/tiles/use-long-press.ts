@@ -21,7 +21,8 @@ export function useLongPress(onLongPress: (() => void) | undefined) {
   };
   return {
     onPointerDownCapture: (event: PointerEvent) => {
-      if (event.button !== 0) return;
+      // Holding a level slider readies it to drag, so it never opens the tile's controls.
+      if (event.button !== 0 || (event.target as Element).closest("[role=slider]")) return;
       fired.current = false;
       start.current = { x: event.clientX, y: event.clientY };
       timer.current = setTimeout(() => {

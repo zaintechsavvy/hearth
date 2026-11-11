@@ -231,6 +231,11 @@ body {
   transition: scale 420ms var(--ease-spring);
 }
 
+/* No rubber-band bounce on a wall tablet, which slid the page under the fixed clock and menu at either end. */
+:root[data-wall] {
+  overscroll-behavior: none;
+}
+
 /* A wall tablet is touched, never read closely: nothing on it selects, except the fields you type into. */
 :root[data-wall] body {
   -webkit-user-select: none;

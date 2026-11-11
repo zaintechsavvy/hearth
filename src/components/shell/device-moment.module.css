@@ -517,7 +517,13 @@
   isolation: isolate;
 }
 
+/* The standing fan is tall, so it keeps a little room above its caption. */
+.standStage {
+  margin-bottom: clamp(12px, 3vh, 32px);
+}
+
 .preview .standStage {
+  margin-bottom: 0;
   width: 74%;
   height: 74%;
 }

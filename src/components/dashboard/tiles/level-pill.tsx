@@ -8,7 +8,7 @@ const DRAG_THRESHOLD = 4;
 /** A press held this long without moving is a hold, which the tile handles, not a tap that toggles. Matches `useLongPress`. */
 const HOLD_MS = 450;
 /** A finger must rest this long before it drags the level, so a swipe that starts on the pill scrolls the page instead. */
-const ARM_MS = 280;
+const ARM_MS = 500;
 const KEY_STEPS: Record<string, number> = { ArrowUp: 5, ArrowRight: 5, ArrowDown: -5, ArrowLeft: -5, PageUp: 25, PageDown: -25 };
 
 interface LevelPillProps {
