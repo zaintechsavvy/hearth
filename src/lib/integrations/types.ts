@@ -36,6 +36,8 @@ export interface Provider {
   searchMedia?(nativeId: string, query: string): Promise<MediaItem[]>;
   /** What is inside an album, artist, or playlist that search found. */
   browseMedia?(nativeId: string, media: { id: string; type: string }): Promise<{ title: string; items: MediaItem[] }>;
+  /** The rooms a robot vacuum has mapped and can be sent to clean, by the integration's own area ids. */
+  vacuumAreas?(nativeId: string): Promise<{ id: string; name: string }[]>;
   /** The items on a shopping or to-do list. */
   todoItems?(nativeId: string): Promise<{ uid: string; summary: string; done: boolean }[]>;
   /** The cover art of what a media player is playing. */

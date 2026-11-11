@@ -122,6 +122,9 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
         mode: HVAC_TO_MODE[entity.state] ?? "off",
         modes: modes.length ? modes : ["off", "heat"],
         action: typeof attributes.hvac_action === "string" ? ACTIONS[attributes.hvac_action] ?? "idle" : null,
+        humidity: num(attributes.current_humidity),
+        preset: str(attributes.preset_mode), presets: strings(attributes.preset_modes),
+        fanMode: str(attributes.fan_mode), fanModes: strings(attributes.fan_modes),
       };
     }
     case "lock":
@@ -163,7 +166,8 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
       const state = VACUUM_STATES[entity.state] ?? "idle";
       return {
         ...base, kind: "vacuum", state, battery: num(attributes.battery_level),
-        can: { start: has(VACUUM.start), pause: has(VACUUM.pause), stop: has(VACUUM.stop), dock: has(VACUUM.dock), locate: has(VACUUM.locate) },
+        fanSpeed: str(attributes.fan_speed), fanSpeeds: has(VACUUM.fanSpeed) ? strings(attributes.fan_speed_list) : [],
+        can: { start: has(VACUUM.start), pause: has(VACUUM.pause), stop: has(VACUUM.stop), dock: has(VACUUM.dock), locate: has(VACUUM.locate), spot: has(VACUUM.spot), areas: has(VACUUM.areas) },
       };
     }
     case "alarm_control_panel": {
@@ -234,7 +238,8 @@ function mapMediaPlayer(base: Pick<MediaPlayerDevice, "id" | "integrationId" | "
   };
 }
 
-const VACUUM = { pause: 4, stop: 8, dock: 16, locate: 512, start: 8192 } as const;
+const VACUUM = { pause: 4, stop: 8, dock: 16, fanSpeed: 32, locate: 512, spot: 1024, start: 8192, areas: 16384 } as const;
+const strings = (value: unknown) => Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 const VACUUM_STATES: Record<string, VacuumState> = { cleaning: "cleaning", docked: "docked", returning: "returning", paused: "paused", idle: "idle", error: "error" };
 const ALARM_MODES: Record<ArmMode, number> = { home: 1, away: 2, night: 4, vacation: 32 };
 const ALARM_STATES: Record<string, AlarmState> = {
@@ -678,6 +683,20 @@ export class HomeAssistantProvider implements Provider {
     return { title: str(answer.result.title) ?? "", items: (answer.result.children ?? []).flatMap(mediaItem) };
   }
 
+  /**
+   * The rooms a vacuum can clean: the Home Assistant areas mapped to its own segments in the vacuum's entity settings,
+   * which Home Assistant keeps in the entity registry. A vacuum not mapped yet has none.
+   */
+  async vacuumAreas(entityId: string) {
+    if (!entityId.startsWith("vacuum.")) throw new IntegrationError("That device is not a vacuum.");
+    const [entry, areas] = await Promise.all([
+      this.live.request<{ options?: { vacuum?: { area_mapping?: Record<string, string[]> } } }>({ type: "config/entity_registry/get", entity_id: entityId }),
+      this.live.request<{ area_id: string; name: string }[]>({ type: "config/area_registry/list" }),
+    ]).catch(() => { throw new IntegrationError("Home Assistant did not say which rooms the vacuum knows."); });
+    const mapped = entry.result.options?.vacuum?.area_mapping ?? {};
+    return areas.result.filter(area => mapped[area.area_id]?.length).map(area => ({ id: area.area_id, name: area.name }));
+  }
+
   /** A shopping or to-do list's items. The action only answers with data, so it needs `return_response`. */
   async todoItems(entityId: string): Promise<TodoItem[]> {
     if (!entityId.startsWith("todo.")) throw new IntegrationError("That device is not a list.");
@@ -790,7 +809,15 @@ export class HomeAssistantProvider implements Provider {
         return void await this.call("tts", "speak", { entity_id: speech, media_player_entity_id: entityId, message: command.message });
       }
       case "vacuum":
-        return void await this.call("vacuum", { start: "start", pause: "pause", stop: "stop", dock: "return_to_base", locate: "locate" }[command.action], target);
+        return void await this.call("vacuum", { start: "start", pause: "pause", stop: "stop", dock: "return_to_base", locate: "locate", spot: "clean_spot" }[command.action], target);
+      case "vacuumFanSpeed":
+        return void await this.call("vacuum", "set_fan_speed", { ...target, fan_speed: command.speed });
+      case "vacuumAreas":
+        return void await this.call("vacuum", "clean_area", { ...target, cleaning_area_id: command.areas });
+      case "thermostatPreset":
+        return void await this.call("climate", "set_preset_mode", { ...target, preset_mode: command.preset });
+      case "thermostatFan":
+        return void await this.call("climate", "set_fan_mode", { ...target, fan_mode: command.mode });
       case "alarm": {
         const service = command.action === "disarm" ? "alarm_disarm" : `alarm_arm_${command.mode ?? "home"}`;
         return void await this.call("alarm_control_panel", service, { ...target, ...(command.code ? { code: command.code } : {}) });

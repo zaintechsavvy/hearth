@@ -409,3 +409,72 @@
   grid-template-rows: auto minmax(0, 1fr);
   align-content: stretch;
 }
+
+.headEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The vacuum's sheet: rooms to clean, a spot clean, and suction. */
+.sheet {
+  display: grid;
+  gap: var(--space-4);
+  width: min(320px, calc(100vw - 32px));
+  padding: var(--space-4);
+}
+
+.sheetGroup {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sheetLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.sheetNote {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.roomList {
+  display: grid;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.roomChoice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border-radius: 10px;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  text-align: start;
+}
+
+.roomChoice:hover {
+  background: oklch(50% 0 0 / .08);
+}
+
+.roomTick {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 6px;
+}
+
+.roomChoice[aria-checked="true"] .roomTick {
+  border-color: var(--foreground);
+  background: var(--foreground);
+  color: var(--background);
+}

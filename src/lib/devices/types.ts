@@ -83,6 +83,14 @@ export interface ThermostatDevice extends DeviceBase {
   mode: ThermostatMode;
   modes: ThermostatMode[];
   action: ThermostatAction | null;
+  /** The room's humidity as a percentage, when the thermostat measures it. */
+  humidity: number | null;
+  /** Named settings such as eco, away, or sleep, as the thermostat calls them; empty when it has none. */
+  preset: string | null;
+  presets: string[];
+  /** How its fan runs, such as auto, low, or high; empty when its fan cannot be set. */
+  fanMode: string | null;
+  fanModes: string[];
 }
 
 export type LockState = "locked" | "unlocked" | "locking" | "unlocking" | "jammed" | "open" | "unknown";
@@ -199,7 +207,11 @@ export interface VacuumDevice extends DeviceBase {
   kind: "vacuum";
   state: VacuumState;
   battery: number | null;
-  can: { start: boolean; pause: boolean; stop: boolean; dock: boolean; locate: boolean };
+  /** Suction power, as the vacuum names its levels; empty when it has only one. */
+  fanSpeed: string | null;
+  fanSpeeds: string[];
+  /** `spot` cleans around where it stands; `areas` cleans chosen rooms, which `Provider.vacuumAreas` lists. */
+  can: { start: boolean; pause: boolean; stop: boolean; dock: boolean; locate: boolean; spot: boolean; areas: boolean };
 }
 
 export type AlarmState = "disarmed" | "armed_home" | "armed_away" | "armed_night" | "armed_vacation" | "arming" | "pending" | "triggered" | "disarming";
@@ -257,7 +269,12 @@ export type DeviceCommand =
   | { type: "unjoin" }
   | { type: "playMedia"; id: string; mediaType: string }
   | { type: "announce"; message: string }
-  | { type: "vacuum"; action: "start" | "pause" | "stop" | "dock" | "locate" }
+  | { type: "vacuum"; action: "start" | "pause" | "stop" | "dock" | "locate" | "spot" }
+  | { type: "vacuumFanSpeed"; speed: string }
+  /** Cleans these rooms only; `areas` are the integration's own area ids. */
+  | { type: "vacuumAreas"; areas: string[] }
+  | { type: "thermostatPreset"; preset: string }
+  | { type: "thermostatFan"; mode: string }
   /** `code` is the alarm's own code, when it has one. */
   | { type: "alarm"; action: "arm" | "disarm"; mode?: ArmMode; code?: string }
   /** `item` is the item's uid, or the text of a new one. */
@@ -354,7 +371,15 @@ export function applyCommand<T extends Device>(device: T, command: DeviceCommand
       return device;
     case "vacuum":
       if (device.kind !== "vacuum") return device;
-      return { ...device, state: ({ start: "cleaning", pause: "paused", stop: "idle", dock: "returning", locate: device.state } as const)[command.action] };
+      return { ...device, state: ({ start: "cleaning", pause: "paused", stop: "idle", dock: "returning", locate: device.state, spot: "cleaning" } as const)[command.action] };
+    case "vacuumFanSpeed":
+      return device.kind === "vacuum" ? { ...device, fanSpeed: command.speed } : device;
+    case "vacuumAreas":
+      return device.kind === "vacuum" ? { ...device, state: "cleaning" } : device;
+    case "thermostatPreset":
+      return device.kind === "thermostat" ? { ...device, preset: command.preset } : device;
+    case "thermostatFan":
+      return device.kind === "thermostat" ? { ...device, fanMode: command.mode } : device;
     case "alarm":
       if (device.kind !== "alarm") return device;
       return { ...device, state: command.action === "disarm" ? "disarmed" : command.mode === "away" || command.mode === "vacation" ? "arming" : `armed_${command.mode ?? "home"}` };

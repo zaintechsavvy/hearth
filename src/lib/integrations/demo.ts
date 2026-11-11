@@ -115,6 +115,9 @@ function demoUsage(nativeId: string, current: number, from: Date, to: Date): His
   return points;
 }
 
+/** Device maps already filled in from the seed. */
+const filled = new WeakSet<Map<string, Device>>();
+
 export class DemoProvider implements Provider {
   constructor(private readonly integrationId: string) {}
 
@@ -137,8 +140,20 @@ export class DemoProvider implements Provider {
       home.updatedAt = row.updatedAt.getTime();
       home.version = row.version;
     }
+    this.fillIn(home);
     simulate(home, Date.now());
     return home;
+  }
+
+  /** A home saved, or kept in memory, before a device gained new details takes them from the seed, so it never lacks one. */
+  private fillIn(home: DemoHome) {
+    if (filled.has(home.devices)) return;
+    const seeded = new Map(seedDemoDevices(this.integrationId).map(device => [device.id, device]));
+    for (const [id, device] of home.devices) {
+      const seed = seeded.get(id);
+      if (seed) home.devices.set(id, { ...seed, ...device, ...("can" in seed && "can" in device ? { can: { ...seed.can, ...device.can } } : {}) } as Device);
+    }
+    filled.add(home.devices);
   }
 
   private async save(home: DemoHome) {
@@ -206,6 +221,10 @@ export class DemoProvider implements Provider {
     const at = trackIndex(device);
     const pick = (index: number) => { const track = TRACKS[(index + TRACKS.length) % TRACKS.length]; return { title: track.title, artist: track.artist, media: track.media }; };
     return { recent: [pick(at - 1), pick(at - 2), pick(at - 3)], next: pick(at + 1) };
+  }
+
+  async vacuumAreas() {
+    return ["Living room", "Kitchen", "Bedroom", "Office", "Entry"].map(name => ({ id: name.toLowerCase().replaceAll(" ", "_"), name }));
   }
 
   async searchMedia(_nativeId: string, query: string) {

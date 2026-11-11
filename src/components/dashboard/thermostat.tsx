@@ -1,12 +1,14 @@
 "use client";
 
 import { animate, motion, useMotionValue, useReducedMotion } from "motion/react";
-import { ChevronDown, ChevronUp, ChartLine, Droplets, Fan, Flame, Power, Snowflake, SunSnow, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, ChartLine, Droplets, Fan, Flame, Power, SlidersHorizontal, Snowflake, SunSnow, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
 import { SlotText } from "@/components/arc/slot-text/slot-text";
 import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
-import { glassClass } from "@/components/glass/glass";
+import { glassClass, glassSheetClass } from "@/components/glass/glass";
+import { OptionChips } from "./option-chips";
 import { clamp, type DeviceCommand, type ThermostatDevice, type ThermostatMode } from "@/lib/devices/types";
 import type { TileSize } from "@/lib/dashboard/layout";
 import styles from "./thermostat.module.css";
@@ -105,13 +107,27 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
     timer.current = setTimeout(() => commit(next), COMMIT_DELAY_MS);
   }
 
-  const indoor = device.current === null ? null : `Indoor ${formatTemperature(device.current)}°`;
+  const indoor = device.current === null ? null : `Indoor ${formatTemperature(device.current)}°${device.humidity === null ? "" : ` · ${Math.round(device.humidity)}%`}`;
   const status = !device.available ? "Unavailable"
     : device.mode === "off" ? ["Off", indoor].filter(Boolean).join(" · ")
     : [heating ? "Heating" : cooling ? "Cooling" : device.mode === "dry" ? "Drying" : device.mode === "fan" ? "Fan only" : "Holding", indoor].filter(Boolean).join(" · ");
   const press = reduce ? undefined : { scale: 0.92 };
   const setMode = (mode: ThermostatMode) => void onCommand({ type: "thermostatMode", mode }).catch(cause => setError(cause instanceof Error ? cause.message : "Could not change the mode."));
   const modes = ORDER.filter(mode => device.modes.includes(mode));
+  const fail = (cause: unknown) => setError(cause instanceof Error ? cause.message : "Could not change that.");
+  const options = !preview && (device.presets.length > 0 || device.fanModes.length > 0) && (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" className={styles.history} aria-label={`${device.name} presets and fan`} title="Presets and fan">
+          <SlidersHorizontal size={15} strokeWidth={1.75} aria-hidden="true" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className={`${glassSheetClass} ${styles.options}`}>
+        {device.presets.length > 0 && <OptionChips label="Preset" value={device.preset} options={device.presets} disabled={!device.available} onChoose={preset => void onCommand({ type: "thermostatPreset", preset }).catch(fail)} />}
+        {device.fanModes.length > 0 && <OptionChips label="Fan" value={device.fanMode} options={device.fanModes} disabled={!device.available} onChoose={mode => void onCommand({ type: "thermostatFan", mode }).catch(fail)} />}
+      </PopoverContent>
+    </Popover>
+  );
   const canPower = device.modes.includes("off") && modes.length > 0;
 
   const up = (
@@ -170,6 +186,7 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
               <ChartLine size={15} strokeWidth={1.75} aria-hidden="true" />
             </button>
           )}
+          {options}
           <span className={styles.unit}>°{device.unit}</span>
           {power}
         </span>

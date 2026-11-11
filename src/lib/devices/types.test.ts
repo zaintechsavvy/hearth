@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyCommand, livePosition, parseDeviceId, type ThermostatDevice } from "./types";
 
-const thermostat: ThermostatDevice = { id: "a:t", integrationId: "a", name: "T", room: null, available: true, kind: "thermostat", unit: "C", current: 20, target: 21, min: 10, max: 30, step: 0.5, mode: "off", modes: ["off", "cool"], action: "off" };
+const thermostat: ThermostatDevice = { id: "a:t", integrationId: "a", name: "T", room: null, available: true, kind: "thermostat", unit: "C", current: 20, target: 21, min: 10, max: 30, step: 0.5, mode: "off", modes: ["off", "cool"], action: "off", humidity: null, preset: null, presets: [], fanMode: null, fanModes: [] };
 
 describe("devices", () => {
   it("clamps setpoints to the device range", () => {

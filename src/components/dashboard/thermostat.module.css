@@ -302,3 +302,11 @@
   background: oklch(50% 0 0 / .1);
   color: var(--foreground);
 }
+
+/* Presets and fan speed, in a small sheet from the header. */
+.options {
+  display: grid;
+  gap: var(--space-4);
+  width: min(320px, calc(100vw - 32px));
+  padding: var(--space-4);
+}

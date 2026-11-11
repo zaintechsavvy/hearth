@@ -24,7 +24,11 @@ export const deviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("unjoin") }),
   z.object({ type: z.literal("playMedia"), id: z.string().min(1).max(500), mediaType: z.string().min(1).max(60) }),
   z.object({ type: z.literal("announce"), message: z.string().trim().min(1).max(300) }),
-  z.object({ type: z.literal("vacuum"), action: z.enum(["start", "pause", "stop", "dock", "locate"]) }),
+  z.object({ type: z.literal("vacuum"), action: z.enum(["start", "pause", "stop", "dock", "locate", "spot"]) }),
+  z.object({ type: z.literal("vacuumFanSpeed"), speed: z.string().min(1).max(80) }),
+  z.object({ type: z.literal("vacuumAreas"), areas: z.array(z.string().min(1).max(200)).min(1).max(40) }),
+  z.object({ type: z.literal("thermostatPreset"), preset: z.string().min(1).max(80) }),
+  z.object({ type: z.literal("thermostatFan"), mode: z.string().min(1).max(80) }),
   z.object({ type: z.literal("alarm"), action: z.enum(["arm", "disarm"]), mode: z.enum(["home", "away", "night", "vacation"]).optional(), code: z.string().max(40).optional() }),
   z.object({ type: z.literal("todo"), action: z.enum(["add", "check", "uncheck", "remove"]), item: z.string().trim().min(1).max(300) }),
 ]);

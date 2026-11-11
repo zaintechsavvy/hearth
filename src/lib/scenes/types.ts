@@ -90,7 +90,15 @@ export function describeAction(device: Device, command: DeviceCommand) {
     case "announce":
       return `Say "${command.message}"`;
     case "vacuum":
-      return { start: "Start cleaning", pause: "Pause", stop: "Stop", dock: "Send home", locate: "Find it" }[command.action];
+      return { start: "Start cleaning", pause: "Pause", stop: "Stop", dock: "Send home", locate: "Find it", spot: "Clean this spot" }[command.action];
+    case "vacuumFanSpeed":
+      return `Suction ${command.speed}`;
+    case "vacuumAreas":
+      return command.areas.length === 1 ? "Clean one room" : `Clean ${command.areas.length} rooms`;
+    case "thermostatPreset":
+      return `Preset ${command.preset}`;
+    case "thermostatFan":
+      return `Fan ${command.mode}`;
     case "alarm":
       return command.action === "disarm" ? "Disarm" : `Arm ${command.mode ?? "home"}`;
     case "todo":

@@ -283,5 +283,6 @@ function mapThermostat(base: Base, node: MatterNode, endpoint: number): Device {
     mode,
     modes: thermostatModes(node, endpoint),
     action,
+    humidity: null, preset: null, presets: [], fanMode: null, fanModes: [],
   };
 }
