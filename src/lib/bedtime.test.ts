@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Device } from "@/lib/devices/types";
-import { bedtimePlan, bedtimeSteps, DEFAULT_BEDTIME } from "./bedtime";
+import { bedtimeChosen, bedtimePlan, bedtimeSteps, DEFAULT_BEDTIME, SUGGESTED_BEDTIME } from "./bedtime";
 import { isDark, openThings } from "./left-open";
 import { cameraFor } from "./ring-camera";
 
@@ -17,14 +17,20 @@ const devices: Device[] = [
 ];
 
 describe("bedtimeSteps", () => {
+  it("does nothing for a new home until something is chosen", () => {
+    expect(bedtimeSteps(devices)).toEqual([]);
+    expect(bedtimeChosen(DEFAULT_BEDTIME)).toBe(false);
+    expect(bedtimeChosen(SUGGESTED_BEDTIME)).toBe(true);
+  });
+
   it("locks, closes the garage, turns lights off, arms for the night, and reports open windows", () => {
-    expect(bedtimeSteps(devices).map(step => [step.name, step.done || step.skip])).toEqual([
+    expect(bedtimeSteps(devices, SUGGESTED_BEDTIME).map(step => [step.name, step.done || step.skip])).toEqual([
       ["Front door", "locked"], ["Garage door", "closed"], ["Porch", "turned off"], ["Alarm", "armed for the night"], ["Kitchen window", "is open"],
     ]);
   });
 
   it("only reports what is set to be checked, and leaves kept devices out", () => {
-    const steps = bedtimeSteps(devices, { ...DEFAULT_BEDTIME, locks: "check", lights: "skip", alarm: "skip", keep: ["ha:cover.garage"], turnOn: ["ha:light.porch"] });
+    const steps = bedtimeSteps(devices, { ...SUGGESTED_BEDTIME, locks: "check", lights: "skip", alarm: "skip", keep: ["ha:cover.garage"], turnOn: ["ha:light.porch"] });
     expect(steps.map(step => [step.name, step.command ? step.done : step.skip])).toEqual([["Front door", "is unlocked"], ["Kitchen window", "is open"]]);
   });
 
@@ -34,12 +40,12 @@ describe("bedtimeSteps", () => {
   });
 
   it("sums up the plan in a sentence", () => {
-    expect(bedtimePlan(bedtimeSteps(devices))).toBe("Lock Front door, close Garage door, turn off Porch, and arm the alarm.");
+    expect(bedtimePlan(bedtimeSteps(devices, SUGGESTED_BEDTIME))).toBe("Lock Front door, close Garage door, turn off Porch, and arm the alarm.");
   });
 
   it("skips an alarm that needs its code to arm", () => {
     const alarm: Device = { ...base, id: "ha:alarm.code", name: "Alarm", kind: "alarm", state: "disarmed", modes: ["away"], codeFormat: "number", codeToArm: true };
-    expect(bedtimeSteps([alarm])[0]).toMatchObject({ command: null, skip: expect.stringContaining("code") });
+    expect(bedtimeSteps([alarm], SUGGESTED_BEDTIME)[0]).toMatchObject({ command: null, skip: expect.stringContaining("code") });
   });
 });
 

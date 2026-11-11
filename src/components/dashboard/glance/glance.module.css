@@ -383,3 +383,17 @@ button.chip:hover:not(:disabled) {
   line-clamp: 2;
   -webkit-box-orient: vertical;
 }
+
+/* A tile that opens a page when tapped anywhere on it. */
+.opens {
+  cursor: pointer;
+  transition: transform var(--duration-spring) var(--ease-spring);
+}
+
+.opens:active {
+  transform: scale(.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opens { transition: none; }
+}

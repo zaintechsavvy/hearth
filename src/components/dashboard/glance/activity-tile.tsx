@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import useSWR from "swr";
 import { activityIcon, activityLit } from "@/components/activity/activity-icon";
@@ -25,14 +26,16 @@ function when(at: string) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-/** The latest changes at home, as Activity lists them, newest first; it reads again whenever the home changes. */
-export function ActivityTile({ tile, devices }: { tile: TileConfig; devices: Device[] }) {
+/** The latest changes at home, as Activity lists them, newest first; it reads again whenever the home changes. A tap anywhere opens Activity. */
+export function ActivityTile({ tile, devices, interactive = true }: { tile: TileConfig; devices: Device[]; interactive?: boolean }) {
+  const router = useRouter();
   const { data, error, mutate } = useSWR("/api/activity", fetchPage, { refreshInterval: 60_000 });
   useEffect(() => { void mutate(); }, [devices, mutate]);
   const known = new Map(devices.map(device => [device.id, device]));
   const entries = data?.entries ?? [];
   return (
-    <section className={`${glassClass("panel")} ${styles.tile}`} data-size={tile.size} aria-label="Activity">
+    <section className={`${glassClass("panel")} ${styles.tile} ${interactive ? styles.opens : ""}`} data-size={tile.size} aria-label="Activity"
+      onClick={interactive ? event => { if (!(event.target as Element).closest("a")) router.push("/activity"); } : undefined}>
       <header className={styles.header}>
         <span className={styles.title}>Activity</span>
         <Link href="/activity" className={styles.meta}>See all</Link>

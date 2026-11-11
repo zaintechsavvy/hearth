@@ -1,0 +1,1 @@
+ALTER TABLE "preference" ALTER COLUMN "bedtime" SET DEFAULT '{"locks":"skip","doors":"skip","lights":"skip","alarm":"skip","openings":"skip","turnOn":[],"turnOff":[],"keep":[]}'::jsonb;

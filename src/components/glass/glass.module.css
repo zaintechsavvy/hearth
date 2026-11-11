@@ -77,3 +77,13 @@
   border-color: oklch(100% 0 0 / .1);
   box-shadow: inset 0 1px 0 oklch(100% 0 0 / .12), var(--shadow-floating);
 }
+
+/*
+ * Controls on dark glass, such as secondary buttons, fields, selects, and segmented controls, take a tint of the
+ * glass instead of the solid near-black surface, so they read as part of the pane rather than a slab laid on it.
+ */
+:root[data-theme="dark"] :is(.glass, .sheet) {
+  --surface: oklch(100% 0 0 / .08);
+  --surface-muted: oklch(100% 0 0 / .13);
+  --border: oklch(100% 0 0 / .12);
+}

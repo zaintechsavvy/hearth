@@ -4,12 +4,13 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { useSWRConfig } from "swr";
 import { Alert } from "@/components/arc/alert/alert";
+import { Button } from "@/components/arc/button/button";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { Select } from "@/components/arc/select/select";
 import { useHome } from "@/components/dashboard/use-home";
 import { Glass } from "@/components/glass/glass";
 import { saveBedtime } from "@/lib/actions";
-import { DEFAULT_BEDTIME, switchedForBedtime, type BedtimeChoice, type BedtimeSettings } from "@/lib/bedtime";
+import { bedtimeChosen, DEFAULT_BEDTIME, SUGGESTED_BEDTIME, switchedForBedtime, type BedtimeChoice, type BedtimeSettings } from "@/lib/bedtime";
 import { statusText } from "@/lib/devices/status";
 import type { Device } from "@/lib/devices/types";
 import styles from "./connections.module.css";
@@ -49,6 +50,15 @@ export function BedtimeSection({ owner }: { owner: boolean }) {
     <SettingsSection id="bedtime" title="Good night" description={<>What one hold of Good night does, for everyone in the home.</>}>
       <Glass shape="panel" className={styles.group}>
         <fieldset disabled={!owner} className={styles.fieldset}>
+        {!bedtimeChosen(settings) && (
+          <div className={styles.row}>
+            <div className={styles.rowText}>
+              <span className={styles.rowTitle}>Nothing chosen yet</span>
+              <span className={styles.rowMeta}>Pick below, or start from the usual: lock up, close the garage, turn the lights off, arm the alarm, and check the windows.</span>
+            </div>
+            <div className={styles.rowActions}><Button variant="secondary" onClick={() => void set(SUGGESTED_BEDTIME)}>Use the usual</Button></div>
+          </div>
+        )}
         {CHOICES.map(choice => (
           <div key={choice.key} className={`${styles.row} ${styles.choiceRow}`}>
             <div className={styles.rowText}>

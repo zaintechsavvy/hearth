@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Moon, TriangleAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSWRConfig } from "swr";
 import { Button } from "@/components/arc/button/button";
@@ -9,7 +10,7 @@ import { HoldToConfirm } from "@/components/arc/hold-to-confirm/hold-to-confirm"
 import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
 import { useHome } from "@/components/dashboard/use-home";
 import { glassSheetClass } from "@/components/glass/glass";
-import { bedtimePlan, bedtimeSteps, type BedtimeResult } from "@/lib/bedtime";
+import { bedtimeChosen, bedtimePlan, bedtimeSteps, type BedtimeResult } from "@/lib/bedtime";
 import { haptic } from "@/lib/haptics";
 import { markSent } from "@/lib/sent-here";
 import styles from "./bedtime-check.module.css";
@@ -27,7 +28,9 @@ type State = { kind: "idle" } | { kind: "confirm" } | { kind: "running" } | { ki
 export function BedtimeCheck() {
   const { mutate } = useSWRConfig();
   const { home } = useHome();
+  const router = useRouter();
   const [state, setState] = useState<State>({ kind: "idle" });
+  const unset = home ? !bedtimeChosen(home.bedtime) : false;
   const steps = home ? bedtimeSteps(home.devices, home.bedtime) : [];
   const plan = bedtimePlan(steps);
   const looks = steps.filter(step => !step.command);
@@ -55,12 +58,14 @@ export function BedtimeCheck() {
   }, []);
 
   const result = state.kind === "done" ? state.result : null;
-  const title = state.kind === "confirm" ? (plan ? "Good night?" : "Already set for the night")
+  const title = state.kind === "confirm" && unset ? "Choose what good night does"
+    : state.kind === "confirm" ? (plan ? "Good night?" : "Already set for the night")
     : state.kind === "running" ? "Getting the home ready for the night"
       : state.kind === "error" ? "The good night check did not run"
         : result && result.failed.length ? "Almost set for the night"
           : result && result.done.length === 0 ? "Already set for the night" : "All set for the night";
-  const description = state.kind === "confirm" ? plan ?? (looks.length ? "Nothing to lock, close, or turn off. A few things need a look." : "Everything is locked, closed, and off.")
+  const description = state.kind === "confirm" && unset ? "Pick the doors to lock, the lights to turn off, and anything else, and one hold of Good night does them all."
+    : state.kind === "confirm" ? plan ?? (looks.length ? "Nothing to lock, close, or turn off. A few things need a look." : "Everything is locked, closed, and off.")
     : state.kind === "running" ? undefined : "Change what good night does in Settings, under Good night.";
   const failed = state.kind === "confirm" ? looks.map(step => ({ name: step.name, why: step.skip ?? "" })) : result?.failed ?? [];
   return (
@@ -90,7 +95,13 @@ export function BedtimeCheck() {
             </ul>
           )}
           {result && result.done.length === 0 && result.failed.length === 0 && <p className={styles.quiet}>Everything was already locked, closed, and off.</p>}
-          {state.kind === "confirm" && (
+          {state.kind === "confirm" && unset && (
+            <div className={styles.actions}>
+              <DialogClose asChild><Button variant="ghost">Not now</Button></DialogClose>
+              <Button onClick={() => { setState({ kind: "idle" }); router.push("/settings#bedtime"); }} autoFocus><Moon size={16} strokeWidth={1.75} aria-hidden="true" />Set up good night</Button>
+            </div>
+          )}
+          {state.kind === "confirm" && !unset && (
             <div className={styles.actions}>
               <DialogClose asChild><Button variant="ghost">{plan ? "Cancel" : "Done"}</Button></DialogClose>
               {plan && <HoldToConfirm label="Hold for good night" confirmedLabel="Good night" tone="neutral" duration={1000} icon={<Moon size={18} strokeWidth={1.75} />} onConfirm={() => void run()} autoFocus />}

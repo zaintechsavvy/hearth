@@ -220,6 +220,51 @@
   justify-self: center;
 }
 
+/* The three steps from a new account to a screen on the wall, in a quiet row under the choices. */
+.firstSteps {
+  width: min(100%, 760px);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  text-align: left;
+}
+
+.firstStep {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  align-items: baseline;
+  align-content: start;
+}
+
+.firstStepNumber {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.firstStepTitle {
+  font-weight: 500;
+}
+
+.firstStepBody {
+  grid-column: 2;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .firstSteps { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Phones: the greeting, toolbar, and rooms stack tightly so tiles start higher on the screen. */
 @media (max-width: 640px) {
   .dashboard { gap: var(--space-4); }

@@ -19,7 +19,15 @@ export interface BedtimeSettings {
   keep: string[];
 }
 
-export const DEFAULT_BEDTIME: BedtimeSettings = { locks: "do", doors: "do", lights: "do", alarm: "do", openings: "check", turnOn: [], turnOff: [], keep: [] };
+/** A new home's good night does nothing until someone picks what it should lock, close, or turn off. */
+export const DEFAULT_BEDTIME: BedtimeSettings = { locks: "skip", doors: "skip", lights: "skip", alarm: "skip", openings: "skip", turnOn: [], turnOff: [], keep: [] };
+
+/** What good night did before it started empty, offered as a one-tap starting point in Settings. */
+export const SUGGESTED_BEDTIME: BedtimeSettings = { locks: "do", doors: "do", lights: "do", alarm: "do", openings: "check", turnOn: [], turnOff: [], keep: [] };
+
+/** Whether good night has been given anything to do yet. */
+export const bedtimeChosen = (settings: BedtimeSettings) =>
+  settings.locks !== "skip" || settings.doors !== "skip" || settings.lights !== "skip" || settings.alarm !== "skip" || settings.openings !== "skip" || settings.turnOn.length > 0 || settings.turnOff.length > 0;
 
 export interface BedtimeStep {
   deviceId: string;

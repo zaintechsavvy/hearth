@@ -450,7 +450,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
       case "people":
         return <PeopleTile tile={tile} devices={home.devices} now={minuteNow} />;
       case "activity":
-        return <ActivityTile tile={tile} devices={home.devices} />;
+        return <ActivityTile tile={tile} devices={home.devices} interactive={interactive} />;
       case "announce":
         return <AnnounceTile tile={tile} devices={home.devices} interactive={interactive} onOptions={patch => change(updateTile(tiles, tile.id, { options: { ...tile.options, ...patch } }))} onCommand={send} />;
       case "appliances":
@@ -588,7 +588,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   if (tiles.length === 0 && !connected) {
     return (
       <>
-        <Welcome onCreated={() => refresh()} onWidgets={() => setDialog({ mode: "add" })} />
+        <Welcome name={userName} onCreated={() => refresh()} onWidgets={() => setDialog({ mode: "add" })} />
         {dialogs}
       </>
     );
@@ -747,34 +747,49 @@ function editableTile(tile: TileConfig, linked: Linked | null, name: string, sou
   return { ...base, ...tuning, linkedName: device.name, identity, adjustable: hasLevel(device), icon: tile.icon ?? style.icon, color: tile.color ?? style.color };
 }
 
-function Welcome({ onCreated, onWidgets }: { onCreated: () => void; onWidgets: () => void }) {
+const FIRST_STEPS = [
+  { title: "Connect", body: "Pair Home Assistant or a Matter server. Your devices come straight in." },
+  { title: "Arrange", body: "Add the tiles you reach for and drag them where you like." },
+  { title: "Hang it up", body: "Turn on wall tablet mode, pick a resting clock, and let it wake when someone walks by." },
+];
+
+function Welcome({ name, onCreated, onWidgets }: { name: string; onCreated: () => void; onWidgets: () => void }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   return (
     <section className={styles.welcome} aria-labelledby="welcome-title">
       <div className={styles.welcomeHeading} data-on-wall>
-        <h1 id="welcome-title" className={styles.title}>Welcome to Hearth</h1>
-        <p className={styles.summary}>Start with a sample home, or bring in your own devices.</p>
+        <h1 id="welcome-title" className={styles.title}>Welcome home{name ? `, ${name.split(" ")[0]}` : ""}</h1>
+        <p className={styles.summary}>Bring in your own devices, or look around a sample home first.</p>
       </div>
       <div className={styles.choices}>
+        <Glass className={styles.choice}>
+          <House className={styles.choiceIcon} size={24} strokeWidth={1.75} aria-hidden="true" />
+          <h2 className={styles.choiceTitle}>Connect your home</h2>
+          <p className={styles.choiceBody}>Home Assistant, a Matter server, or RTSP cameras through go2rtc. You build the dashboard after.</p>
+          <Button className={styles.choiceButton} onClick={() => router.push("/settings#connections")}>Add a connection</Button>
+        </Glass>
         <Glass className={styles.choice}>
           <Sparkles className={styles.choiceIcon} size={24} strokeWidth={1.75} aria-hidden="true" />
           <h2 className={styles.choiceTitle}>Explore the demo home</h2>
           <p className={styles.choiceBody}>Simulated lights, fans, locks, a garage door, and a thermostat you can try right away.</p>
-          <Button className={styles.choiceButton} loading={creating} onClick={async () => {
+          <Button className={styles.choiceButton} variant="secondary" loading={creating} onClick={async () => {
             setCreating(true);
             await addDemoHome();
             onCreated();
             setCreating(false);
           }}>Open the demo home</Button>
         </Glass>
-        <Glass className={styles.choice}>
-          <House className={styles.choiceIcon} size={24} strokeWidth={1.75} aria-hidden="true" />
-          <h2 className={styles.choiceTitle}>Connect your home</h2>
-          <p className={styles.choiceBody}>Home Assistant, a Matter server, or RTSP cameras through go2rtc. You build the dashboard after.</p>
-          <Button className={styles.choiceButton} variant="secondary" onClick={() => router.push("/settings")}>Add a connection</Button>
-        </Glass>
       </div>
+      <ol className={styles.firstSteps} aria-label="How setting up goes" data-on-wall>
+        {FIRST_STEPS.map((step, index) => (
+          <li key={step.title} className={styles.firstStep}>
+            <span className={styles.firstStepNumber} aria-hidden="true">{index + 1}</span>
+            <span className={styles.firstStepTitle}>{step.title}</span>
+            <span className={styles.firstStepBody}>{step.body}</span>
+          </li>
+        ))}
+      </ol>
       <Button variant="ghost" className={styles.widgetsOnly} onClick={onWidgets}><Sun size={16} strokeWidth={1.75} aria-hidden="true" />Or start with weather, a calendar, and reminders</Button>
     </section>
   );
