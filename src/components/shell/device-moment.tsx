@@ -36,14 +36,29 @@ const TABLE_LAMP = /\blamps?\b/i;
 /** Fans named like these stand on the floor or a table; any other fan hangs from the ceiling. */
 const STANDING = /\b(stand(ing)?|pedestal|floor|desk|table|tower|box|oscillating|portable)\b/i;
 
+/** How long changes that arrive together are gathered before they play, and how many share one screen. */
+const GATHER_MS = 900;
+const PER_SCREEN = 3;
+
+/** Moments that share a screen, the most striking in the middle: a chandelier before a fan before anything else. */
+function arrange(moments: Moment[]): Moment[] {
+  const weight = (moment: Moment) => moment.kind === "light" && moment.chandelier ? 2 : moment.kind === "fan" ? 1 : 0;
+  const sorted = [...moments].sort((a, b) => weight(b) - weight(a));
+  return sorted.length === 3 ? [sorted[1], sorted[0], sorted[2]] : sorted;
+}
+
 /**
  * Full-screen moments on a wall tablet, resting or awake: a light or fan someone changes elsewhere plays a short scene
- * of it changing, one after another. A change made on this screen plays on its own tile instead. It never wakes the
- * screen. Locks and garage doors have their own notice, `StateNotices`, which plays `LockScene` and `GarageScene`.
+ * of it changing. Changes that arrive together play together, side by side, up to three to a screen. A change made on
+ * this screen plays on its own tile instead. It never wakes the screen. Locks and garage doors have their own notice,
+ * `StateNotices`, which plays `LockScene` and `GarageScene`.
  */
 export function DeviceMoments({ devices }: { devices: Device[] | undefined }) {
   const seen = useRef<Map<string, string> | null>(null);
-  const [queue, setQueue] = useState<Moment[]>([]);
+  const gathering = useRef<Moment[]>([]);
+  const gather = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [queue, setQueue] = useState<Moment[][]>([]);
+  useEffect(() => () => clearTimeout(gather.current), []);
   useEffect(() => {
     if (!devices) return;
     const known = seen.current;
@@ -61,8 +76,16 @@ export function DeviceMoments({ devices }: { devices: Device[] | undefined }) {
     }
     seen.current = next;
     if (!fresh.length) return;
-    const timer = setTimeout(() => setQueue(current => [...current, ...fresh].slice(-4)), 0);
-    return () => clearTimeout(timer);
+    gathering.current = [...gathering.current.filter(item => !fresh.some(moment => moment.name === item.name)), ...fresh];
+    // Its own timer, not the effect's: a snapshot with nothing new must not cancel what is still gathering.
+    clearTimeout(gather.current);
+    gather.current = setTimeout(() => {
+      const gathered = gathering.current;
+      gathering.current = [];
+      const screens: Moment[][] = [];
+      for (let at = 0; at < gathered.length; at += PER_SCREEN) screens.push(arrange(gathered.slice(at, at + PER_SCREEN)));
+      setQueue(current => [...current, ...screens].slice(-3));
+    }, GATHER_MS);
   }, [devices]);
 
   useEffect(() => {
@@ -71,17 +94,33 @@ export function DeviceMoments({ devices }: { devices: Device[] | undefined }) {
     return () => clearTimeout(timer);
   }, [queue]);
 
-  const moment = queue[0];
+  const screen = queue[0];
+  const caption = (moment: Moment) => (
+    <>
+      <p className={styles.label}>{moment.name}</p>
+      <p className={styles.detail}>{moment.on ? "Turned on" : "Turned off"}{moment.room && !moment.name.toLowerCase().includes(moment.room.toLowerCase()) ? ` · ${moment.room}` : ""}</p>
+    </>
+  );
   return (
     <AnimatePresence>
-      {moment && (
-        <motion.div key={moment.key} className={styles.moment} data-kind={moment.kind} role="status" aria-live="polite"
+      {screen && (
+        <motion.div key={screen.map(moment => moment.key).join("|")} className={styles.moment} data-many={screen.length > 1 || undefined} role="status" aria-live="polite"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
-          <Scene moment={moment} />
-          <motion.div className={styles.caption} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.4 }}>
-            <p className={styles.label}>{moment.name}</p>
-            <p className={styles.detail}>{moment.on ? "Turned on" : "Turned off"}{moment.room && !moment.name.toLowerCase().includes(moment.room.toLowerCase()) ? ` · ${moment.room}` : ""}</p>
-          </motion.div>
+          {screen.length === 1 ? (
+            <>
+              <Scene moment={screen[0]} />
+              <motion.div className={styles.caption} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.4 }}>{caption(screen[0])}</motion.div>
+            </>
+          ) : (
+            <div className={styles.row}>
+              {screen.map((moment, index) => (
+                <div key={moment.key} className={styles.slot} data-lead={(screen.length === 3 && index === 1) || undefined}>
+                  <Scene moment={moment} compact />
+                  <motion.div className={styles.caption} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 + index * .08, duration: 0.4 }}>{caption(moment)}</motion.div>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>
@@ -98,9 +137,11 @@ function useFlip(target: boolean) {
   return shown;
 }
 
-function Scene({ moment }: { moment: Moment }) {
+/** `compact` draws it in a share of the screen, beside other moments, with the light sized to its slot. */
+function Scene({ moment, compact = false }: { moment: Moment; compact?: boolean }) {
   if (moment.kind === "fan") return moment.standing ? <StandingFanScene on={moment.on} /> : <FanScene on={moment.on} />;
-  return moment.chandelier ? <ChandelierScene on={moment.on} tint={moment.tint} /> : moment.lamp ? <DeskLampScene on={moment.on} tint={moment.tint} /> : <LightScene on={moment.on} tint={moment.tint} />;
+  if (moment.chandelier) return <ChandelierScene on={moment.on} tint={moment.tint} />;
+  return moment.lamp ? <DeskLampScene on={moment.on} tint={moment.tint} size={compact ? "70cqmin" : undefined} /> : <LightScene on={moment.on} tint={moment.tint} size={compact ? "72cqmin" : undefined} />;
 }
 
 function Bloom({ shown }: { shown: boolean }) {

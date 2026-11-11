@@ -14,6 +14,7 @@
 .sheet.sheet > :last-child {
   display: grid;
   min-height: 0;
+  overflow-y: auto;
 }
 
 /* The code on the left, what it says on the right; stacked on a narrow screen. */
@@ -125,8 +126,14 @@
 }
 
 @media (max-width: 720px), (orientation: portrait) and (max-width: 900px) {
-  .body { grid-template-columns: minmax(0, 1fr); }
-  .code { justify-self: center; width: min(80vw, 48vh, 460px); }
-  .side { width: min(100%, 460px); justify-self: center; }
-  .done { justify-self: stretch; }
+  .body { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); padding-block: var(--space-4); }
+  .code { justify-self: center; width: min(72vw, 40vh, 460px); }
+  .side { width: min(100%, 460px); justify-self: center; gap: var(--space-5); }
+  .facts { gap: var(--space-4); }
+  .facts dd { font-size: var(--text-xl); }
+  .done { justify-self: stretch; min-width: 0; }
+}
+
+@media (max-height: 700px) and (max-width: 720px) {
+  .code { width: min(64vw, 34vh); }
 }

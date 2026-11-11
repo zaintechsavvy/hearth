@@ -39,6 +39,53 @@
   letter-spacing: var(--tracking-display);
 }
 
+/* Several moments at once: side by side, the middle one a little larger, each with its glow kept around it. */
+.row {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: clamp(16px, 4vw, 64px);
+  width: 100%;
+  padding-inline: clamp(16px, 4vw, 48px);
+}
+
+/* Each scene centres in the space above its caption, so the captions share one line however tall the scenes are. */
+.slot {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: center;
+  justify-items: center;
+  gap: clamp(10px, 2.4vh, 24px);
+  min-width: 0;
+  isolation: isolate;
+}
+
+.slot .stage {
+  width: min(38vh, 26vw);
+  height: min(38vh, 26vw);
+  container-type: size;
+}
+
+.slot[data-lead] .stage {
+  width: min(48vh, 32vw);
+  height: min(48vh, 32vw);
+}
+
+.slot .bloom {
+  position: absolute;
+  inset: -45%;
+  z-index: -1;
+}
+
+.slot .label {
+  font-size: clamp(var(--text-lg), 2.4vw, 30px);
+}
+
+.slot .detail {
+  font-size: clamp(var(--text-sm), 1.4vw, 18px);
+}
+
 /* Inside a smaller card, such as the lock and garage notice. */
 .small {
   width: 100%;

@@ -354,7 +354,7 @@
   align-content: end;
   justify-items: center;
   padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
-  background: linear-gradient(to bottom, transparent 62%, oklch(0% 0 0 / .32));
+  background: linear-gradient(to bottom, transparent 48%, oklch(0% 0 0 / .55));
 }
 
 .overviewBack {
@@ -380,14 +380,19 @@
   color: oklch(98% 0 0);
   font-size: var(--text-sm);
   font-weight: 500;
+  text-shadow: 0 1px 6px oklch(0% 0 0 / .45);
 }
 
+/* Solid white with a dark icon, so each action reads at once over whatever the home is showing. */
 .overviewIcon {
   display: grid;
   place-items: center;
   width: 72px;
   height: 72px;
   border-radius: 50%;
+  background: oklch(99% 0 0);
+  color: oklch(20% .01 260);
+  box-shadow: 0 10px 30px -12px oklch(0% 0 0 / .6);
   transition: transform var(--duration-spring) var(--ease-spring);
 }
 

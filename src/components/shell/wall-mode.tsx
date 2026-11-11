@@ -204,7 +204,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
               transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34, delay: 0.04 }}>
               {actions.map(({ label, icon: Icon, run }) => (
                 <button key={label} type="button" className={styles.overviewAction} onClick={() => { setOverview(false); run(); }}>
-                  <span className={`${glassClass("pill")} ${styles.overviewIcon}`}><Icon size={24} strokeWidth={1.75} aria-hidden="true" /></span>
+                  <span className={styles.overviewIcon}><Icon size={24} strokeWidth={1.75} aria-hidden="true" /></span>
                   <span className={styles.overviewLabel}>{label}</span>
                 </button>
               ))}
