@@ -1,0 +1,136 @@
+.moment {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: clamp(16px, 4vh, 40px);
+  background: radial-gradient(80% 80% at 50% 45%, oklch(14% .006 250 / .94), oklch(5% .004 250 / .98));
+  color: oklch(96% 0 0);
+  pointer-events: none;
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(60vh, 70vw);
+  height: min(60vh, 70vw);
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-2xl), 4.4vw, 56px);
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+}
+
+/* Inside a smaller card, such as the lock and garage notice. */
+.small {
+  width: 100%;
+  height: 100%;
+}
+
+/* Light: the bulb hangs from the top of the screen and the room fills with its colour. */
+.bloom {
+  position: fixed;
+  inset: -10%;
+  background: radial-gradient(45% 45% at 50% 42%, color-mix(in oklab, var(--glow) 55%, transparent), transparent 70%);
+  opacity: 0;
+}
+
+.bulb {
+  position: relative;
+  translate: 0 -6vh;
+  color: oklch(92% 0 0);
+}
+
+.bulb svg {
+  width: min(52vh, 60vw);
+  height: auto;
+}
+
+/* Fan. */
+.fan {
+  width: 82%;
+  height: 82%;
+}
+
+.blade {
+  fill: oklch(92% .01 230 / .9);
+  stroke: oklch(100% 0 0 / .3);
+  stroke-width: 1;
+}
+
+.hub {
+  fill: oklch(70% .01 230);
+}
+
+.breeze {
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, oklch(80% .06 220 / .35), transparent);
+}
+
+/* Lock. */
+.lock {
+  width: 62%;
+  height: auto;
+  overflow: visible;
+}
+
+.shackle {
+  fill: none;
+  stroke: oklch(86% .01 250);
+  stroke-width: 12;
+  stroke-linecap: round;
+}
+
+.body {
+  fill: oklch(72% .13 70);
+  transition: fill .5s var(--ease-standard);
+}
+
+.stage[data-locked] .body {
+  fill: oklch(70% .14 150);
+}
+
+.keyhole {
+  fill: oklch(20% .02 250 / .7);
+}
+
+.ring {
+  position: absolute;
+  inset: 6%;
+  border: 6px solid oklch(74% .15 150);
+  border-radius: 50%;
+}
+
+/* Garage door. */
+.garage {
+  width: 100%;
+  height: auto;
+}
+
+.house {
+  fill: oklch(28% .01 250);
+  stroke: oklch(60% .01 250);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.inside {
+  fill: oklch(12% .01 250);
+}
+
+.panel {
+  fill: oklch(86% .01 250);
+}
+
+.frame {
+  fill: none;
+  stroke: oklch(70% .01 250);
+  stroke-width: 3;
+}

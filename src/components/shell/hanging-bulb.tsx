@@ -43,7 +43,8 @@ export function HangingBulb({ on, size, tint }: { on: boolean; size: number; tin
           <line x1="20.5" y1="15" x2="27.5" y2="15" className={styles.thread} />
           <motion.circle data-part="glow" cx="24" cy="29" r="20" fill={`url(#${id}-halo)`} initial={false} animate={{ opacity: on ? 1 : 0 }} transition={{ duration: 0 }} />
           <path d="M 20 17 C 20 20 13 23 13 30 A 11 11 0 0 0 35 30 C 35 23 28 20 28 17 Z" fill={`url(#${id}-glass)`} className={styles.glass} />
-          <motion.path data-part="glow" d="M 21 27 L 22.5 31 L 24 27 L 25.5 31 L 27 27" className={styles.filament} initial={false} animate={{ opacity: on ? 1 : 0.35 }} transition={{ duration: 0 }} />
+          <path d="M 22 18 L 22.2 27.5 M 26 18 L 25.8 27.5" className={styles.wire} />
+          <motion.path data-part="glow" d="M 22.2 27.5 q .45 -1.4 .9 0 q .45 1.4 .9 0 q .45 -1.4 .9 0 q .45 1.4 .9 0" className={styles.filament} initial={false} animate={{ opacity: on ? 1 : 0.35 }} transition={{ duration: 0 }} />
           <ellipse cx="19.5" cy="26" rx="2" ry="4" className={styles.shine} transform="rotate(20 19.5 26)" />
         </motion.g>
       </svg>

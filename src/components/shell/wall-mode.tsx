@@ -23,6 +23,7 @@ import { isWidget, type TileConfig } from "@/lib/dashboard/layout";
 import { AnalogFace } from "./analog-face";
 import { LuxuryFace } from "./luxury-face";
 import { DigitalTime } from "./digital-time";
+import { DeviceMoments } from "./device-moment";
 import { clockColorOf, DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { itemsOf } from "@/lib/widgets/items";
@@ -239,6 +240,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           <Moon size={18} strokeWidth={1.75} aria-hidden="true" /> Good night
         </button>
       )}
+      <DeviceMoments devices={home?.devices} active={resting} />
       <StateNotices devices={home?.devices} />
       {!resting && <LeftOpenBanner items={leftOpen.items} onClose={device => void send(device, { type: "cover", action: "close" }).catch(() => {})} onQuiet={leftOpen.quietTonight} />}
       <div className={styles.corner} data-on-wall>

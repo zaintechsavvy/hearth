@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Device } from "@/lib/devices/types";
 import { haptic } from "@/lib/haptics";
 import { sentHere } from "@/lib/sent-here";
+import { GarageScene, LockScene } from "./device-moment";
 import styles from "./state-notice.module.css";
 
 const SHOW_MS = 5000;
@@ -92,7 +93,7 @@ export function StateNotices({ devices }: { devices: Device[] | undefined }) {
           onClick={() => setNotice(null)} aria-label={`${notice.name} ${notice.words}. Tap to close.`}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.35 }}>
           <motion.span className={styles.card} initial={reduce ? false : { y: 16, scale: .97 }} animate={{ y: 0, scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 26 }}>
-            <span className={styles.art} aria-hidden="true">{notice.picture === "garage" ? <Garage /> : notice.picture === "lock" ? <Padlock /> : notice.picture === "leak" ? <Leak /> : <Door />}</span>
+            <span className={styles.art} aria-hidden="true">{notice.picture === "garage" ? <GarageScene small open={notice.open} /> : notice.picture === "lock" ? <LockScene small locked={!notice.open} /> : notice.picture === "leak" ? <Leak /> : <Door />}</span>
             <span className={styles.words}>
               <span className={styles.title}>{notice.alarm ? "Water leak" : `${notice.name} ${notice.words}`}</span>
               <span className={styles.meta}>
@@ -105,33 +106,6 @@ export function StateNotices({ devices }: { devices: Device[] | undefined }) {
         </motion.button>
       )}
     </AnimatePresence>
-  );
-}
-
-/** A garage whose door rolls up when it opens and down when it closes, drawn in single lines. */
-function Garage() {
-  return (
-    <svg viewBox="0 0 120 100" className={styles.svg}>
-      <path d="M14 44 L60 14 L106 44 V90 H14 Z" className={styles.line} />
-      <clipPath id="garage-opening"><rect x="30" y="50" width="60" height="40" /></clipPath>
-      <path d="M30 90 V50 H90 V90" className={styles.line} />
-      <g clipPath="url(#garage-opening)">
-        <g className={styles.rolling}>
-          {[0, 1, 2, 3].map(index => <path key={index} d={`M34 ${58 + index * 9} H86`} className={styles.thin} />)}
-        </g>
-      </g>
-    </svg>
-  );
-}
-
-/** A padlock whose shackle lifts when it unlocks and drops when it locks. */
-function Padlock() {
-  return (
-    <svg viewBox="0 0 120 100" className={styles.svg}>
-      <path d="M46 46 V34 a14 14 0 0 1 28 0 V46" className={`${styles.line} ${styles.lifting}`} />
-      <rect x="36" y="46" width="48" height="40" rx="8" className={styles.line} />
-      <path d="M60 62 V70" className={styles.line} />
-    </svg>
   );
 }
 
