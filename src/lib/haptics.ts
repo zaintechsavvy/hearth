@@ -36,14 +36,20 @@ export function haptic(kind: Haptic = "tap") {
   label.remove();
 }
 
+/** How recently the page or a list may have scrolled for a touch to count as scrolling rather than a tap. */
+const SCROLL_QUIET_MS = 250;
+let scrolledAt = -Infinity;
+let watchingScroll = false;
+
 /**
  * Lays an invisible switch over each `[data-haptic]` control under `root`, so a tap on it ticks on an iPhone. The tap
  * toggles the switch, then is handed to the control as its own click, so links and buttons behave as before.
  */
-/** How far a finger may move on a control before the touch counts as scrolling. */
-const SCROLL_SLOP_PX = 10;
-
 export function addTapSwitches(root: ParentNode) {
+  if (!watchingScroll) {
+    watchingScroll = true;
+    document.addEventListener("scroll", () => { scrolledAt = performance.now(); }, { capture: true, passive: true });
+  }
   for (const host of root.querySelectorAll<HTMLElement>("[data-haptic]")) {
     if (host.querySelector(`:scope > [${SWITCH_ATTR}]`)) continue;
     if (getComputedStyle(host).position === "static") host.style.position = "relative";
@@ -54,24 +60,11 @@ export function addTapSwitches(root: ParentNode) {
     input.setAttribute("aria-hidden", "true");
     input.tabIndex = -1;
     input.style.cssText = "position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;padding:0;border:0;-webkit-appearance:switch;appearance:auto;opacity:0;cursor:inherit";
-    // An iOS switch also flips when a finger slides across it, so a touch that moved or scrolled the page is a scroll, not a tap.
-    let touch: { x: number; y: number; scroll: number; moved: boolean } | null = null;
-    input.addEventListener("touchstart", event => {
-      const point = event.touches[0];
-      touch = { x: point.clientX, y: point.clientY, scroll: scrollY, moved: false };
-    }, { passive: true });
-    input.addEventListener("touchmove", event => {
-      const point = event.touches[0];
-      if (touch && Math.hypot(point.clientX - touch.x, point.clientY - touch.y) > SCROLL_SLOP_PX) touch.moved = true;
-    }, { passive: true });
+    // A finger that scrolled can still end in a click on the switch. The tile never hears of it, but the switch is left
+    // to flip: cancelling a switch's click on iOS holds the touch and stops the page scrolling.
     input.addEventListener("click", event => {
       event.stopPropagation();
-      const scrolled = touch && (touch.moved || Math.abs(scrollY - touch.scroll) > SCROLL_SLOP_PX);
-      touch = null;
-      if (scrolled) {
-        event.preventDefault();
-        return;
-      }
+      if (performance.now() - scrolledAt < SCROLL_QUIET_MS) return;
       switchedAt = performance.now();
       if (!host.matches(":disabled")) host.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     });
