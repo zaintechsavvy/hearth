@@ -522,10 +522,10 @@
   margin-bottom: clamp(12px, 3vh, 32px);
 }
 
-.preview .standStage {
+.preview .stage.standStage {
   margin-bottom: 0;
-  width: 74%;
-  height: 74%;
+  width: 50%;
+  height: 50%;
 }
 
 /* The lock and garage are drawn at the size of the notice card; a frame this size wants them smaller. */

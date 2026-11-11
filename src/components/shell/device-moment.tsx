@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { lightTint } from "@/components/dashboard/light-controls";
 import type { Device } from "@/lib/devices/types";
@@ -198,10 +198,28 @@ function ChandelierScene({ on, tint }: { on: boolean; tint: string | null }) {
 }
 
 const BLADES = [0, 72, 144, 216, 288];
+
+/**
+ * A fan's blades, as an angle that keeps turning: switched on, it winds up to `peak` degrees a second and holds there
+ * for as long as it shows; switched off, it starts at speed and winds down to a stop.
+ */
+function useSpin(on: boolean, peak: number) {
+  const reduce = useReducedMotion();
+  const angle = useMotionValue(0);
+  const speed = useRef(on ? 0 : peak);
+  useAnimationFrame((_, delta) => {
+    if (reduce) return;
+    speed.current += ((on ? peak : 0) - speed.current) * Math.min(1, delta / 900);
+    if (speed.current < 1) return;
+    angle.set((angle.get() + speed.current * delta / 1000) % 360);
+  });
+  return angle;
+}
 const round = (value: number) => Math.round(value * 100) / 100;
 
 /** A ceiling fan seen from a little above: the blades turn in a tilted plane that passes behind the motor. */
 function FanScene({ on }: { on: boolean }) {
+  const spin = useSpin(on, 720);
   const reduce = useReducedMotion();
   const id = useId();
   return (
@@ -223,8 +241,7 @@ function FanScene({ on }: { on: boolean }) {
           <path d="M 28 72 L 72 72" className={styles.seam} />
         </svg>
         <div className={styles.fanPlane}>
-          <motion.svg viewBox="-100 -100 200 200" className={styles.fanBlades} aria-hidden="true"
-            initial={{ rotate: 0 }} animate={{ rotate: reduce ? 0 : on ? 1800 : 300 }} transition={{ duration: on ? 3.2 : 2.6, ease: on ? [.55, 0, 1, .8] : [0, .5, .3, 1] }}>
+          <motion.svg viewBox="-100 -100 200 200" className={styles.fanBlades} aria-hidden="true" style={{ rotate: spin }}>
             <defs>
               <linearGradient id={`${id}-wood`} x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0" stopColor="oklch(58% .07 55)" />
@@ -252,6 +269,7 @@ function FanScene({ on }: { on: boolean }) {
 
 /** A pedestal fan facing you: the blades spin behind the grille, and the head turns from side to side as it runs. */
 function StandingFanScene({ on }: { on: boolean }) {
+  const spin = useSpin(on, 900);
   const reduce = useReducedMotion();
   const id = useId();
   return (
@@ -277,8 +295,7 @@ function StandingFanScene({ on }: { on: boolean }) {
         <svg viewBox="-100 -100 200 200" className={styles.standLayer} style={{ transform: "translateZ(-34px)" }} aria-hidden="true">
           <circle r={34} fill={`url(#${id}-pole)`} />
         </svg>
-        <motion.svg viewBox="-100 -100 200 200" className={styles.standLayer} style={{ transform: "translateZ(-10px)" }} aria-hidden="true"
-          initial={{ rotate: 0 }} animate={{ rotate: reduce ? 0 : on ? 2200 : 360 }} transition={{ duration: on ? 3.2 : 2.6, ease: on ? [.55, 0, 1, .8] : [0, .5, .3, 1] }}>
+        <motion.svg viewBox="-100 -100 200 200" className={styles.standLayer} style={{ rotate: spin, z: -10 }} aria-hidden="true">
           {[0, 120, 240].map(angle => <path key={angle} transform={`rotate(${angle})`} d="M 0 -10 C 30 -24 52 -70 24 -86 C 6 -94 -14 -82 -12 -56 C -10 -38 -6 -22 0 -10 Z" className={styles.standBlade} />)}
         </motion.svg>
         <motion.span className={styles.standBlur} initial={{ opacity: on ? 0 : .5 }} animate={{ opacity: reduce ? 0 : on ? [0, 0, .5] : [.5, 0] }} transition={{ duration: on ? 3.2 : 1.6 }} aria-hidden="true" />
