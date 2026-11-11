@@ -1,13 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CalendarDays, Check, DoorOpen, History, House, LayoutGrid, Leaf, LogOut, MonitorPause, Moon, MoreHorizontal, Package, Paintbrush, Pill, Recycle, Settings, Sparkles, Thermometer } from "lucide-react";
+import { CalendarDays, Check, DoorOpen, History, House, LayoutGrid, Leaf, LogOut, MonitorPause, Moon, MoreHorizontal, Package, Paintbrush, Pill, Recycle, Settings, Thermometer } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import useSWR from "swr";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
-import { askHearth } from "@/components/assistant/assistant-dock";
 import { useHome } from "@/components/dashboard/use-home";
 import { useTick } from "@/components/dashboard/household/use-tick";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
@@ -50,10 +49,10 @@ export function WallMode() {
   const settings = { ...DEFAULT_WALL, ...stored };
   useEffect(() => {
     const root = document.documentElement;
-    if (settings.enabled) root.dataset.wall = settings.showAssistant ? "assistant" : "";
+    if (settings.enabled) root.dataset.wall = "";
     else delete root.dataset.wall;
     return () => { delete root.dataset.wall; };
-  }, [settings.enabled, settings.showAssistant]);
+  }, [settings.enabled]);
   return settings.enabled ? <Wall settings={settings} onLeave={() => setStored({ ...settings, enabled: false })} /> : null;
 }
 
@@ -187,7 +186,6 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
   const actions = [
     { label: "Customize", icon: Paintbrush, run: () => router.push("/settings#wall") },
     { label: "Settings", icon: Settings, run: () => router.push("/settings") },
-    ...(settings.showAssistant ? [{ label: "Ask Hearth", icon: Sparkles, run: () => askHearth() }] : []),
     { label: "Good night", icon: Moon, run: () => startBedtime() },
     { label: "Rest the screen", icon: MonitorPause, run: rest },
     { label: "Leave wall mode", icon: LogOut, run: leave },
@@ -267,7 +265,6 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
             </div>
           ) : (
             <>
-              {settings.showAssistant && <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); askHearth(); }}>Ask Hearth</button>}
               <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); startBedtime(); }}>Good night</button>
               <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); rest(); }}>Rest the screen</button>
               <span className={styles.menuDivider} aria-hidden="true" />

@@ -11,7 +11,6 @@ export interface WallSettings {
   /** Motion, presence, or door sensors that wake the screen. */
   wakeSensors: string[];
   keepAwake: boolean;
-  showAssistant: boolean;
   /** The resting clock's colour and how bright it shows, 0.15 to 1. `custom` uses `customColor`. */
   clockColor: ClockColor | "custom";
   /** A colour of the person's own, as `#rrggbb`. */
@@ -102,7 +101,7 @@ export function isLight(color: string) {
 export const WALL_KEY = "hearth-wall";
 
 export const DEFAULT_WALL: WallSettings = {
-  enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: true, showAssistant: true,
+  enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: true,
   clockColor: "white", customColor: "#7aa7ff", clockBrightness: 0.85, clockFace: "digital", handColor: null, secondHand: "tick", digitLayout: "inline", digitScale: 1, nightRed: false, openReminder: true, openMinutes: 15,
   frame: false, frameSource: "uploads", frameSeconds: 20, frameAtNight: false, frameClock: "corner",
 };

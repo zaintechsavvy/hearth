@@ -1,4 +1,3 @@
-import { AssistantDock } from "@/components/assistant/assistant-dock";
 import { DoorbellCall } from "@/components/dashboard/doorbell-call";
 import { HouseholdAlerts } from "@/components/dashboard/household/household-alerts";
 import { Wallpaper } from "@/components/glass/wallpaper";
@@ -23,7 +22,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <BackgroundSync initial={background} />
       <AppHeader user={{ name: user.name, email: user.email }} role={home.role} ownerName={home.ownerName} />
       <main className={styles.page}>{children}</main>
-      {home.role !== "guest" && <AssistantDock />}
       <BackgroundStudio />
       <CommandMenu limited={home.role === "guest"} />
       <WallMode />

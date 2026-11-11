@@ -5,7 +5,6 @@ import { CalendarDays, Clapperboard, DoorOpen, House, LayoutGrid, Lightbulb, Loc
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { CommandPalette, type CommandItem } from "@/components/arc/command-palette/command-palette";
-import { askHearth } from "@/components/assistant/assistant-dock";
 import { useHome } from "@/components/dashboard/use-home";
 import { useResolvedTheme } from "@/components/shell/use-resolved-theme";
 import { startBedtime } from "@/components/shell/bedtime-check";
@@ -24,7 +23,7 @@ export const openCommandMenu = () => window.dispatchEvent(new Event(OPEN_EVENT))
 const KIND_ICONS: Partial<Record<Device["kind"], LucideIcon>> = { light: Lightbulb, switch: Plug, fan: Wind, lock: Lock, cover: Warehouse, scene: Clapperboard, media_player: Music };
 const SETTINGS = [
   { id: "connections", label: "Connections" }, { id: "rooms", label: "Rooms" }, { id: "cameras", label: "Cameras" },
-  { id: "calendars", label: "Calendars" }, { id: "alerts", label: "Alerts" }, { id: "appearance", label: "Appearance" }, { id: "assistants", label: "Assistants" },
+  { id: "calendars", label: "Calendars" }, { id: "alerts", label: "Alerts" }, { id: "appearance", label: "Appearance" },
 ];
 
 let menuOpen = false;
@@ -106,7 +105,6 @@ function Menu({ close, limited }: { close: () => void; limited: boolean }) {
   };
   const icon = (Icon: LucideIcon) => <Icon size={16} strokeWidth={1.75} aria-hidden="true" />;
 
-  if (!limited) add({ id: "ask", label: "Ask Hearth", description: "Type or say what you want", group: "Assistant", keywords: ["assistant", "ai", "help"], icon: icon(Sparkles), shortcut: "⌘J" }, () => askHearth());
   for (const device of home?.devices ?? []) {
     const action = deviceCommand(device);
     if (!action || isSensitive(device, action.command)) continue;

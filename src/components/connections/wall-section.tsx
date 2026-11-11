@@ -64,7 +64,6 @@ export function WallSection() {
           </div>
           <Slider label="Night dimming" value={Math.round(settings.dimLevel * 100)} min={0} max={85} format={value => `${value}%`} onValueChange={value => set({ dimLevel: value / 100 })} />
           <Switch label="Keep the screen awake" checked={settings.keepAwake} onCheckedChange={keepAwake => set({ keepAwake })} />
-          <Switch label="Show the assistant" checked={settings.showAssistant} onCheckedChange={showAssistant => set({ showAssistant })} />
         </div>
         <div className={`${styles.row} ${styles.stacked}`}>
           <div className={styles.rowText}>

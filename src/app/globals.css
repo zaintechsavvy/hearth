@@ -264,7 +264,3 @@ button,
   }
 }
 
-/* Shown only on a wall tablet with the assistant on, such as the assistant button beside the greeting. */
-:root:not([data-wall="assistant"]) [data-wall-only] {
-  display: none;
-}

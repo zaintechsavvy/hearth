@@ -65,7 +65,7 @@ const FEATURES: ({ title: string; body: string; points: string[]; small?: boolea
 const FAQS: [string, string][] = [
   ["Why not the default Home Assistant dashboard, Mushroom, or Bubble Card?", "Those are great if you enjoy building cards in YAML. Hearth is for a screen the whole household uses: you arrange it by dragging, it rests as a clock, the doorbell takes over the screen, and nothing needs editing in a text file."],
   ["Does it replace Home Assistant?", "No. Hearth sits on top of the Home Assistant you already run and talks to it over its API. Your automations, devices and history stay where they are."],
-  ["Does it need the cloud?", "No. It runs on your own server or a small machine at home. Nothing is sent anywhere except to your Home Assistant, and to an AI provider only if you turn on asking in plain words."],
+  ["Does it need the cloud?", "No. It runs on your own server or a small machine at home. Nothing is sent anywhere except to your Home Assistant."],
   ["What tablets work?", "Any recent browser. An iPad or Android tablet on the wall is the main target; add it to the home screen, turn on wall mode in Settings, and set the tablet to never lock."],
   ["Is it free?", "Yes. Hearth is open source under the MIT license."],
 ];

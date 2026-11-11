@@ -5,7 +5,6 @@ import { AlertsSection } from "@/components/connections/alerts-section";
 import { AppearanceSection } from "@/components/connections/appearance-section";
 import { BedtimeSection } from "@/components/connections/bedtime-section";
 import { HouseholdSection } from "@/components/connections/household-section";
-import { AssistantsSection } from "@/components/connections/assistants-section";
 import { CalendarsSection } from "@/components/connections/calendars-section";
 import { CamerasSection } from "@/components/connections/cameras-section";
 import { IntegrationsSection } from "@/components/connections/integrations-section";
@@ -17,10 +16,9 @@ import styles from "@/components/connections/connections.module.css";
 import type { CameraSource } from "@/lib/cameras/stream-relay";
 import { unseal } from "@/lib/crypto";
 import { db } from "@/lib/db";
-import { assistant, calendar, camera, integration, invite, membership, user as users } from "@/lib/db/schema";
+import { calendar, camera, integration, invite, membership, user as users } from "@/lib/db/schema";
 import { getPreferences, streamRelayUrl } from "@/lib/home";
 import { publicConfig } from "@/lib/integrations/registry";
-import { ASSISTANT_PROVIDERS } from "@/lib/assistant/providers";
 import { requireHome } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -37,11 +35,10 @@ export default async function ConnectionsPage() {
   const home = await requireHome("member");
   const { user } = home;
   const homeId = home.homeId;
-  const [integrations, cameras, relayUrl, assistants, calendars, preferences] = await Promise.all([
+  const [integrations, cameras, relayUrl, calendars, preferences] = await Promise.all([
     db.select().from(integration).where(eq(integration.userId, homeId)).orderBy(integration.createdAt),
     db.select().from(camera).where(eq(camera.userId, homeId)).orderBy(camera.createdAt),
     streamRelayUrl(homeId),
-    db.select({ id: assistant.id, provider: assistant.provider, model: assistant.model, baseUrl: assistant.baseUrl, isDefault: assistant.isDefault }).from(assistant).where(eq(assistant.userId, homeId)).orderBy(assistant.createdAt),
     db.select().from(calendar).where(eq(calendar.userId, homeId)).orderBy(calendar.createdAt),
     getPreferences(homeId),
   ]);
@@ -59,7 +56,6 @@ export default async function ConnectionsPage() {
           { id: "rooms", label: "Rooms", summary: "Names and order" },
           ...(owner ? [{ id: "cameras" as const, label: "Cameras", summary: cameras.length ? `${cameras.length} ${cameras.length === 1 ? "camera" : "cameras"}` : "None added" }] : []),
           { id: "calendars", label: "Calendars", summary: calendars.length ? `${calendars.length} ${calendars.length === 1 ? "calendar" : "calendars"}` : "None added" },
-          ...(owner ? [{ id: "assistants" as const, label: "Assistants", summary: assistants.length ? assistants.map(row => ASSISTANT_PROVIDERS[row.provider].label).join(", ") : "None added" }] : []),
         ] },
         { title: "People", items: [
           { id: "household", label: "Household", summary: owner ? (members.length ? `You and ${members.length} ${members.length === 1 ? "other" : "others"}` : "Just you") : `${home.ownerName}'s home` },
@@ -81,7 +77,6 @@ export default async function ConnectionsPage() {
       <AlertsSection alerts={preferences.alerts} />
       <SecuritySection method={preferences.security.method} hasPin={Boolean(preferences.security.hash)} owner={owner} />
       <BedtimeSection owner={owner} />
-      {owner && <AssistantsSection assistants={assistants} />}
       {owner && <CamerasSection cameras={cameras.map(row => ({ id: row.id, name: row.name, host: hostOf(unseal<CameraSource>(row.source).url) }))} relayUrl={relayUrl}
         homeAssistants={integrations.filter(row => row.kind === "home-assistant").map(row => ({ id: row.id, name: row.name }))} />}
       <CalendarsSection calendars={calendars.map(row => ({ id: row.id, name: row.name, color: row.color, host: hostOf(unseal<string>(row.url)) }))} />

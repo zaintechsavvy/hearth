@@ -1,5 +1,5 @@
 import {
-  Activity, ArrowDown, BellRing, Bot, Camera, Clock, Cloud, Database, DoorOpen, Fingerprint, Hand, House, KeyRound, Laptop, Lightbulb, ListChecks,
+  Activity, ArrowDown, BellRing, Camera, Clock, Cloud, Database, DoorOpen, Fingerprint, Hand, House, KeyRound, Laptop, Lightbulb, ListChecks,
   Lock, Moon, MousePointerClick, Network, Radio, Server, ShieldCheck, ShieldX, Smartphone, Sparkles, Tablet, ToggleRight, Workflow, type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -62,7 +62,7 @@ export function ConnectsDiagram() {
         <Node icon={House} title="Home Assistant" note="Devices, rooms, logbook" />
         <Node icon={Network} title="Matter Server" note="Optional, direct" />
         <Node icon={Camera} title="Cameras" note="Through go2rtc" />
-        <Node icon={Sparkles} title="Assistant, calendars, transit" note="Keys you add" />
+        <Node icon={Sparkles} title="Calendars and transit" note="Keys you add" />
       </Group>
     </Flow>
   );
@@ -198,7 +198,7 @@ export function ActivityDiagram() {
 
 export function OpeningDiagram() {
   return (
-    <div className={styles.decision} role="img" aria-label="Unlocking, opening the garage, or disarming always asks a person first: hold to confirm or the household PIN. Automations, scenes, and the assistant are refused.">
+    <div className={styles.decision} role="img" aria-label="Unlocking, opening the garage, or disarming always asks a person first: hold to confirm or the household PIN. Automations and scenes are refused.">
       <Node icon={DoorOpen} title="Unlock, open, or disarm" note="From any tile or screen" tone="warning" />
       <span className={styles.down} aria-hidden="true"><ArrowDown size={18} strokeWidth={1.75} /></span>
       <div className={styles.branches}>
@@ -212,7 +212,6 @@ export function OpeningDiagram() {
           <span className={styles.branchTitle} data-tone="danger">Anything automatic</span>
           <Node icon={Workflow} title="Automations" />
           <Node icon={ListChecks} title="Scenes and Good night" note="They lock and close only" />
-          <Node icon={Bot} title="The assistant" />
           <Node icon={ShieldX} title="Refused" tone="danger" />
         </div>
       </div>
