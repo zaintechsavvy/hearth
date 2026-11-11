@@ -247,10 +247,6 @@
   transform-style: preserve-3d;
 }
 
-.padlockTile {
-  width: 78%;
-}
-
 .lockLayer {
   position: absolute;
   inset: 0;

@@ -161,7 +161,9 @@
 
 .corner {
   position: fixed;
-  top: max(calc(var(--space-10) + var(--space-1)), env(safe-area-inset-top));
+  /* Level with the greeting: the page's top margin and the greeting's own padding, less half the gap between the
+     44px buttons and the greeting's line. */
+  top: calc(max(var(--space-3), env(safe-area-inset-top)) + var(--space-10) - 9px);
   right: max(var(--space-3), env(safe-area-inset-right));
   z-index: 50;
   display: flex;

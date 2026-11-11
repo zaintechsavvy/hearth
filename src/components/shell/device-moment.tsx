@@ -85,9 +85,9 @@ export function DeviceMoments({ devices }: { devices: Device[] | undefined }) {
   );
 }
 
-/** Starts in the old state, then flips a beat later so the scene plays the change itself; `still` starts in the new one. */
-function useFlip(target: boolean, still = false) {
-  const [shown, setShown] = useState(still ? target : !target);
+/** Starts in the old state, then flips a beat later so the scene plays the change itself. */
+function useFlip(target: boolean) {
+  const [shown, setShown] = useState(!target);
   useEffect(() => {
     const timer = setTimeout(() => setShown(target), 260);
     return () => clearTimeout(timer);
@@ -275,16 +275,15 @@ function StandingFanScene({ on }: { on: boolean }) {
 }
 
 /** A brass padlock that turns toward you as its chrome shackle swings round and drops in, and the key turns. */
-/** `inTile` draws it as a tile's icon: it opens in its current state and plays only a change. */
-export function LockScene({ locked, small = false, inTile = false }: { locked: boolean; small?: boolean; inTile?: boolean }) {
-  const shown = useFlip(locked, inTile);
+export function LockScene({ locked, small = false }: { locked: boolean; small?: boolean }) {
+  const shown = useFlip(locked);
   const reduce = useReducedMotion();
   const id = useId();
   const quick = reduce ? { duration: 0 } : undefined;
   return (
-    <div className={`${styles.stage} ${styles.depth} ${small || inTile ? styles.small : ""}`} data-locked={shown || undefined}>
-      {!inTile && <motion.span className={styles.ring} initial={false} animate={shown && !reduce ? { scale: [0.6, 1.25], opacity: [0.7, 0] } : { opacity: 0 }} transition={{ duration: 1.1, delay: .9, ease: "easeOut" }} aria-hidden="true" />}
-      <motion.div className={`${styles.padlock} ${inTile ? styles.padlockTile : ""}`} initial={false} animate={reduce ? undefined : { rotateY: shown ? [-26, 8, 0] : [0, -20, -14], rotateX: [4, 8, 4] }} transition={{ duration: 1.4, ease: "easeInOut" }}>
+    <div className={`${styles.stage} ${styles.depth} ${small ? styles.small : ""}`} data-locked={shown || undefined}>
+      <motion.span className={styles.ring} initial={false} animate={shown && !reduce ? { scale: [0.6, 1.25], opacity: [0.7, 0] } : { opacity: 0 }} transition={{ duration: 1.1, delay: .9, ease: "easeOut" }} aria-hidden="true" />
+      <motion.div className={styles.padlock} initial={false} animate={reduce ? undefined : { rotateY: shown ? [-26, 8, 0] : [0, -20, -14], rotateX: [4, 8, 4] }} transition={{ duration: 1.4, ease: "easeInOut" }}>
         <motion.svg viewBox="-60 -80 120 150" className={styles.lockLayer} aria-hidden="true" initial={false} style={{ originX: "76.6%", originY: "50%" }}
           animate={shown ? { y: "0%", rotateY: 0 } : { y: "-11%", rotateY: -150 }}
           transition={quick ?? (shown ? { rotateY: { duration: .55, ease: "easeInOut" }, y: { delay: .55, duration: .22, ease: [.6, 0, 1, 1] } } : { y: { duration: .3, ease: "easeOut" }, rotateY: { delay: .3, duration: .6, ease: "easeInOut" } })}>
@@ -327,13 +326,13 @@ export function LockScene({ locked, small = false, inTile = false }: { locked: b
 }
 
 /** A garage door that slides slowly up into its opening, or back down, as the light inside comes on or goes out. */
-export function GarageScene({ open, small = false, inTile = false }: { open: boolean; small?: boolean; inTile?: boolean }) {
+export function GarageScene({ open, small = false }: { open: boolean; small?: boolean }) {
   const reduce = useReducedMotion();
   const id = useId();
   const travel = { duration: reduce ? 0 : 3.4, ease: [.42, 0, .2, 1] as const, delay: reduce ? 0 : .3 };
   const light = { duration: reduce ? 0 : .8, delay: reduce ? 0 : open ? .5 : 2.6 };
   return (
-    <div className={`${styles.stage} ${small || inTile ? styles.small : ""}`}>
+    <div className={`${styles.stage} ${small ? styles.small : ""}`}>
       <div className={styles.garageBox}>
         <svg viewBox="0 0 240 220" className={styles.garageArt} aria-hidden="true">
           <defs>
@@ -355,7 +354,7 @@ export function GarageScene({ open, small = false, inTile = false }: { open: boo
           {[96, 112, 128, 144, 160, 176].map(y => <line key={y} x1={10} x2={230} y1={y} y2={y} className={styles.siding} />)}
           <path d="M 2 78 L 120 8 L 238 78" className={styles.roof} />
           <rect x={40} y={86} width={160} height={110} fill={`url(#${id}-inside)`} />
-          <motion.g initial={inTile ? false : { opacity: open ? 0 : 1 }} animate={{ opacity: open ? 1 : 0 }} transition={light}>
+          <motion.g initial={{ opacity: open ? 0 : 1 }} animate={{ opacity: open ? 1 : 0 }} transition={light}>
             <rect x={40} y={86} width={160} height={110} fill={`url(#${id}-lamp)`} />
             <rect x={104} y={88} width={32} height={3} rx={1.5} className={styles.lampBar} />
             <path d="M 40 196 L 200 196 L 232 220 L 8 220 Z" fill={`url(#${id}-spill)`} />
@@ -366,7 +365,7 @@ export function GarageScene({ open, small = false, inTile = false }: { open: boo
           <rect x={40} y={86} width={160} height={110} className={styles.frame} />
         </svg>
         <div className={styles.opening}>
-          <motion.div className={styles.door} initial={inTile ? false : { y: open ? "0%" : "-96%" }} animate={{ y: open ? "-96%" : "0%" }} transition={travel}>
+          <motion.div className={styles.door} initial={{ y: open ? "0%" : "-96%" }} animate={{ y: open ? "-96%" : "0%" }} transition={travel}>
             {Array.from({ length: 4 }, (_, row) => (
               <span key={row} className={styles.doorRow} data-glass={row === 0 || undefined}>
                 {Array.from({ length: 4 }, (_, cell) => <span key={cell} className={styles.doorPanel} />)}
@@ -380,12 +379,12 @@ export function GarageScene({ open, small = false, inTile = false }: { open: boo
 }
 
 /** A panelled door that swings open toward you on its hinge, letting the light from inside spill out, or swings shut. */
-export function DoorScene({ open, small = false, inTile = false }: { open: boolean; small?: boolean; inTile?: boolean }) {
+export function DoorScene({ open, small = false }: { open: boolean; small?: boolean }) {
   const reduce = useReducedMotion();
   const id = useId();
   const swing = { duration: reduce ? 0 : 1.6, ease: [.4, 0, .2, 1] as const, delay: reduce ? 0 : .25 };
   return (
-    <div className={`${styles.stage} ${small || inTile ? styles.small : ""}`}>
+    <div className={`${styles.stage} ${small ? styles.small : ""}`}>
       <div className={styles.doorBox}>
         <svg viewBox="0 0 200 220" className={styles.garageArt} aria-hidden="true">
           <defs>
@@ -400,7 +399,7 @@ export function DoorScene({ open, small = false, inTile = false }: { open: boole
           </defs>
           <rect x={20} y={14} width={160} height={186} rx={4} className={styles.house} />
           <rect x={62} y={34} width={76} height={166} fill="oklch(10% .01 250)" />
-          <motion.g initial={inTile ? false : { opacity: open ? 0 : 1 }} animate={{ opacity: open ? 1 : 0 }} transition={{ duration: reduce ? 0 : .7, delay: reduce ? 0 : open ? .35 : 1.1 }}>
+          <motion.g initial={{ opacity: open ? 0 : 1 }} animate={{ opacity: open ? 1 : 0 }} transition={{ duration: reduce ? 0 : .7, delay: reduce ? 0 : open ? .35 : 1.1 }}>
             <rect x={62} y={34} width={76} height={166} fill={`url(#${id}-glow)`} />
             <path d="M 62 200 L 138 200 L 176 218 L 24 218 Z" fill={`url(#${id}-spill)`} />
           </motion.g>
@@ -408,7 +407,7 @@ export function DoorScene({ open, small = false, inTile = false }: { open: boole
           <path d="M 14 200 L 186 200" className={styles.frame} />
         </svg>
         <div className={styles.doorOpening}>
-          <motion.div className={styles.doorLeaf} initial={inTile ? false : { rotateY: open ? 0 : -70 }} animate={{ rotateY: open ? -70 : 0 }} transition={swing}>
+          <motion.div className={styles.doorLeaf} initial={{ rotateY: open ? 0 : -70 }} animate={{ rotateY: open ? -70 : 0 }} transition={swing}>
             <span className={styles.doorInset} />
             <span className={styles.doorInset} />
             <span className={styles.doorKnob} />
@@ -420,12 +419,12 @@ export function DoorScene({ open, small = false, inTile = false }: { open: boole
 }
 
 /** A sash window whose lower half slides up to let the night in, or slides back down. */
-export function WindowScene({ open, small = false, inTile = false }: { open: boolean; small?: boolean; inTile?: boolean }) {
+export function WindowScene({ open, small = false }: { open: boolean; small?: boolean }) {
   const reduce = useReducedMotion();
   const id = useId();
   const slide = { duration: reduce ? 0 : 1.8, ease: [.42, 0, .2, 1] as const, delay: reduce ? 0 : .25 };
   return (
-    <div className={`${styles.stage} ${small || inTile ? styles.small : ""}`}>
+    <div className={`${styles.stage} ${small ? styles.small : ""}`}>
       <div className={styles.windowBox}>
         <svg viewBox="0 0 200 200" className={styles.garageArt} aria-hidden="true">
           <defs>
@@ -443,7 +442,7 @@ export function WindowScene({ open, small = false, inTile = false }: { open: boo
         </svg>
         <div className={styles.windowOpening}>
           <span className={styles.sashUpper}><span className={styles.pane} /><span className={styles.pane} /></span>
-          <motion.span className={styles.sashLower} initial={inTile ? false : { y: open ? "0%" : "-86%" }} animate={{ y: open ? "-86%" : "0%" }} transition={slide}>
+          <motion.span className={styles.sashLower} initial={{ y: open ? "0%" : "-86%" }} animate={{ y: open ? "-86%" : "0%" }} transition={slide}>
             <span className={styles.pane} /><span className={styles.pane} />
             <span className={styles.sashHandle} />
           </motion.span>
