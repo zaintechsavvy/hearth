@@ -34,8 +34,8 @@ const handPath = (cx: number, cy: number, length: number, width: number, tail: n
   `M ${cx - width / 2} ${cy + tail} L ${cx - width * .62} ${cy - length * .72} L ${cx} ${cy - length} L ${cx + width * .62} ${cy - length * .72} L ${cx + width / 2} ${cy + tail} Z`;
 
 /**
- * A dress dial shaped like the screen: a rounded rectangle in the clock colour, a railroad minute track that follows
- * its edge, Roman numerals turned to face the centre, and sword hands that reach the track at every angle.
+ * A dress dial shaped like the screen and filling it to the corners: a railroad minute track that follows its edge,
+ * upright Roman numerals just inside it, and sword hands that reach the track at every angle.
  */
 export function LuxuryFace({ night, settings, inline = false }: { night: boolean; settings: WallSettings; inline?: boolean }) {
   const now = useClockNow();
@@ -53,8 +53,8 @@ export function LuxuryFace({ night, settings, inline = false }: { night: boolean
 
   const W = Math.round(H * aspect);
   const cx = W / 2, cy = H / 2;
-  const track = { hx: cx - H * .085, hy: cy - H * .085, r: H * .085, half: H * .02 };
-  const ring = { hx: cx - H * .2, hy: cy - H * .2, r: H * .06 };
+  const track = { hx: cx - H * .055, hy: cy - H * .055, r: H * .07, half: H * .018 };
+  const ring = { hx: cx - H * .19, hy: cy - H * .17, r: H * .05 };
   const numeral = H * .095;
   const sweep = settings.secondHand === "smooth" && !reduce;
   const date = new Date(now);
@@ -79,9 +79,9 @@ export function LuxuryFace({ night, settings, inline = false }: { night: boolean
     return <line key={minute} x1={x1} y1={y1} x2={x2} y2={y2} className={minute % 5 === 0 ? styles.hourTick : styles.tick} />;
   });
   const numerals = NUMERALS.map((text, hour) => {
-    const { x, y, normal } = onEdge(hour * 30, ring.hx, ring.hy, ring.r);
+    const { x, y } = onEdge(hour * 30, ring.hx, ring.hy, ring.r);
     return (
-      <text key={text} transform={`translate(${round(cx + x)} ${round(cy + y)}) rotate(${round(normal + 90)}) scale(.78 1.18)`} textAnchor="middle" dominantBaseline="central"
+      <text key={text} transform={`translate(${round(cx + x)} ${round(cy + y)}) scale(.82 1.12)`} textAnchor="middle" dominantBaseline="central"
         className={styles.numeral} style={{ fontSize: numeral }}>{text}</text>
     );
   });

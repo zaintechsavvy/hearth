@@ -7,16 +7,14 @@
   opacity: var(--saver-dim, 1);
 }
 
-/* The dial is one rounded rectangle in the clock colour, a touch lighter at the centre, with no frame around it. */
+/* The dial is the whole screen in the clock colour, a touch lighter at the centre, with no frame around it. */
 .dial {
   position: absolute;
-  inset: clamp(6px, 1.4cqh, 16px);
-  border-radius: clamp(18px, 5cqh, 56px);
+  inset: 0;
   background: radial-gradient(75% 95% at 50% 45%, color-mix(in oklab, var(--dial) 88%, white), var(--dial) 60%, color-mix(in oklab, var(--dial) 80%, black));
 }
 
 .inline .dial {
-  inset: 0;
   border-radius: inherit;
 }
 
@@ -53,7 +51,7 @@
   fill: var(--ink);
   font-family: var(--font-serif), "Bodoni 72", Didot, Georgia, serif;
   font-weight: 400;
-  letter-spacing: -.02em;
+  letter-spacing: .01em;
 }
 
 .second line,
