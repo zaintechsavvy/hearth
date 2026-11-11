@@ -65,7 +65,8 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
   const router = useRouter();
   const reduce = useReducedMotion();
   const { home, send } = useHome();
-  const now = useTick(1000) ?? 0;
+  // The wall only needs a coarse clock for resting and the corner time; the resting screen ticks every second on its own.
+  const now = useTick(5000) ?? 0;
   const [resting, setResting] = useState(false);
   /** When the screen last went to rest, so its activity notes show only what happened since. */
   const [restedAt, setRestedAt] = useState(0);
@@ -225,7 +226,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           <motion.button type="button" key="saver" className={styles.saver} data-night={night || undefined} data-red={(night && settings.nightRed) || undefined} aria-label="Wake the screen"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.6 }}
             onClick={() => { lastActive.current = Date.now(); setResting(false); }}>
-            <Glance now={now} night={night} settings={settings} leftOpen={leftOpen.items} />
+            <Glance night={night} settings={settings} leftOpen={leftOpen.items} />
             <RestActivity since={restedAt} />
           </motion.button>
         )}
@@ -267,7 +268,8 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
 }
 
 /** The resting screen: the date over a large clock, the weather, then running timers and what needs doing next as cards. It drifts a little each minute so nothing burns in. */
-function Glance({ now, night, settings, leftOpen }: { now: number; night: boolean; settings: WallSettings; leftOpen: LeftOpen[] }) {
+function Glance({ night, settings, leftOpen }: { night: boolean; settings: WallSettings; leftOpen: LeftOpen[] }) {
+  const now = useTick(1000) ?? 0;
   const { home } = useHome();
   const [frameEmpty, setFrameEmpty] = useState(false);
   const photos = settings.frame && !(night && !settings.frameAtNight);
