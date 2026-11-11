@@ -1,7 +1,7 @@
 .pill {
   position: relative;
   overflow: hidden;
-  touch-action: none;
+  touch-action: pan-y;
   cursor: ns-resize;
   user-select: none;
   background: oklch(50% 0 0 / .08);
@@ -21,6 +21,10 @@
   background: linear-gradient(180deg, color-mix(in oklch, var(--tile-color) 30%, oklch(99% 0 0)), color-mix(in oklch, var(--tile-color) 52%, oklch(97% 0 0)));
   box-shadow: inset 0 1px 0 oklch(100% 0 0 / .8);
   transition: height var(--duration-spring) var(--ease-spring);
+}
+
+.pill[data-armed] {
+  background: oklch(50% 0 0 / .14);
 }
 
 .pill[data-dragging] .fill {
