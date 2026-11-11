@@ -173,12 +173,13 @@
   gap: var(--space-3);
 }
 
+/* Set exactly as the greeting beside it. */
 .cornerTime {
   color: var(--foreground);
   font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: 500;
-  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
   letter-spacing: var(--tracking-display);
 }
 

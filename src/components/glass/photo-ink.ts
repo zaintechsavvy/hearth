@@ -85,7 +85,8 @@ export function usePhotoInk(photo: PhotoBackground | null, theme: "light" | "dar
         if (element.closest("[data-backed], [data-wall-chip]")) continue;
         const box = element.getBoundingClientRect();
         if (!box.width) continue;
-        const offset = pinned(element) ? 0 : scrollY;
+        // A wall tablet scrolls <main> rather than the page, so its scroll counts too.
+        const offset = pinned(element) ? 0 : scrollY + (document.querySelector("main")?.scrollTop ?? 0);
         const pageTop = box.top + offset, pageBottom = box.bottom + offset;
         const left = Math.max(0, Math.floor(box.left / innerWidth * COLS)), right = Math.min(COLS - 1, Math.floor(box.right / innerWidth * COLS));
         const top = Math.min(rows - 1, Math.max(0, Math.floor(pageTop / height * rows))), bottom = Math.min(rows - 1, Math.max(0, Math.floor(pageBottom / height * rows)));

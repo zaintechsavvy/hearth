@@ -231,9 +231,19 @@ body {
   transition: scale 420ms var(--ease-spring);
 }
 
-/* No rubber-band bounce on a wall tablet, which slid the page under the fixed clock and menu at either end. */
-:root[data-wall] {
+/* On a wall tablet the page itself never scrolls; only <main> does. With nothing scrolling the whole page, Safari has
+   nothing to bounce or drag, so the fixed clock and menu in the corner cannot move. */
+:root[data-wall],
+:root[data-wall] body {
+  height: 100%;
+  overflow: hidden;
   overscroll-behavior: none;
+}
+
+:root[data-wall] main {
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* A wall tablet is touched, never read closely: nothing on it selects, except the fields you type into. */

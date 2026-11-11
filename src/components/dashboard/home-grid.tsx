@@ -48,7 +48,7 @@ function useFitHeight() {
     if (!node) return;
     const measure = () => {
       const bottom = parseFloat(getComputedStyle(document.querySelector("main") ?? document.body).paddingBottom) || 0;
-      node.style.setProperty("--fit-height", `${Math.max(240, window.innerHeight - (node.getBoundingClientRect().top + window.scrollY) - bottom)}px`);
+      node.style.setProperty("--fit-height", `${Math.max(240, window.innerHeight - (node.getBoundingClientRect().top + window.scrollY + (document.querySelector("main")?.scrollTop ?? 0)) - bottom)}px`);
     };
     measure();
     const observer = new ResizeObserver(measure);
