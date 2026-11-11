@@ -63,15 +63,31 @@ function predict(device: Device, command: DeviceCommand): Device {
   return next.kind === "light" && next.dimmable && next.on && next.brightness === 0 ? { ...next, brightness: levels.get(device.id) ?? 100 } : next;
 }
 
-function patch(snapshot: HomeSnapshot, id: string, command: DeviceCommand): HomeSnapshot {
-  return { ...snapshot, devices: snapshot.devices.map(device => device.id === id ? predict(device, command) : device) };
-}
-
 /** How long a command just sent outranks a pushed snapshot that still shows the device as it was. */
 const SETTLE_MS = 4000;
 /** Commands sent from this screen, kept until a snapshot agrees with them or they age out. */
 const recent = new Map<string, { command: DeviceCommand; at: number }>();
 const same = (a: Device, b: Device) => JSON.stringify(a) === JSON.stringify(b);
+/** Tells every reader of the home that the pending commands changed, so each shows them at once. */
+const pending = { version: 0, listeners: new Set<() => void>() };
+const changedPending = () => { pending.version++; for (const listener of pending.listeners) listener(); };
+
+/**
+ * The home with every command still on its way laid over it. Each one is laid over whatever the home is now, so two
+ * quick taps both show at once and neither undoes the other while the first is still being answered.
+ */
+function withPending(snapshot: HomeSnapshot): HomeSnapshot {
+  if (!recent.size) return snapshot;
+  const now = Date.now();
+  let changed = false;
+  const devices = snapshot.devices.map(device => {
+    const sent = recent.get(device.id);
+    if (!sent || now - sent.at > SETTLE_MS || same(applyCommand(device, sent.command), device)) return device;
+    changed = true;
+    return predict(device, sent.command);
+  });
+  return changed ? { ...snapshot, devices } : snapshot;
+}
 
 /**
  * A snapshot built before the server applied a command, which can arrive just after it returns, would flip the tile
@@ -163,6 +179,9 @@ function settle() {
 export function useHome() {
   const live = useSyncExternalStore(listener => { shared.listeners.add(listener); return () => shared.listeners.delete(listener); }, () => shared.live, () => false);
   const { data, error, isLoading, mutate } = useSWR<HomeSnapshot>(KEY, fetchHome, { refreshInterval: live ? 0 : FALLBACK_POLL_MS, keepPreviousData: true });
+  // Read so a change to the pending commands renders every reader again, which lays them over the home below.
+  useSyncExternalStore(listener => { pending.listeners.add(listener); return () => pending.listeners.delete(listener); }, () => pending.version, () => 0);
+  const home = data && withPending(data);
 
   useEffect(() => connect(), []);
 
@@ -213,30 +232,26 @@ export function useHome() {
   const send = useCallback(async (device: Device, command: DeviceCommand, pin?: string) => {
     markSent(device.id);
     shared.inFlight++;
-    recent.set(device.id, { command, at: Date.now() });
     rememberLevels([device]);
+    // A change behind a PIN or an alarm code waits for the server to accept the code, so a wrong one never looks like it worked.
+    const guarded = Boolean(pin || (command.type === "alarm" && command.code));
+    const show = () => { recent.set(device.id, { command, at: Date.now() }); changedPending(); };
+    if (!guarded) show();
     try {
-      await mutate(async current => {
-        const response = await fetch(`/api/devices/${encodeURIComponent(device.id)}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...(pin ? { "X-Hearth-Pin": pin } : {}) },
-          body: JSON.stringify(command),
-        });
-        if (!response.ok) {
-          recent.delete(device.id);
-          throw new Error((await response.json().catch(() => null))?.error ?? "The device did not respond.");
-        }
-        return current && patch(current, device.id, command);
-      }, {
-        // A change behind a PIN or an alarm code waits for the server to accept the code, so a wrong one never looks like it worked.
-        ...(pin || (command.type === "alarm" && command.code) ? {} : { optimisticData: (current: HomeSnapshot | undefined) => current ? patch(current, device.id, command) : (current as unknown as HomeSnapshot) }),
-        rollbackOnError: true,
-        revalidate: false,
+      const response = await fetch(`/api/devices/${encodeURIComponent(device.id)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(pin ? { "X-Hearth-Pin": pin } : {}) },
+        body: JSON.stringify(command),
       });
+      if (!response.ok) {
+        if (recent.get(device.id)?.command === command) { recent.delete(device.id); changedPending(); }
+        throw new Error((await response.json().catch(() => null))?.error ?? "The device did not respond.");
+      }
+      if (guarded) show();
     } finally {
       settle();
     }
-  }, [mutate]);
+  }, []);
 
   const runScene = useCallback(async (scene: HearthScene): Promise<SceneRun> => {
     markSent(...scene.actions.map(action => action.deviceId));
@@ -260,5 +275,5 @@ export function useHome() {
     }
   }, [mutate]);
 
-  return { home: data, error, isLoading, live, refresh: mutate, send, runScene, saveItem, removeItem, changeItem };
+  return { home, error, isLoading, live, refresh: mutate, send, runScene, saveItem, removeItem, changeItem };
 }
