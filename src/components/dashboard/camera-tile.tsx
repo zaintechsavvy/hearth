@@ -1,10 +1,11 @@
 "use client";
 
-import { Maximize2, RotateCw, VideoOff } from "lucide-react";
+import { Maximize2, Minimize2, RotateCw, VideoOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
 import { glassClass } from "@/components/glass/glass";
 import { firstFrame, watchFrames } from "./camera-frames";
+import { useCameraFullScreen } from "./use-camera-full-screen";
 import styles from "./camera-tile.module.css";
 
 type StreamState = "connecting" | "live" | "snapshot" | "offline";
@@ -47,6 +48,7 @@ async function connect(cameraId: string, video: HTMLVideoElement, signal: AbortS
 
 export function CameraTile({ camera, fill = false }: { camera: { id: string; name: string }; fill?: boolean }) {
   const frame = useRef<HTMLElement>(null);
+  const full = useCameraFullScreen(frame);
   const video = useRef<HTMLVideoElement>(null);
   const [state, setState] = useState<StreamState>("connecting");
   const [attempt, setAttempt] = useState(0);
@@ -107,8 +109,9 @@ export function CameraTile({ camera, fill = false }: { camera: { id: string; nam
           {state === "connecting" ? <TextShimmer>Connecting</TextShimmer> : state === "live" ? "Live" : state === "snapshot" ? "Snapshot" : "Offline"}
         </span>
       </figcaption>
-      <button type="button" className={`${glassClass("pill")} ${styles.fullscreen}`} onClick={() => frame.current?.requestFullscreen?.()} aria-label={`Show ${camera.name} full screen`}>
-        <Maximize2 size={16} strokeWidth={1.75} aria-hidden="true" />
+      <button type="button" className={`${glassClass("pill")} ${styles.fullscreen}`} onClick={() => void (full.lifted ? full.close() : full.open())}
+        aria-label={full.lifted ? `Close the full screen view of ${camera.name}` : `Show ${camera.name} full screen`}>
+        {full.lifted ? <Minimize2 size={16} strokeWidth={1.75} aria-hidden="true" /> : <Maximize2 size={16} strokeWidth={1.75} aria-hidden="true" />}
       </button>
     </figure>
   );

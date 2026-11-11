@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Info, Maximize2, RotateCw, VideoOff } from "lucide-react";
+import { Download, Info, Maximize2, Minimize2, RotateCw, VideoOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
 import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
@@ -8,6 +8,7 @@ import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import type { CameraDevice } from "@/lib/devices/types";
 import type { IceCandidate, IceServer } from "@/lib/integrations/types";
 import { candidateHosts, firstFrame, timeout, watchFrames } from "./camera-frames";
+import { useCameraFullScreen } from "./use-camera-full-screen";
 import styles from "./camera-tile.module.css";
 
 type Stage = "webrtc" | "hls" | "mjpeg";
@@ -245,6 +246,7 @@ interface IntegrationCameraTileProps {
  */
 export function IntegrationCameraTile({ camera, call }: IntegrationCameraTileProps) {
   const frame = useRef<HTMLElement>(null);
+  const full = useCameraFullScreen(frame);
   const video = useRef<HTMLVideoElement>(null);
   const [view, setView] = useState<View>(camera.streamable ? { kind: "connecting", stage: "webrtc" } : { kind: "offline" });
   const [notes, setNotes] = useState<string[]>([]);
@@ -449,8 +451,9 @@ export function IntegrationCameraTile({ camera, call }: IntegrationCameraTilePro
           <a className={`${glassClass("pill")} ${styles.tool}`} href={`${base}?mode=snapshot&save=1`} download={`${camera.name}.jpg`} aria-label={`Save a snapshot from ${camera.name}`} title="Save a snapshot">
             <Download size={16} strokeWidth={1.75} aria-hidden="true" />
           </a>
-          <button type="button" className={`${glassClass("pill")} ${styles.tool}`} onClick={() => frame.current?.requestFullscreen?.()} aria-label={`Show ${camera.name} full screen`} title="Full screen">
-            <Maximize2 size={16} strokeWidth={1.75} aria-hidden="true" />
+          <button type="button" className={`${glassClass("pill")} ${styles.tool}`} onClick={() => void (full.lifted ? full.close() : full.open())}
+            aria-label={full.lifted ? `Close the full screen view of ${camera.name}` : `Show ${camera.name} full screen`} title={full.lifted ? "Close full screen" : "Full screen"}>
+            {full.lifted ? <Minimize2 size={16} strokeWidth={1.75} aria-hidden="true" /> : <Maximize2 size={16} strokeWidth={1.75} aria-hidden="true" />}
           </button>
         </div>
       )}

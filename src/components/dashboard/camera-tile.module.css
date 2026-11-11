@@ -252,3 +252,24 @@
 .tile[data-state="snapshot"] .media {
   transition: opacity var(--duration-standard) var(--ease-standard);
 }
+
+/* Lifted to fill the window where the browser has no full screen; the whole picture shows, letterboxed. */
+.tile:popover-open {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: oklch(0% 0 0);
+}
+
+.tile:popover-open .media,
+.tile:fullscreen .media {
+  object-fit: contain;
+}
