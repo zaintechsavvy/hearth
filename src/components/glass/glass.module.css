@@ -84,6 +84,7 @@
  */
 :root[data-theme="dark"] :is(.glass, .sheet) {
   --surface: oklch(100% 0 0 / .08);
+  --surface-raised: oklch(100% 0 0 / .1);
   --surface-muted: oklch(100% 0 0 / .13);
   --border: oklch(100% 0 0 / .12);
 }

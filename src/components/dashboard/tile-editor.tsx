@@ -168,7 +168,7 @@ export function TileEditor({ tile, onOpenChange, onChange, onRemove, onRelink, r
               >
                 <RadioCards
                   aria-labelledby="tile-size"
-                  minColumnWidth={112}
+                  minColumnWidth={150}
                   value={tile.config.size}
                   onValueChange={size => onChange({ size: size as TileSize })}
                   options={options.map(option => ({

@@ -143,6 +143,13 @@
   gap: var(--space-2);
 }
 
+/* Every button in the footer takes the confirm buttons' height and corners, so Edit scene, Remove tile, Delete scene and Done read as one set. */
+.extra > button,
+.actions > button {
+  min-height: var(--control-height-sm);
+  border-radius: var(--radius-control-sm);
+}
+
 .link {
   display: flex;
   align-items: center;
