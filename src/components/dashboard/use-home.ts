@@ -55,6 +55,34 @@ function patch(snapshot: HomeSnapshot, id: string, command: DeviceCommand): Home
   return { ...snapshot, devices: snapshot.devices.map(device => device.id === id ? applyCommand(device, command) : device) };
 }
 
+/** How long a command just sent outranks a pushed snapshot that still shows the device as it was. */
+const SETTLE_MS = 4000;
+/** Commands sent from this screen, kept until a snapshot agrees with them or they age out. */
+const recent = new Map<string, { command: DeviceCommand; at: number }>();
+const same = (a: Device, b: Device) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * A snapshot built before the server applied a command, which can arrive just after it returns, would flip the tile
+ * back for a moment. While a command is fresh, such a snapshot keeps the commanded state; one that agrees retires it.
+ */
+function reconcile(snapshot: HomeSnapshot): HomeSnapshot {
+  if (!recent.size) return snapshot;
+  const now = Date.now();
+  let changed = false;
+  const devices = snapshot.devices.map(device => {
+    const sent = recent.get(device.id);
+    if (!sent) return device;
+    const expected = applyCommand(device, sent.command);
+    if (same(expected, device) || now - sent.at > SETTLE_MS) {
+      recent.delete(device.id);
+      return device;
+    }
+    changed = true;
+    return expected;
+  });
+  return changed ? { ...snapshot, devices } : snapshot;
+}
+
 /**
  * One live stream for the whole page, however many tiles read the home: each open stream rebuilds the home on the
  * server for every change, so a stream per tile made every change slow to arrive. Pushed snapshots wait while a
@@ -83,7 +111,7 @@ function open() {
     const source = new EventSource(STREAM);
     source.addEventListener("snapshot", event => {
       notifyLive(true);
-      const snapshot = steady(JSON.parse((event as MessageEvent<string>).data) as HomeSnapshot);
+      const snapshot = reconcile(steady(JSON.parse((event as MessageEvent<string>).data) as HomeSnapshot));
       if (shared.inFlight > 0) shared.held = snapshot;
       else void mutateKey(KEY, snapshot, { revalidate: false });
     });
@@ -113,7 +141,7 @@ function connect() {
 function settle() {
   shared.inFlight--;
   if (shared.inFlight === 0 && shared.held) {
-    const snapshot = shared.held;
+    const snapshot = reconcile(shared.held);
     shared.held = null;
     void mutateKey(KEY, snapshot, { revalidate: false });
   }
@@ -173,6 +201,7 @@ export function useHome() {
   const send = useCallback(async (device: Device, command: DeviceCommand, pin?: string) => {
     markSent(device.id);
     shared.inFlight++;
+    recent.set(device.id, { command, at: Date.now() });
     try {
       await mutate(async current => {
         const response = await fetch(`/api/devices/${encodeURIComponent(device.id)}`, {
@@ -180,7 +209,10 @@ export function useHome() {
           headers: { "Content-Type": "application/json", ...(pin ? { "X-Hearth-Pin": pin } : {}) },
           body: JSON.stringify(command),
         });
-        if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? "The device did not respond.");
+        if (!response.ok) {
+          recent.delete(device.id);
+          throw new Error((await response.json().catch(() => null))?.error ?? "The device did not respond.");
+        }
         return current && patch(current, device.id, command);
       }, {
         // A change behind a PIN or an alarm code waits for the server to accept the code, so a wrong one never looks like it worked.

@@ -14,7 +14,6 @@ import { Glass, glassClass } from "@/components/glass/glass";
 import { addDemoHome, deleteScene, saveLayout, updateDevice } from "@/lib/actions";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { useTick } from "./household/use-tick";
-import { PageTabs } from "./page-tabs";
 import { ADD_TILE_EVENT } from "@/components/shell/command-menu";
 import type { HomeCamera } from "@/lib/home";
 import { INTEGRATION_LABELS } from "@/lib/integrations/types";
@@ -168,7 +167,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     if (rulePage) setStoredPage(rulePage);
     else if (leaving) setStoredPage(HOME_PAGE_ID);
   }, [ruleId, rulePage, setStoredPage]);
-  const page = home?.pages.find(item => item.id === storedPage) ?? home?.pages[0];
+  // One home screen: rooms filter it, and any other pages saved earlier are kept but no longer shown.
+  const page = home?.pages.find(item => item.id === HOME_PAGE_ID) ?? home?.pages[0];
   const pageId = page?.id ?? HOME_PAGE_ID;
   const tiles = useMemo(() => resolveLayout(draft ?? page?.layout ?? [], sources), [draft, page?.layout, sources]);
   const swipe = useRef<{ id: number; x: number; y: number; lastX: number; lastY: number } | null>(null);
@@ -237,7 +237,6 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     setRoom(ALL_ROOMS);
     setStoredPage(id);
   };
-  const pageIndex = home.pages.findIndex(item => item.id === pageId);
   /** Copied tiles land after the page's own, filling the first gaps, each as a new tile with the same settings. */
   const paste = () => {
     change([...tiles, ...clipboard.map(tile => ({ ...tile, id: newTileId(), at: undefined }))]);
@@ -337,16 +336,10 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     slide(Math.sign(screens.indexOf(next) - screens.indexOf(current)));
     setRoom(next);
   };
-  /** On a wall tablet a swipe turns the page; elsewhere it moves through the rooms first, then on to the next page. */
+  /** A swipe moves through the rooms. */
   const step = (direction: 1 | -1, pagesOnly: boolean) => {
     const next = pagesOnly ? undefined : screens[screens.indexOf(current) + direction];
-    if (next !== undefined) return showRoom(next);
-    const page = home.pages[pageIndex + direction];
-    if (page) {
-      slide(direction);
-      setRoom(ALL_ROOMS);
-      selectPage(page.id);
-    }
+    if (next !== undefined) showRoom(next);
   };
   // Followed from first touch to last, in the capture phase, so a swipe that starts on a tile still counts even when
   // the tile, or the switch that ticks under it on an iPhone, takes the touch over before the finger lifts.
@@ -357,9 +350,9 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
     const dx = x - start.x, dy = y - start.y;
     if (Math.abs(dx) < SWIPE_PX || Math.abs(dy) > Math.abs(dx) * 0.6) return;
     swiped.current = event.timeStamp;
-    step(dx < 0 ? 1 : -1, document.documentElement.dataset.wall !== undefined && home.pages.length > 1);
+    step(dx < 0 ? 1 : -1, false);
   };
-  const swipeHandlers = !editing && (screens.length > 1 || home.pages.length > 1) ? {
+  const swipeHandlers = !editing && screens.length > 1 ? {
     onPointerDownCapture: (event: React.PointerEvent) => {
       if (event.pointerType === "touch") swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY };
     },
@@ -634,30 +627,11 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         </div>
       </header>
 
-      {editing && <PageTabs pages={home.pages} current={pageId} editing={editing} onSelect={selectPage} onChanged={refresh} />}
-      {editing ? linkedRooms.length > 1 && (
-          <div className={styles.screens} data-on-wall>
-            <span className={`${glassClass("pill")} ${styles.screenGlass}`}><SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} /></span>
-          </div>
-        )
-        : (home.pages.length > 1 || linkedRooms.length > 1) && (
-          <div className={styles.screens} data-on-wall>
-            {home.pages.length > 1 && (
-              <span className={`${glassClass("pill")} ${styles.screenGlass}`}>
-                {home.pages.length <= 5 ? (
-                  <SegmentedControl label="Page" className={styles.rooms} value={pageId} onValueChange={id => { setRoom(ALL_ROOMS); selectPage(id); }}
-                    options={home.pages.map(item => ({ value: item.id, label: item.name }))} />
-                ) : (
-                  <DropdownMenu icon={<LayoutGrid size={15} strokeWidth={1.75} aria-hidden="true" />} label={page?.name ?? "Home"}
-                    items={home.pages.map(item => ({ label: item.name, onSelect: () => { setRoom(ALL_ROOMS); selectPage(item.id); } }))} />
-                )}
-              </span>
-            )}
-            {linkedRooms.length > 1 && (
-              <span className={`${glassClass("pill")} ${styles.screenGlass}`}><SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} /></span>
-            )}
-          </div>
-        )}
+      {linkedRooms.length > 1 && (
+        <div className={styles.screens} data-on-wall>
+          <span className={`${glassClass("pill")} ${styles.screenGlass}`}><SegmentedControl label="Room" className={styles.rooms} value={current} onValueChange={showRoom} options={[{ value: ALL_ROOMS, label: "All" }, ...linkedRooms.map(value => ({ value, label: value }))]} /></span>
+        </div>
+      )}
 
       {failing.map(integration => (
         <Alert key={integration.id} tone="warning" title={`${integration.name} is not responding`}>{integration.error ?? ""}</Alert>

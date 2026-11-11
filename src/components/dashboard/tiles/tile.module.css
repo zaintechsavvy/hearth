@@ -352,13 +352,13 @@ div.reading {
   letter-spacing: var(--tracking-display);
 }
 
-/* A raised button, so it still reads as one on frosted glass over a busy wallpaper. */
+/* A quiet button with a hairline edge, so it reads as one on frosted glass without standing out. */
 .tallAction {
   height: 36px;
-  border: 1px solid oklch(0% 0 0 / .07);
+  border: 1px solid oklch(0% 0 0 / .06);
   border-radius: var(--radius-tile-control);
-  background: oklch(100% 0 0 / .66);
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .75), 0 1px 2px oklch(0% 0 0 / .08), 0 8px 18px -10px oklch(0% 0 0 / .4);
+  background: oklch(100% 0 0 / .46);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .5);
   color: var(--foreground);
   font-size: var(--text-sm);
   font-weight: 500;
@@ -366,9 +366,9 @@ div.reading {
 }
 
 :root[data-theme="dark"] .tallAction {
-  border-color: oklch(100% 0 0 / .12);
-  background: oklch(100% 0 0 / .16);
-  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .16), 0 8px 20px -10px oklch(0% 0 0 / .7);
+  border-color: oklch(100% 0 0 / .09);
+  background: oklch(100% 0 0 / .1);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / .08);
 }
 
 .tile[data-on] .tallAction,

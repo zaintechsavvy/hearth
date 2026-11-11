@@ -237,10 +237,11 @@
 }
 
 /* After dark the resting screen offers the bedtime check, out of the way in a corner. */
+/* Top right while resting: the analog face keeps the day in the lower left and activity notes take the lower right. */
 .bedtime {
   position: fixed;
-  left: max(var(--space-5), env(safe-area-inset-left));
-  bottom: max(var(--space-5), env(safe-area-inset-bottom));
+  right: max(var(--space-5), env(safe-area-inset-right));
+  top: max(var(--space-5), env(safe-area-inset-top));
   z-index: 85;
   display: inline-flex;
   align-items: center;
