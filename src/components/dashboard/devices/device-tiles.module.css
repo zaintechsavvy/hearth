@@ -478,3 +478,94 @@
   background: var(--foreground);
   color: var(--background);
 }
+
+/* The large vacuum card: a start button ringed by the battery, and the other controls in a row beneath it. */
+.card[data-template="vacuum"] {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-content: stretch;
+}
+
+.vacuumCenter {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+
+.vacuumGo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(64px, 38cqmin, 104px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--foreground);
+  color: var(--background);
+  transition: scale var(--duration-fast) var(--ease-standard);
+}
+
+.vacuumGo:active:not(:disabled) {
+  scale: .95;
+}
+
+.vacuumGo:disabled {
+  opacity: .45;
+}
+
+.vacuumRing {
+  position: absolute;
+  inset: -9px;
+  width: calc(100% + 18px);
+  height: calc(100% + 18px);
+  rotate: -90deg;
+}
+
+.ringTrack,
+.ringFill {
+  fill: none;
+  stroke-width: 3;
+}
+
+.ringTrack {
+  stroke: oklch(50% 0 0 / .14);
+}
+
+.ringFill {
+  stroke: var(--success);
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--duration-standard) var(--ease-standard);
+}
+
+.ringFill[data-low] {
+  stroke: var(--danger);
+}
+
+.playNudge {
+  translate: 2px 0;
+}
+
+.vacuumRow,
+.sheetActions {
+  display: flex;
+  justify-content: space-around;
+  gap: var(--space-2);
+}
+
+.roundAction {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.roundAction:disabled {
+  opacity: .45;
+}
+
+.roundAction:active:not(:disabled) .round {
+  scale: .92;
+}
+
+button.card {
+  text-align: start;
+}
