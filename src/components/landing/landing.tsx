@@ -11,28 +11,23 @@ import { LiveThermostat } from "./live-thermostat";
 import { MomentDemo } from "./moment-demo";
 import { useRouter } from "next/navigation";
 import ipad from "./shots/ipad.webp";
-import ipadDark from "./shots/ipad-dark.webp";
 import analog from "./shots/wall-analog.webp";
 import luxury from "./shots/wall-luxury.webp";
 import activity from "./shots/activity.webp";
-import activityDark from "./shots/activity-dark.webp";
 import customize from "./shots/customize.webp";
-import customizeDark from "./shots/customize-dark.webp";
 import phone from "./shots/phone.webp";
-import phoneDark from "./shots/phone-dark.webp";
 import { ConnectsDiagram } from "@/app/how-it-works/diagrams";
 import styles from "./landing.module.css";
 
 const GITHUB = "https://github.com/zaintechsavvy/hearth";
 
-/** A feature shows two screenshots, light and dark, or `live`, the real thermostat to try. */
-const FEATURES: ({ title: string; body: string; points: string[]; small?: boolean; radius?: string } & ({ live?: false; shot: StaticImageData; dark: StaticImageData; alt: string } | { live: true }))[] = [
+/** A feature shows a screenshot, or `live`, the real thermostat to try. */
+const FEATURES: ({ title: string; body: string; points: string[]; small?: boolean; radius?: string } & ({ live?: false; shot: StaticImageData; alt: string } | { live: true }))[] = [
   {
     title: "A grid you arrange yourself",
     body: "Start empty and add what you reach for. Drag tiles into any cell, gaps and all, and pick a size from 1×1 to 4×3. No YAML.",
     points: ["Lights, locks, garage doors, cameras, climate, scenes", "Each screen width keeps its own layout", "Swipe between rooms on a tablet"],
     shot: customize,
-    dark: customizeDark,
     alt: "The customize dialog for a tile, with size, icon, colour and press actions",
   },
   {
@@ -48,7 +43,6 @@ const FEATURES: ({ title: string; body: string; points: string[]; small?: boolea
     body: "Activity lists every change from Hearth and Home Assistant alike, even while no screen was open. Noisy devices fold into one line you can open.",
     points: ["Credits the person, scene or automation", "Doorbell rings come with a picture", "Mute a device that talks too much"],
     shot: activity,
-    dark: activityDark,
     alt: "The Activity page grouping changes by day",
   },
   {
@@ -56,7 +50,6 @@ const FEATURES: ({ title: string; body: string; points: string[]; small?: boolea
     body: "The same home on your phone, with the same tiles. Add it to your home screen and it opens like an app.",
     points: ["Pages and rooms you can swipe", "Ask by typing or speaking", "Guests can be invited with a code"],
     shot: phone,
-    dark: phoneDark,
     alt: "Hearth on a phone showing rooms and tiles",
     small: true,
   },
@@ -107,8 +100,7 @@ export function Landing() {
 
           <motion.div className={styles.tablet} {...rise(0.1)}>
             <div className={styles.bezel}>
-              <Image unoptimized src={ipad} alt="Hearth on a wall tablet: thermostat, transit, music, locks, a porch camera, lights and who is home" priority className={`${styles.screen} ${styles.lightOnly}`} sizes="(min-width: 1200px) 1100px, 92vw" />
-              <Image unoptimized src={ipadDark} alt="" aria-hidden="true" loading="eager" className={`${styles.screen} ${styles.darkOnly}`} sizes="(min-width: 1200px) 1100px, 92vw" />
+              <Image unoptimized src={ipad} alt="Hearth on a wall tablet: thermostat, transit, music, locks, a porch camera, lights and who is home" priority className={styles.screen} sizes="(min-width: 1200px) 1100px, 92vw" />
             </div>
           </motion.div>
         </section>
@@ -151,12 +143,7 @@ export function Landing() {
                 <ul className={styles.points}>{f.points.map(p => <li key={p}>{p}</li>)}</ul>
               </div>
               <div className={`${styles.featureShot} ${f.small ? styles.featureShotSmall : ""} ${f.radius ? styles.featureShotRound : ""}`} style={f.radius ? { "--shot-radius": f.radius } as CSSProperties : undefined}>
-                {f.live ? <LiveThermostat /> : (
-                  <>
-                    <Image unoptimized src={f.shot} alt={f.alt} className={`${styles.shot} ${styles.lightOnly}`} sizes="(min-width: 900px) 760px, 92vw" />
-                    <Image unoptimized src={f.dark} alt="" aria-hidden="true" className={`${styles.shot} ${styles.darkOnly}`} sizes="(min-width: 900px) 760px, 92vw" />
-                  </>
-                )}
+                {f.live ? <LiveThermostat /> : <Image unoptimized src={f.shot} alt={f.alt} className={styles.shot} sizes="(min-width: 900px) 760px, 92vw" />}
               </div>
             </motion.article>
           ))}

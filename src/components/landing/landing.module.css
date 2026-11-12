@@ -141,10 +141,6 @@
   border-radius: clamp(12px, 1.8vw, 26px);
 }
 
-.darkOnly { display: none; }
-:global(:root[data-theme="dark"]) .darkOnly { display: block; }
-:global(:root[data-theme="dark"]) .lightOnly { display: none; }
-
 .heading {
   font-family: var(--font-display);
   font-size: clamp(28px, 3.4vw, var(--text-4xl));
