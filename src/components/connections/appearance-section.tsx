@@ -87,7 +87,7 @@ export function AppearanceSection({ pages }: { pages: { id: string; name: string
             <span className={styles.rowMeta}>Soft sounds on this device when you switch something, a scene runs, a timer finishes, or the doorbell rings.</span>
           </div>
           <div className={styles.rowActions}>
-            <Switch aria-label="Sounds" checked={sounds} onCheckedChange={on => { setSounds(on); if (on) { void unlock(); play("toggle"); } }} />
+            <Switch aria-label="Sounds" checked={sounds} onCheckedChange={on => { setSounds(on); if (on) { void unlock(); play("select", { volume: 0.45 }); } }} />
           </div>
         </div>
         <div className={styles.row}>

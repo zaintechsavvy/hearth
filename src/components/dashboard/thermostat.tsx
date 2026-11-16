@@ -11,6 +11,7 @@ import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import { OptionChips } from "./option-chips";
 import { clamp, type DeviceCommand, type ThermostatDevice, type ThermostatMode } from "@/lib/devices/types";
 import type { TileSize } from "@/lib/dashboard/layout";
+import { cue } from "@/lib/sound";
 import styles from "./thermostat.module.css";
 
 const COMMIT_DELAY_MS = 700;
@@ -101,6 +102,7 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
     if (off || target === null) return;
     const next = clamp(Math.round((target + direction * device.step) / device.step) * device.step, device.min, device.max);
     if (next === target) return;
+    cue("select", { emphasis: "subtle", direction: direction > 0 ? "forward" : "back" });
     setDraft(next);
     pulse(direction);
     clearTimeout(timer.current);
