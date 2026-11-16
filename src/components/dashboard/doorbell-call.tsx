@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import type { EventDevice } from "@/lib/devices/types";
 import { haptic } from "@/lib/haptics";
+import { cue } from "@/lib/sound";
 import { cameraFor } from "@/lib/ring-camera";
 import { IntegrationCameraTile } from "./integration-camera-tile";
 import { useHome } from "./use-home";
@@ -53,6 +54,7 @@ export function DoorbellCall() {
       setRing(doorbell);
       setLooking(false);
       haptic("alert");
+      cue("attention", { emphasis: "strong" });
       window.dispatchEvent(new Event(WAKE_EVENT));
       void fetch("/api/doorbell", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId: doorbell.id, at: doorbell.last }) }).catch(() => {});
     }

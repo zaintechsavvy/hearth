@@ -9,6 +9,7 @@ import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/typ
 import { markSent } from "@/lib/sent-here";
 import type { HomeSnapshot, SceneRun } from "@/lib/home";
 import { applyScene, type HearthScene } from "@/lib/scenes/types";
+import { commandCue, cue } from "@/lib/sound";
 
 const KEY = "/api/home";
 const STREAM = "/api/home/stream";
@@ -236,7 +237,9 @@ export function useHome() {
     // A change behind a PIN or an alarm code waits for the server to accept the code, so a wrong one never looks like it worked.
     const guarded = Boolean(pin || (command.type === "alarm" && command.code));
     const show = () => { recent.set(device.id, { command, at: Date.now() }); changedPending(); };
-    if (!guarded) show();
+    const sound = commandCue(device, command);
+    const sounded = () => { if (sound) cue(...sound); };
+    if (!guarded) { show(); sounded(); }
     try {
       const response = await fetch(`/api/devices/${encodeURIComponent(device.id)}`, {
         method: "POST",
@@ -245,9 +248,10 @@ export function useHome() {
       });
       if (!response.ok) {
         if (recent.get(device.id)?.command === command) { recent.delete(device.id); changedPending(); }
+        cue("error", { emphasis: "subtle" });
         throw new Error((await response.json().catch(() => null))?.error ?? "The device did not respond.");
       }
-      if (guarded) show();
+      if (guarded) { show(); sounded(); }
     } finally {
       settle();
     }
@@ -261,8 +265,9 @@ export function useHome() {
       await mutate(async current => {
         const response = await fetch(`/api/scenes/${scene.id}`, { method: "POST" });
         const body = await response.json().catch(() => null);
-        if (!response.ok) throw new Error(body?.error ?? "The scene did not run.");
+        if (!response.ok) { cue("error"); throw new Error(body?.error ?? "The scene did not run."); }
         outcome = body as SceneRun;
+        cue(outcome.failed.length ? "warning" : "success");
         return current && { ...current, devices: applyScene(current.devices, scene.actions) };
       }, {
         optimisticData: current => current ? { ...current, devices: applyScene(current.devices, scene.actions) } : (current as unknown as HomeSnapshot),

@@ -12,6 +12,7 @@ import { useHome } from "@/components/dashboard/use-home";
 import { glassSheetClass } from "@/components/glass/glass";
 import { bedtimeChosen, bedtimePlan, bedtimeSteps, type BedtimeResult } from "@/lib/bedtime";
 import { haptic } from "@/lib/haptics";
+import { cue } from "@/lib/sound";
 import { markSent } from "@/lib/sent-here";
 import styles from "./bedtime-check.module.css";
 
@@ -44,6 +45,7 @@ export function BedtimeCheck() {
       if (!response.ok) throw new Error(body?.error ?? "Hearth could not run the good night check.");
       const result = body as BedtimeResult;
       haptic(result.failed.length ? "press" : "success");
+      cue(result.failed.length ? "warning" : "success");
       setState({ kind: "done", result });
       void mutate("/api/home");
     } catch (error) {

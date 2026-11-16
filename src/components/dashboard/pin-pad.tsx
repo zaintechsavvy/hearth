@@ -4,6 +4,7 @@ import { Delete } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/arc/button/button";
 import { haptic } from "@/lib/haptics";
+import { cue } from "@/lib/sound";
 import styles from "./pin-pad.module.css";
 
 interface PinPadProps {
@@ -34,6 +35,7 @@ export function PinPad({ label, submitLabel, onSubmit, text = false, length = nu
     setPending(false);
     if (problem) {
       haptic("alert");
+      cue("error");
       setError(problem);
       setCode("");
     }

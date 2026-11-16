@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { useEffect } from "react";
 import { Plus, RotateCcw, Timer } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/arc/button/button";
@@ -17,6 +18,7 @@ interface TimerTakeoverProps {
   onRestart: (timer: WidgetItem<"timer">) => void;
   onDismiss: (timer: WidgetItem<"timer">) => void;
 }
+import { cue } from "@/lib/sound";
 
 const ago = (ms: number) => ms < 60_000 ? "Just now" : `${Math.floor(ms / 60_000)} min ago`;
 
@@ -24,6 +26,7 @@ const ago = (ms: number) => ms < 60_000 ? "Just now" : `${Math.floor(ms / 60_000
 export function TimerTakeover({ timers, now, night, onAdd, onRestart, onDismiss }: TimerTakeoverProps) {
   const reduce = useReducedMotion();
   const [timer, ...rest] = timers;
+  useEffect(() => cue("attention"), [timer.id]);
   const since = now - Date.parse(timer.data.endsAt ?? "");
   return createPortal(
     <motion.div role="alertdialog" aria-modal="true" aria-labelledby="takeover-title" className={styles.takeover} data-night={night || undefined}

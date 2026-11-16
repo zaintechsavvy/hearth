@@ -13,6 +13,8 @@ import { Input } from "@/components/arc/input/input";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { Switch } from "@/components/arc/switch/switch";
 import { HAPTICS_KEY } from "@/lib/haptics";
+import { play, unlock } from "cuelume";
+import { SOUNDS_KEY } from "@/lib/sound";
 import { Slider } from "@/components/arc/slider/slider";
 import { TILE_OPACITY_KEY } from "@/lib/theme";
 import { NO_PAGE_RULES, PAGE_SCHEDULE_KEY, type PageRule } from "@/lib/page-schedule";
@@ -27,6 +29,7 @@ export function AppearanceSection({ pages }: { pages: { id: string; name: string
   const [theme, setTheme] = useThemePreference();
   const [glass, setGlass] = useHtmlPreference<GlassLevel>(GLASS_KEY, "glass", "frosted");
   const [haptics, setHaptics] = useStoredJson<boolean>(HAPTICS_KEY, true);
+  const [sounds, setSounds] = useStoredJson<boolean>(SOUNDS_KEY, true);
   const [opacity, setOpacity] = useStoredJson<number | null>(TILE_OPACITY_KEY, null);
   const presetOpacity = glass === "solid" ? 1 : glass === "clear" ? .3 : .55;
   useEffect(() => {
@@ -76,6 +79,15 @@ export function AppearanceSection({ pages }: { pages: { id: string; name: string
           </div>
           <div className={styles.rowActions}>
             <Switch aria-label="Vibrate on taps" checked={haptics} onCheckedChange={setHaptics} />
+          </div>
+        </div>
+        <div className={styles.row}>
+          <div className={styles.rowText}>
+            <span className={styles.rowTitle}>Sounds</span>
+            <span className={styles.rowMeta}>Soft sounds on this device when you switch something, a scene runs, a timer finishes, or the doorbell rings.</span>
+          </div>
+          <div className={styles.rowActions}>
+            <Switch aria-label="Sounds" checked={sounds} onCheckedChange={on => { setSounds(on); if (on) { void unlock(); play("toggle"); } }} />
           </div>
         </div>
         <div className={styles.row}>
