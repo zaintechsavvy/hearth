@@ -80,3 +80,8 @@
   0%, 100% { transform: translateX(-14%) scaleX(.9); }
   50% { transform: translateX(14%) scaleX(.9); }
 }
+
+.stage[data-small] .tilt,
+.stage[data-small] .wave { width: 34%; }
+
+.stage[data-small] .shadow { width: 28%; height: 10px; margin-bottom: 12%; }

@@ -149,6 +149,8 @@ export interface EventDevice extends DeviceBase {
   /** A doorbell whose call leaves out Listen (the speaker) or Talk (the microphone). */
   hideListen?: boolean;
   hideTalk?: boolean;
+  /** A sensor or button shown as a doorbell in Hearth; its integration files it as this kind. */
+  doorbellFrom?: "binary_sensor" | "event";
 }
 
 export type SceneVariant = "scene" | "script" | "button";

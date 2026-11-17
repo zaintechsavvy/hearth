@@ -180,6 +180,8 @@ export const deviceOverride = pgTable("device_override", {
   hideListen: boolean("hide_listen").notNull().default(false),
   /** A doorbell's call without its Talk button, for a camera with no speaker to talk through. */
   hideTalk: boolean("hide_talk").notNull().default(false),
+  /** Rings as a doorbell when it turns on, for one an integration files as a sensor or a button, such as occupancy. */
+  asDoorbell: boolean("as_doorbell").notNull().default(false),
   /** Left out of Activity, such as an occupancy sensor that fires every minute someone sits in a room. */
   quiet: boolean("quiet").notNull().default(false),
   updatedAt: updatedAt(),

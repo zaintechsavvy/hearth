@@ -1,0 +1,1 @@
+ALTER TABLE "device_override" ADD COLUMN "as_doorbell" boolean DEFAULT false NOT NULL;

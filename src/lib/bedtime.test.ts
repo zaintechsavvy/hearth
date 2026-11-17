@@ -65,11 +65,12 @@ describe("left open", () => {
 describe("cameraFor", () => {
   const doorbell: Device = { ...base, id: "ha:event.front_door_ding", name: "Front door doorbell", kind: "event", eventClass: "doorbell", last: null };
   const camera = (id: string, name: string, room: string | null): Device => ({ ...base, id, name, room, kind: "camera", streamable: true });
-  it("picks the camera that shares the doorbell's room, name, or id", () => {
-    expect(cameraFor(doorbell, [camera("ha:camera.backyard", "Backyard", "Garden"), camera("ha:camera.front_door", "Front door", "Entry")])?.id).toBe("ha:camera.front_door");
+  const cameras = [camera("ha:camera.backyard", "Backyard", "Garden"), camera("ha:camera.front_door", "Front door", "Entry")];
+  it("uses the camera chosen for the doorbell", () => {
+    expect(cameraFor({ ...doorbell, camera: "ha:camera.backyard" } as Device, cameras)?.id).toBe("ha:camera.backyard");
   });
 
-  it("gives up rather than guess between unrelated cameras", () => {
-    expect(cameraFor(doorbell, [camera("ha:camera.backyard", "Backyard", "Garden"), camera("ha:camera.garage", "Garage", "Garage")])).toBeNull();
+  it("has no camera until one is chosen, even when one looks like a match", () => {
+    expect(cameraFor(doorbell, cameras)).toBeNull();
   });
 });

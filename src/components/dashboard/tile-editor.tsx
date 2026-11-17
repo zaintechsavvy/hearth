@@ -44,9 +44,11 @@ export interface TileIdentity {
   doorbellCamera?: { value: string | null; options: { value: string; name: string }[] };
   /** For a doorbell: whether its call shows Listen (the speaker) and Talk (the microphone). */
   doorbellButtons?: { listen: boolean; talk: boolean };
+  /** For a sensor or button: whether Hearth treats it as the doorbell, ringing when it turns on. */
+  asDoorbell?: boolean;
 }
 
-export type IdentityChange = { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean; hideListen?: boolean; hideTalk?: boolean };
+export type IdentityChange = { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean; hideListen?: boolean; hideTalk?: boolean; asDoorbell?: boolean };
 
 export interface EditableTile {
   config: TileConfig;
@@ -416,11 +418,14 @@ function IdentityFields({ identity, rooms, onIdentity }: { identity: TileIdentit
       {identity.quiet !== undefined && (
         <Switch label="Show in Activity" checked={!identity.quiet} onCheckedChange={shown => onIdentity({ quiet: !shown })} />
       )}
+      {identity.asDoorbell !== undefined && (
+        <Switch label="This is a doorbell" checked={identity.asDoorbell} onCheckedChange={on => onIdentity({ asDoorbell: on })} />
+      )}
       {identity.doorbellCamera && (
-        <Select label="Camera at the door" value={identity.doorbellCamera.value ?? AUTO_CAMERA}
+        <Select label="Camera at the door" value={identity.doorbellCamera.value ?? NO_DOOR_CAMERA}
           description={identity.doorbellCamera.options.length ? "A ring fills the screen with this camera, with Listen and Talk." : "Connect the doorbell's camera to see who is there when it rings."}
-          onValueChange={value => onIdentity({ camera: value === AUTO_CAMERA ? null : value })}
-          options={[{ value: AUTO_CAMERA, label: "Find it for me" }, ...identity.doorbellCamera.options.map(option => ({ value: option.value, label: option.name }))]} />
+          onValueChange={value => onIdentity({ camera: value === NO_DOOR_CAMERA ? null : value })}
+          options={[{ value: NO_DOOR_CAMERA, label: "None" }, ...identity.doorbellCamera.options.map(option => ({ value: option.value, label: option.name }))]} />
       )}
       {identity.doorbellButtons && (
         <>
@@ -444,7 +449,7 @@ function IdentityFields({ identity, rooms, onIdentity }: { identity: TileIdentit
   );
 }
 
-const AUTO_CAMERA = "auto";
+const NO_DOOR_CAMERA = "none";
 const KIND_CHOICES: { value: SwitchableKind; label: string }[] = [{ value: "light", label: "Light" }, { value: "switch", label: "Switch" }, { value: "fan", label: "Fan" }];
 const KIND_WORDS: Record<SwitchableKind, string> = { light: "light", switch: "switch", fan: "fan" };
 

@@ -728,6 +728,7 @@ function editableTile(tile: TileConfig, linked: Linked | null, name: string, sou
   const identity = {
     id: device.id, name: device.name, sourceName: device.sourceName, room: device.room, sourceRoom: device.sourceRoom, roomEditable: true, source: sourceLabel(device),
     ...(isSwitchableKind(device.kind) ? { kind: device.kind, sourceKind: device.sourceKind } : {}),
+    ...(device.kind === "binary_sensor" || (device.kind === "event" && (device.eventClass !== "doorbell" || device.doorbellFrom)) ? { asDoorbell: device.kind === "event" && Boolean(device.doorbellFrom) } : {}),
     ...(device.kind === "event" && device.eventClass === "doorbell" ? { doorbellCamera: { value: device.camera ?? null, options: cameras }, doorbellButtons: { listen: !device.hideListen, talk: !device.hideTalk } } : {}),
     quiet: device.quiet ?? false,
   };

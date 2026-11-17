@@ -151,7 +151,7 @@ export function DoorbellCall() {
             ) : (
               <div className={styles.noCamera}>
                 <VideoOff size={28} strokeWidth={1.75} aria-hidden="true" />
-                <p>No camera is set up for this doorbell. Add the camera at the door from Home Assistant to see who it is.</p>
+                <p>No doorbell camera has been connected yet. Choose the camera at the door in this doorbell&apos;s Customize to see who is there.</p>
               </div>
             )}
           </div>

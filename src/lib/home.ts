@@ -63,12 +63,24 @@ export interface HomeSnapshot {
   photoAlbum: boolean;
 }
 
-type Override = { name: string | null; room: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean; hideListen?: boolean; hideTalk?: boolean };
+type Override = { name: string | null; room: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean; hideListen?: boolean; hideTalk?: boolean; asDoorbell?: boolean };
+
+/** When each sensor shown as a doorbell last turned on, so turning off again is not a second ring. */
+const doorbellOn = new Map<string, string>();
+
+/** A sensor or button turned into a doorbell: its last turn on, or its last press, is the ring. */
+function asDoorbell(device: Device): Device {
+  if (device.kind === "event") return device.eventClass === "doorbell" ? device : { ...device, eventClass: "doorbell", doorbellFrom: "event" };
+  if (device.kind !== "binary_sensor") return device;
+  if (device.active && device.changedAt) doorbellOn.set(device.id, device.changedAt);
+  const { id, integrationId, name, room, available, auxiliary, changedAt, quiet } = device;
+  return { id, integrationId, name, room, available, auxiliary, changedAt, quiet, kind: "event", eventClass: "doorbell", last: doorbellOn.get(id) ?? changedAt ?? null, doorbellFrom: "binary_sensor" };
+}
 
 /** Hearth's names and rooms over the integration's, keeping the originals so they can be shown and restored. */
 export function applyOverride<T extends Device>(device: T, override: Override | undefined): T {
   if (!override) return device;
-  const next = { ...device };
+  const next = { ...(override.asDoorbell ? asDoorbell(device) : device) } as T;
   if (override.name) {
     next.sourceName = device.name;
     next.name = override.name;

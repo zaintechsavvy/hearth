@@ -497,6 +497,8 @@ const deviceChange = z.object({
   /** Leave Listen or Talk off a doorbell's call. */
   hideListen: z.boolean().optional(),
   hideTalk: z.boolean().optional(),
+  /** Ring as a doorbell when it turns on. */
+  asDoorbell: z.boolean().optional(),
 });
 
 async function ownsTarget(userId: string, id: string) {
@@ -505,7 +507,7 @@ async function ownsTarget(userId: string, id: string) {
   return Boolean(parsed && await db.query.integration.findFirst({ where: and(eq(integration.id, parsed.integrationId), eq(integration.userId, userId)) }));
 }
 
-async function writeOverride(userId: string, deviceId: string, change: { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean; hideListen?: boolean; hideTalk?: boolean }) {
+async function writeOverride(userId: string, deviceId: string, change: { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean; hideListen?: boolean; hideTalk?: boolean; asDoorbell?: boolean }) {
   const current = await db.query.deviceOverride.findFirst({ where: and(eq(deviceOverride.userId, userId), eq(deviceOverride.deviceId, deviceId)) });
   const next = {
     name: change.name === undefined ? current?.name ?? null : change.name || null,
@@ -515,8 +517,9 @@ async function writeOverride(userId: string, deviceId: string, change: { name?: 
     quiet: change.quiet ?? current?.quiet ?? false,
     hideListen: change.hideListen ?? current?.hideListen ?? false,
     hideTalk: change.hideTalk ?? current?.hideTalk ?? false,
+    asDoorbell: change.asDoorbell ?? current?.asDoorbell ?? false,
   };
-  if (next.name === null && next.room === null && next.kind === null && next.camera === null && !next.quiet && !next.hideListen && !next.hideTalk) {
+  if (next.name === null && next.room === null && next.kind === null && next.camera === null && !next.quiet && !next.hideListen && !next.hideTalk && !next.asDoorbell) {
     await db.delete(deviceOverride).where(and(eq(deviceOverride.userId, userId), eq(deviceOverride.deviceId, deviceId)));
     return;
   }
