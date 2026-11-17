@@ -1,22 +1,14 @@
-"use client";
-
-import { motion } from "motion/react";
 import styles from "./ring-bell.module.css";
 
 /**
- * The moment a doorbell rings: a brass bell swings in 3D, its clapper striking against the swing, with rings of sound
- * spreading out behind it. Drawn in SVG and CSS so it costs nothing to load; the call shows it only for a fresh ring.
- * `small` fits it to a preview, such as the tablet on the landing page.
+ * A brass doorbell bell drawn in SVG. While `ringing` it swings in 3D from its crown, the clapper striking against the
+ * swing, with rings of sound spreading behind it; otherwise it hangs still. It fills the width it is given.
  */
-export function RingBell({ small = false }: { small?: boolean }) {
+export function RingBell({ ringing }: { ringing: boolean }) {
   return (
-    <motion.div className={styles.stage} data-ring-bell="" data-small={small || undefined} aria-hidden="true"
-      initial={{ opacity: 0, scale: .6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .4, y: -120, transition: { duration: .45, ease: [.4, 0, .2, 1] } }}
-      transition={{ type: "spring", stiffness: 260, damping: 18 }}>
-      <span className={styles.wave} />
-      <span className={styles.wave} />
-      <span className={styles.wave} />
-      <div className={styles.tilt}>
+    <span className={styles.stage} data-ringing={ringing || undefined} aria-hidden="true">
+      {ringing && <><span className={styles.wave} /><span className={styles.wave} /></>}
+      <span className={styles.tilt}>
         <svg className={styles.bell} viewBox="0 0 200 220">
           <defs>
             <linearGradient id="ring-bell-body" x1="0" x2="1" y1="0" y2="0">
@@ -48,8 +40,7 @@ export function RingBell({ small = false }: { small?: boolean }) {
             <path d="M72 46c-12 12-17 34-19 58" fill="none" stroke="oklch(100% 0 0 / .55)" strokeWidth="7" strokeLinecap="round" />
           </g>
         </svg>
-      </div>
-      <span className={styles.shadow} />
-    </motion.div>
+      </span>
+    </span>
   );
 }

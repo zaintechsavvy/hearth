@@ -17,4 +17,4 @@ export function proxy(request: NextRequest) {
   return NextResponse.redirect(target);
 }
 
-export const config = { matcher: ["/((?!_next|favicon.ico|.*\\.[a-z]+$).*)"] };
+export const config = { matcher: ["/((?!_next|favicon.ico|.*\\.[a-z0-9]+$).*)"] };

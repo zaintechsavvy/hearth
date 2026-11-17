@@ -42,22 +42,11 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
+  padding: 6px;
   border-radius: 50%;
-  background: color-mix(in oklab, var(--warning) 26%, transparent);
-  color: oklch(90% .12 85);
-  animation: bell 1.2s var(--ease-standard) infinite;
-}
-
-.bell[data-still] {
-  animation: none;
-}
-
-@keyframes bell {
-  0%, 60%, 100% { transform: rotate(0); }
-  10%, 30% { transform: rotate(-14deg); }
-  20%, 40% { transform: rotate(14deg); }
+  background: color-mix(in oklab, var(--warning) 22%, transparent);
 }
 
 .words {
@@ -156,7 +145,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bell { animation: none; }
   .controlIcon { transition: none; }
 }
 
@@ -213,7 +201,7 @@
   background: linear-gradient(0deg, oklch(0% 0 0 / .7), transparent);
 }
 
-.call[data-camera] > :not(.view):not(.flash):not([data-ring-bell]) {
+.call[data-camera] > :not(.view):not(.flash) {
   position: relative;
   z-index: 1;
 }

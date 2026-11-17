@@ -95,3 +95,13 @@
 @media (prefers-reduced-motion: reduce) {
   .caption { animation: none; }
 }
+
+.bell {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+
+.bell > * {
+  width: 64%;
+}
