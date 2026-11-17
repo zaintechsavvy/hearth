@@ -30,7 +30,10 @@ function strike(context: AudioContext, out: AudioNode, hz: number, at: number, r
   }
 }
 
-/** The doorbell's chime: a soft, bright ding-dong, E6 then C6, synthesised live. Silent when sounds are off. */
+/** A doorbell's ding-dong, ding-dong: E and C, then D falling to G, the answer a little lower; the last note rings longest. Hz, seconds in, seconds to ring. */
+const CHIME: [number, number, number][] = [[1318.51, 0, 1], [1046.5, 0.36, 1], [1174.66, 0.92, 1], [783.99, 1.28, 1.8]];
+
+/** The doorbell's chime, synthesised live. Silent when sounds are off. */
 export function chime(volume = 0.7) {
   if (typeof window === "undefined" || !soundsOn()) return;
   chimeContext ??= new AudioContext();
@@ -43,8 +46,7 @@ export function chime(volume = 0.7) {
     out.gain.value = 0.32 * volume;
     out.connect(soften).connect(context.destination);
     const now = context.currentTime + 0.02;
-    strike(context, out, 1318.51, now, 1.2);
-    strike(context, out, 1046.5, now + 0.38, 1.5);
+    for (const [hz, at, ring] of CHIME) strike(context, out, hz, now + at, ring);
   }).catch(() => {});
 }
 
