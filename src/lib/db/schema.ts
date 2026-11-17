@@ -176,6 +176,10 @@ export const deviceOverride = pgTable("device_override", {
   kind: text("kind").$type<SwitchableKind>(),
   /** A doorbell's camera, as a device id; null finds the camera that matches it. */
   camera: text("camera"),
+  /** A doorbell's call without its Listen button, for a camera with no speaker worth hearing. */
+  hideListen: boolean("hide_listen").notNull().default(false),
+  /** A doorbell's call without its Talk button, for a camera with no speaker to talk through. */
+  hideTalk: boolean("hide_talk").notNull().default(false),
   /** Left out of Activity, such as an occupancy sensor that fires every minute someone sits in a room. */
   quiet: boolean("quiet").notNull().default(false),
   updatedAt: updatedAt(),

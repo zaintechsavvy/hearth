@@ -474,3 +474,28 @@ div.reading {
 .frame:has(> .swatch) > .press[data-size="2x1"] {
   padding-right: calc(var(--space-3) + 40px);
 }
+
+/* A doorbell that just rang: the lit tile breathes a warm halo and its bell shakes, for the ten seconds it stays lit. */
+.tile[data-ringing] {
+  animation: ringing 1.4s var(--ease-standard) infinite;
+}
+
+.tile[data-ringing] .icon {
+  animation: ring-shake 1.2s var(--ease-standard) infinite;
+  transform-origin: 50% 15%;
+}
+
+@keyframes ringing {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--warning) 0%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--warning) 32%, transparent), 0 0 32px color-mix(in oklab, var(--warning) 28%, transparent); }
+}
+
+@keyframes ring-shake {
+  0%, 55%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(-16deg); }
+  20%, 40% { transform: rotate(16deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile[data-ringing], .tile[data-ringing] .icon { animation: none; }
+}

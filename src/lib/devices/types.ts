@@ -146,6 +146,9 @@ export interface EventDevice extends DeviceBase {
   last: string | null;
   /** The camera chosen for a doorbell in Hearth, as a device id. */
   camera?: string;
+  /** A doorbell whose call leaves out Listen (the speaker) or Talk (the microphone). */
+  hideListen?: boolean;
+  hideTalk?: boolean;
 }
 
 export type SceneVariant = "scene" | "script" | "button";

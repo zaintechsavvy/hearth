@@ -89,7 +89,7 @@ function describe(device: StateDevice, now: number): { text: string; active: boo
       return { text: formatReading(device), active: false };
     case "event": {
       if (!device.last) return { text: device.eventClass === "doorbell" ? "No rings yet" : "No presses yet", active: false };
-      const recent = now * 30_000 - Date.parse(device.last) < 120_000;
+      const recent = device.eventClass !== "doorbell" && now * 30_000 - Date.parse(device.last) < 120_000;
       return { text: `${device.eventClass === "doorbell" ? "Rang" : "Pressed"} ${relativeTime(device.last, now * 30_000)}`, active: recent };
     }
     case "scene":
@@ -172,6 +172,21 @@ function SensitiveConfirm({ device, state, onConfirm, onClose }: { device: State
   );
 }
 
+/** How long a doorbell's tile stays lit after a ring. */
+const RING_LIT_MS = 10_000;
+
+/** True for the ten seconds after a doorbell rings, to the millisecond rather than on the tile's coarse clock. */
+function useRinging(device: StateDevice) {
+  const ringAt = device.kind === "event" && device.eventClass === "doorbell" && device.last ? Date.parse(device.last) : null;
+  const [over, setOver] = useState<number | null>(() => (ringAt !== null && Date.now() >= ringAt + RING_LIT_MS ? ringAt : null));
+  useEffect(() => {
+    if (ringAt === null) return;
+    const timer = setTimeout(() => setOver(ringAt), Math.max(0, ringAt + RING_LIT_MS - Date.now()));
+    return () => clearTimeout(timer);
+  }, [ringAt]);
+  return ringAt !== null && over !== ringAt;
+}
+
 export function StateTile({ device, config, onCommand, interactive = true, onOpenHistory, onHold, openMethod = "hold", camera }: StateTileProps) {
   const now = useSyncExternalStore(subscribeMinute, minute, () => 0);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +195,10 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
   const style = defaultStyle(device);
   const Icon = TILE_ICON_COMPONENTS[config.icon ?? style.icon];
   const color = config.color ?? style.color;
-  const { text, active } = describe(device, now);
+  const described = describe(device, now);
+  const ringing = useRinging(device);
+  const text = ringing ? "Ringing now" : described.text;
+  const active = described.active || ringing;
   const icon = (size: number) => <Icon size={size} strokeWidth={1.75} />;
   const command = tapCommand(device);
   const disabled = !device.available || !interactive || !command;
@@ -202,7 +220,7 @@ export function StateTile({ device, config, onCommand, interactive = true, onOpe
 
   const press = useLongPress(holdToOpen ? undefined : onHold ?? undefined);
   const shared = {
-    "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-template": "toggle", "data-on": active || undefined, "data-glow": config.options?.glow || undefined,
+    "data-color": color, "data-unavailable": !device.available || undefined, "data-size": config.size, "data-template": "toggle", "data-on": active || undefined, "data-ringing": ringing || undefined, "data-glow": config.options?.glow || undefined,
     "data-holding": hold.holding || undefined, ...press,
   };
   const holdMeta = hold.holding ? "Keep holding" : hold.hint ? `Hold to ${holdWords.toLowerCase()}` : null;

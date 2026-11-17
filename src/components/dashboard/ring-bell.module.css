@@ -1,0 +1,82 @@
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  perspective: 900px;
+}
+
+.tilt {
+  grid-area: 1 / 1;
+  width: min(42vmin, 300px);
+  transform: rotateX(14deg);
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 24px 40px oklch(20% .05 60 / .45));
+}
+
+.bell {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* The bell hangs from its crown: it swings about the top, leaning in depth as it goes. */
+.swing {
+  transform-box: view-box;
+  transform-origin: 100px 10px;
+  animation: swing 1.05s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+
+/* The clapper trails the swing, so it strikes the rim at each end. */
+.clapper {
+  transform-box: view-box;
+  transform-origin: 100px 120px;
+  animation: clapper 1.05s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+
+@keyframes swing {
+  0%, 100% { transform: rotate(-16deg) skewY(2deg); }
+  50% { transform: rotate(16deg) skewY(-2deg); }
+}
+
+@keyframes clapper {
+  0%, 100% { transform: rotate(22deg); }
+  50% { transform: rotate(-22deg); }
+}
+
+.wave {
+  grid-area: 1 / 1;
+  width: min(42vmin, 300px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid oklch(90% .11 85 / .7);
+  opacity: 0;
+  animation: wave 1.6s cubic-bezier(.2, .6, .3, 1) infinite;
+}
+
+.wave:nth-child(2) { animation-delay: .53s; }
+.wave:nth-child(3) { animation-delay: 1.06s; }
+
+@keyframes wave {
+  0% { opacity: .8; transform: scale(.55); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+
+.shadow {
+  grid-area: 1 / 1;
+  align-self: end;
+  width: min(26vmin, 190px);
+  height: 18px;
+  margin-bottom: max(8vh, 40px);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, oklch(15% .03 60 / .4), transparent);
+  animation: shadow 1.05s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+
+@keyframes shadow {
+  0%, 100% { transform: translateX(-14%) scaleX(.9); }
+  50% { transform: translateX(14%) scaleX(.9); }
+}

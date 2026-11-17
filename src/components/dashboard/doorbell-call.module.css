@@ -213,7 +213,7 @@
   background: linear-gradient(0deg, oklch(0% 0 0 / .7), transparent);
 }
 
-.call[data-camera] > :not(.view):not(.flash) {
+.call[data-camera] > :not(.view):not(.flash):not([data-ring-bell]) {
   position: relative;
   z-index: 1;
 }

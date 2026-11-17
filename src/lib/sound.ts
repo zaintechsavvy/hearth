@@ -12,6 +12,14 @@ export function cue(name: SoundName, options?: PlayOptions) {
   play(name, { volume: 0.45, ...options });
 }
 
+/** The doorbell's chime: a small recorded shop-door chime (public/sounds), kept soft. Silent when sounds are off. */
+export function chime() {
+  if (typeof window === "undefined" || !soundsOn()) return;
+  const audio = new Audio("/sounds/doorbell-chime.mp3");
+  audio.volume = 0.35;
+  void audio.play().catch(() => {});
+}
+
 type Cue = [SoundName, PlayOptions?];
 
 const way = (forward: boolean): PlayOptions => ({ direction: forward ? "forward" : "back" });

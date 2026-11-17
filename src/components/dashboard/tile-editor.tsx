@@ -42,9 +42,11 @@ export interface TileIdentity {
   quiet?: boolean;
   /** For a doorbell: the camera a ring opens, null when Hearth finds one itself, and the cameras to choose from. */
   doorbellCamera?: { value: string | null; options: { value: string; name: string }[] };
+  /** For a doorbell: whether its call shows Listen (the speaker) and Talk (the microphone). */
+  doorbellButtons?: { listen: boolean; talk: boolean };
 }
 
-export type IdentityChange = { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean };
+export type IdentityChange = { name?: string | null; room?: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean; hideListen?: boolean; hideTalk?: boolean };
 
 export interface EditableTile {
   config: TileConfig;
@@ -419,6 +421,12 @@ function IdentityFields({ identity, rooms, onIdentity }: { identity: TileIdentit
           description={identity.doorbellCamera.options.length ? "A ring fills the screen with this camera, with Listen and Talk." : "Connect the doorbell's camera to see who is there when it rings."}
           onValueChange={value => onIdentity({ camera: value === AUTO_CAMERA ? null : value })}
           options={[{ value: AUTO_CAMERA, label: "Find it for me" }, ...identity.doorbellCamera.options.map(option => ({ value: option.value, label: option.name }))]} />
+      )}
+      {identity.doorbellButtons && (
+        <>
+          <Switch label="Show Listen (speaker)" checked={identity.doorbellButtons.listen} onCheckedChange={on => onIdentity({ hideListen: !on })} />
+          <Switch label="Show Talk (microphone)" checked={identity.doorbellButtons.talk} onCheckedChange={on => onIdentity({ hideTalk: !on })} />
+        </>
       )}
       {identity.kind && (
         <div className={styles.nameField}>

@@ -6,9 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import type { EventDevice } from "@/lib/devices/types";
 import { haptic } from "@/lib/haptics";
-import { cue } from "@/lib/sound";
+import { chime } from "@/lib/sound";
 import { cameraFor } from "@/lib/ring-camera";
 import { IntegrationCameraTile } from "./integration-camera-tile";
+import { RingBell } from "./ring-bell";
 import { useHome } from "./use-home";
 import styles from "./doorbell-call.module.css";
 
@@ -20,6 +21,7 @@ export const lookAtDoor = (deviceId: string) => window.dispatchEvent(new CustomE
 const FRESH_MS = 60_000;
 /** A call nobody answers closes by itself. */
 const UNANSWERED_MS = 90_000;
+const INTRO_MS = 2_600;
 
 /**
  * A doorbell ring that arrives while Hearth is open, on any page: the screen flashes, the doorbell's camera plays,
@@ -39,6 +41,8 @@ export function DoorbellCall() {
   const [sender, setSender] = useState<RTCRtpSender | null>(null);
   const [talking, setTalking] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  /** The big swinging bell that opens a fresh ring, before the camera takes the screen. */
+  const [intro, setIntro] = useState(false);
 
   useEffect(() => {
     if (!devices) return;
@@ -54,7 +58,8 @@ export function DoorbellCall() {
       setRing(doorbell);
       setLooking(false);
       haptic("alert");
-      cue("attention", { emphasis: "strong" });
+      chime();
+      setIntro(true);
       window.dispatchEvent(new Event(WAKE_EVENT));
       void fetch("/api/doorbell", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId: doorbell.id, at: doorbell.last }) }).catch(() => {});
     }
@@ -71,9 +76,16 @@ export function DoorbellCall() {
     setRing(null);
     setListen(false);
     setProblem(null);
+    setIntro(false);
   };
   const latestClose = useRef(close);
   useEffect(() => { latestClose.current = close; });
+
+  useEffect(() => {
+    if (!intro) return;
+    const timer = setTimeout(() => setIntro(false), INTRO_MS);
+    return () => clearTimeout(timer);
+  }, [intro]);
 
   useEffect(() => {
     if (!ring || listen || talking) return;
@@ -125,6 +137,7 @@ export function DoorbellCall() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: motionTokens.duration.exit } }}
           transition={{ duration: reduce ? 0 : motionTokens.duration.standard }}>
           {!reduce && !looking && <span key={ring.last} className={styles.flash} aria-hidden="true" />}
+          <AnimatePresence>{intro && !reduce && !looking && <RingBell key={ring.last} />}</AnimatePresence>
           <header className={styles.head}>
             <span className={styles.bell} data-still={looking || undefined} aria-hidden="true"><BellRing size={26} strokeWidth={1.75} /></span>
             <div className={styles.words}>
@@ -144,9 +157,9 @@ export function DoorbellCall() {
           </div>
           {problem && <p className={styles.problem} role="status">{problem}</p>}
           <div className={styles.controls}>
-            <CallButton icon={listen ? Volume2 : VolumeX} label={listen ? "Listening" : "Listen"} pressed={listen} disabled={!camera} onClick={() => setListen(value => !value)} />
-            <CallButton icon={talking ? Mic : MicOff} label={talking ? "Talking" : "Talk"} pressed={talking} disabled={!sender}
-              note={camera && !sender ? "Talking needs a direct connection to a camera with a speaker, such as on the home network" : undefined} onClick={() => void toggleTalk()} />
+            {!ring.hideListen && <CallButton icon={listen ? Volume2 : VolumeX} label={listen ? "Listening" : "Listen"} pressed={listen} disabled={!camera} onClick={() => setListen(value => !value)} />}
+            {!ring.hideTalk && <CallButton icon={talking ? Mic : MicOff} label={talking ? "Talking" : "Talk"} pressed={talking} disabled={!sender}
+              note={camera && !sender ? "Talking needs a direct connection to a camera with a speaker, such as on the home network" : undefined} onClick={() => void toggleTalk()} />}
             <CallButton icon={X} label="Close" onClick={close} autoFocus />
           </div>
         </motion.div>

@@ -63,7 +63,7 @@ export interface HomeSnapshot {
   photoAlbum: boolean;
 }
 
-type Override = { name: string | null; room: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean };
+type Override = { name: string | null; room: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean; hideListen?: boolean; hideTalk?: boolean };
 
 /** Hearth's names and rooms over the integration's, keeping the originals so they can be shown and restored. */
 export function applyOverride<T extends Device>(device: T, override: Override | undefined): T {
@@ -77,7 +77,11 @@ export function applyOverride<T extends Device>(device: T, override: Override | 
     next.sourceRoom = device.room;
     next.room = override.room || null;
   }
-  if (override.camera && next.kind === "event") next.camera = override.camera;
+  if (next.kind === "event") {
+    if (override.camera) next.camera = override.camera;
+    if (override.hideListen) next.hideListen = true;
+    if (override.hideTalk) next.hideTalk = true;
+  }
   if (override.quiet) next.quiet = true;
   if (override.kind && override.kind !== device.kind && (next.kind === "light" || next.kind === "switch" || next.kind === "fan")) return showAs(next, override.kind) as T;
   return next;
