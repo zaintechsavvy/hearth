@@ -103,5 +103,6 @@
 }
 
 .bell > * {
-  width: 64%;
+  width: 60%;
+  transform: translateY(12%);
 }

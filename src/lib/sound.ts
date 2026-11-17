@@ -12,12 +12,40 @@ export function cue(name: SoundName, options?: PlayOptions) {
   play(name, { volume: 0.45, ...options });
 }
 
-/** The doorbell's chime: a small recorded shop-door chime (public/sounds). Silent when sounds are off. */
+let chimeContext: AudioContext | null = null;
+
+/** One bell tone: the note with a soft octave and a faint inharmonic shimmer, struck and left to ring out. */
+function strike(context: AudioContext, out: AudioNode, hz: number, at: number, ring: number) {
+  for (const [ratio, level, decay] of [[1, 1, 1], [2, .22, .5], [2.76, .07, .3]] as const) {
+    const tone = context.createOscillator();
+    const gain = context.createGain();
+    tone.type = "sine";
+    tone.frequency.value = hz * ratio;
+    gain.gain.setValueAtTime(0, at);
+    gain.gain.linearRampToValueAtTime(level, at + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + ring * decay);
+    tone.connect(gain).connect(out);
+    tone.start(at);
+    tone.stop(at + ring * decay + 0.05);
+  }
+}
+
+/** The doorbell's chime: a soft, bright ding-dong, E6 then C6, synthesised live. Silent when sounds are off. */
 export function chime(volume = 0.7) {
   if (typeof window === "undefined" || !soundsOn()) return;
-  const audio = new Audio("/sounds/doorbell-chime.mp3");
-  audio.volume = volume;
-  void audio.play().catch(() => {});
+  chimeContext ??= new AudioContext();
+  const context = chimeContext;
+  void context.resume().then(() => {
+    const out = context.createGain();
+    const soften = context.createBiquadFilter();
+    soften.type = "lowpass";
+    soften.frequency.value = 5_000;
+    out.gain.value = 0.32 * volume;
+    out.connect(soften).connect(context.destination);
+    const now = context.currentTime + 0.02;
+    strike(context, out, 1318.51, now, 1.2);
+    strike(context, out, 1046.5, now + 0.38, 1.5);
+  }).catch(() => {});
 }
 
 type Cue = [SoundName, PlayOptions?];
