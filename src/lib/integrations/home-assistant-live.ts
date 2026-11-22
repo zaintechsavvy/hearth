@@ -34,11 +34,11 @@ export class HomeAssistantCommandError extends IntegrationError {
 }
 
 interface DisplayRegistry {
-  entities: { ei: string; ec?: number; hb?: boolean }[];
+  entities: { ei: string; ec?: number; hb?: boolean; pl?: string }[];
 }
 
 /** Only domains Hearth shows wake listeners; the rest (updates, numbers, device trackers) change often and matter to no tile. */
-const WATCHED = new Set(["light", "switch", "input_boolean", "fan", "climate", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", "script", "button", "input_button"]);
+const WATCHED = new Set(["light", "switch", "input_boolean", "fan", "climate", "lock", "cover", "binary_sensor", "sensor", "camera", "event", "scene", "script", "button", "input_button", "media_player"]);
 const RECONNECT_MIN_MS = 2000;
 const RECONNECT_MAX_MS = 30_000;
 const IDLE_CLOSE_MS = 60_000;
@@ -60,6 +60,8 @@ export class HomeAssistantLive {
   private readonly states = new Map<string, HassState>();
   /** Entities Home Assistant files under settings or diagnostics, or hides. */
   readonly auxiliary = new Set<string>();
+  /** The integration behind each entity, such as `spotify` or `cast`. */
+  readonly platforms = new Map<string, string>();
   private readonly listeners = new Set<() => void>();
   private readonly waiting = new Map<number, Waiter>();
   private ready = false;
@@ -195,7 +197,11 @@ export class HomeAssistantLive {
           if (!message.success) return;
           if (kind === "registry") {
             this.auxiliary.clear();
-            for (const entry of (message.result as DisplayRegistry).entities ?? []) if (entry.ec !== undefined || entry.hb) this.auxiliary.add(entry.ei);
+            this.platforms.clear();
+            for (const entry of (message.result as DisplayRegistry).entities ?? []) {
+              if (entry.ec !== undefined || entry.hb) this.auxiliary.add(entry.ei);
+              if (entry.pl) this.platforms.set(entry.ei, entry.pl);
+            }
           }
           if (kind === "config") this.unit = (message.result as { unit_system?: { temperature?: string } })?.unit_system?.temperature === "°F" ? "F" : "C";
           if (kind === "states") {

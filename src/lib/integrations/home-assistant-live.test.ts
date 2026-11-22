@@ -6,7 +6,9 @@ import { WebRtcUnsupportedError } from "./types";
 
 const servers: WebSocketServer[] = [];
 
-function fakeHomeAssistant(token: string) {
+const HALL = [{ entity_id: "light.hall", state: "off", attributes: {} }];
+
+function fakeHomeAssistant(token: string, states: unknown[] = HALL, registry: unknown[] = []) {
   const server = new WebSocketServer({ port: 0, path: "/api/websocket" });
   servers.push(server);
   const sockets: ServerSocket[] = [];
@@ -23,7 +25,13 @@ function fakeHomeAssistant(token: string) {
         subscription = message.id;
         return socket.send(JSON.stringify({ id: message.id, type: "result", success: true, result: null }));
       }
-      if (message.type === "get_states") return socket.send(JSON.stringify({ id: message.id, type: "result", success: true, result: [{ entity_id: "light.hall", state: "off", attributes: {} }] }));
+      if (message.type === "get_states") return socket.send(JSON.stringify({ id: message.id, type: "result", success: true, result: states }));
+      if (message.type === "config/entity_registry/list_for_display") return socket.send(JSON.stringify({ id: message.id, type: "result", success: true, result: { entities: registry } }));
+      if (message.type === "media_player/browse_media") {
+        return socket.send(JSON.stringify({ id: message.id, type: "result", success: true, result: {
+          title: "Spotify", children: [{ title: "Playlists", media_class: "directory", media_content_id: "current_user_playlists", media_content_type: "current_user_playlists", can_expand: true, can_play: false, thumbnail: null }],
+        } }));
+      }
       if (message.type === "camera/capabilities") {
         const types = message.entity_id === "camera.porch" ? ["web_rtc"] : ["hls"];
         return socket.send(JSON.stringify({ id: message.id, type: "result", success: true, result: { frontend_stream_types: types } }));
@@ -77,6 +85,49 @@ describe("HomeAssistantLive", () => {
 
     stop();
     live.close();
+  });
+
+  it("lists every Cast speaker with its platform, files hidden ones as auxiliary, and wakes on media player changes", async () => {
+    const speaker = (entity_id: string, friendly_name: string) => ({ entity_id, state: "off", attributes: { friendly_name, device_class: "speaker", supported_features: 152_463 } });
+    const ha = fakeHomeAssistant("good-token", [speaker("media_player.bedroom_mini", "Bedroom mini"), speaker("media_player.old_mini", "Old mini")], [
+      { ei: "media_player.bedroom_mini", pl: "cast" }, { ei: "media_player.old_mini", pl: "cast", hb: true },
+    ]);
+    await new Promise(resolve => setTimeout(resolve, 20));
+    const provider = new HomeAssistantProvider(`cast-${ha.port()}`, { url: `http://127.0.0.1:${ha.port()}`, token: "good-token" });
+    const listener = vi.fn();
+    const stop = provider.subscribe(listener);
+    await vi.waitFor(() => expect(listener).toHaveBeenCalled());
+
+    const { devices } = await provider.listDevices();
+    expect(devices).toEqual([
+      expect.objectContaining({ name: "Bedroom mini", kind: "media_player", platform: "cast", available: true }),
+      expect.objectContaining({ name: "Old mini", platform: "cast", auxiliary: true }),
+    ]);
+    const calls = listener.mock.calls.length;
+    ha.push("media_player.bedroom_mini", "playing");
+    await vi.waitFor(() => expect(listener.mock.calls.length).toBe(calls + 1));
+    stop();
+  });
+
+  it("browses the top of a player's library without a content id", async () => {
+    const ha = fakeHomeAssistant("good-token");
+    await new Promise(resolve => setTimeout(resolve, 20));
+    const provider = new HomeAssistantProvider(`browse-${ha.port()}`, { url: `http://127.0.0.1:${ha.port()}`, token: "good-token" });
+    expect(await provider.browseMedia("media_player.spotify", null)).toEqual({
+      title: "Spotify", items: [{ title: "Playlists", subtitle: null, kind: "other", media: { id: "current_user_playlists", type: "current_user_playlists" }, artwork: null, playable: false, expandable: true }],
+    });
+  });
+
+  it("starts Spotify playing, then moves it to the chosen speaker", async () => {
+    const calls: string[] = [];
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async input => {
+      calls.push(new URL(String(input)).pathname);
+      return new Response("[]", { status: 200 });
+    });
+    const provider = new HomeAssistantProvider("play-order", { url: "http://127.0.0.1:1", token: "t" });
+    await provider.execute("media_player.spotify", { type: "playMedia", id: "spotify:playlist:1", mediaType: "playlist", output: "Kitchen speaker" });
+    expect(calls).toEqual(["/api/services/media_player/play_media", "/api/services/media_player/select_source"]);
+    fetch.mockRestore();
   });
 
   it("reports a rejected token and stops", async () => {

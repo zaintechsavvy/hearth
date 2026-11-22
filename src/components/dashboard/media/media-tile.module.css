@@ -1,5 +1,6 @@
 .tile {
   position: relative;
+  isolation: isolate;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -13,7 +14,7 @@
   box-shadow: inset 0 0 0 1.5px oklch(50% 0 0 / .1);
 }
 
-/* The bar: cover, title and artist, the three controls, and the rail along the bottom. */
+/* The bar: cover, title and artist, play and next, and the rail along the bottom. */
 .bar {
   position: absolute;
   inset: 0;
@@ -42,14 +43,19 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: clamp(40px, 50cqh, 60px);
+  width: clamp(44px, 56cqh, 64px);
   aspect-ratio: 1;
   overflow: hidden;
-  border-radius: 10px;
-  background: linear-gradient(148deg, oklch(90% .01 260), oklch(84% .01 260));
+  border-radius: 12px;
+  background: linear-gradient(148deg, oklch(90% .01 260), oklch(82% .012 260));
+  box-shadow: 0 6px 16px -8px oklch(0% 0 0 / .45), inset 0 0 0 1px oklch(100% 0 0 / .08);
   color: var(--text-muted);
   pointer-events: none;
   transition: scale var(--duration-fast) var(--ease-standard);
+}
+
+:root[data-theme="dark"] .art {
+  background: linear-gradient(148deg, oklch(34% .01 260), oklch(26% .01 260));
 }
 
 .cover {
@@ -80,100 +86,182 @@
   overflow: hidden;
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  line-height: 1.25;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.album {
+  color: var(--text-muted);
+}
+
+/* Transport. Play is the one solid control, so it is found without looking. */
 .ops {
   position: relative;
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
-.op {
+.op,
+.mode,
+.heart,
+.mute,
+.back,
+.searchClear,
+.remove {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  flex: none;
   border-radius: 50%;
   color: var(--text-secondary);
   -webkit-tap-highlight-color: transparent;
-  transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), scale var(--duration-fast) var(--ease-standard);
+  transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), scale var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
 }
 
-.op:hover:not(:disabled) {
+.op {
+  width: 40px;
+  height: 40px;
   color: var(--foreground);
-  background: oklch(50% 0 0 / .08);
 }
 
-.op:active:not(:disabled) {
+.op:hover:not(:disabled),
+.mode:hover:not(:disabled),
+.heart:hover:not(:disabled),
+.mute:hover:not(:disabled),
+.back:hover,
+.searchClear:hover,
+.remove:hover {
+  color: var(--foreground);
+  background: oklch(50% 0 0 / .1);
+}
+
+.op:active:not(:disabled),
+.mode:active:not(:disabled),
+.heart:active:not(:disabled),
+.mute:active:not(:disabled) {
   scale: .9;
 }
 
-/* Play is the one dark control, so it is found without looking. */
+.op:disabled,
+.mode:disabled {
+  opacity: .45;
+}
+
 .op[data-lead] {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: var(--foreground);
   color: var(--background);
+  box-shadow: 0 8px 18px -10px oklch(0% 0 0 / .5);
 }
 
 .op[data-lead]:hover:not(:disabled) {
   background: var(--foreground);
   color: var(--background);
-  opacity: .88;
+  opacity: .9;
 }
 
 .playGlyph {
   translate: 1px 0;
 }
 
-.ops[data-large] {
-  justify-self: center;
-  gap: 18px;
+.bar .op[data-previous] {
+  display: none;
 }
 
-.ops[data-large] .op[data-side] {
+.ops[data-size="mini"] {
+  gap: 2px;
+}
+
+.ops[data-size="mini"] .op[data-lead] {
+  width: 40px;
+  height: 40px;
+}
+
+.ops[data-size="large"] {
+  justify-content: space-between;
+  width: 100%;
+  max-width: 420px;
+  justify-self: center;
+  gap: 8px;
+}
+
+.ops[data-size="large"] .op[data-side] {
+  width: 56px;
+  height: 56px;
+}
+
+.ops[data-size="large"] .op[data-lead] {
+  width: 72px;
+  height: 72px;
+}
+
+/* Shuffle and repeat sit at the ends, quieter, lit with a dot under them when on. */
+.mode {
+  position: relative;
   width: 44px;
   height: 44px;
 }
 
-.ops[data-large] .op[data-lead] {
-  width: 58px;
-  height: 58px;
+.mode[data-on] {
+  color: var(--foreground);
+}
+
+.mode[data-on]::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .rail {
   grid-column: 1 / -1;
   display: block;
-  height: 3px;
+  height: 4px;
   overflow: hidden;
   border-radius: 999px;
-  background: oklch(50% 0 0 / .16);
+  background: oklch(50% 0 0 / .18);
   pointer-events: none;
 }
 
+:root[data-theme="dark"] .rail {
+  background: oklch(100% 0 0 / .16);
+}
+
 .run {
+  position: relative;
   display: block;
   height: 100%;
+  overflow: hidden;
   border-radius: inherit;
   background: var(--foreground);
 }
 
-/* Narrow bars keep play and next; the full player has every control. */
-@container cell (max-width: 300px) {
-  .bar .op[aria-label="Previous"] { display: none; }
+/* While it plays, a soft light runs along the progress line. */
+[data-playing] .run::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, oklch(100% 0 0 / .55), transparent);
+  translate: -100% 0;
+  animation: sheen 2.6s var(--ease-standard) infinite;
+}
+
+@keyframes sheen {
+  to { translate: 100% 0; }
 }
 
 /* The full player, in its own tile or opened over the page. */
 .player {
   position: relative;
   display: grid;
-  align-content: start;
-  gap: 18px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 16px;
   width: 100%;
   height: 100%;
   padding: 18px;
@@ -181,15 +269,10 @@
 
 .head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 12px;
-}
-
-.head:not(:has(.headTap)) {
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 14px;
+  min-width: 0;
 }
 
 .headTap {
@@ -203,6 +286,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.head:has(.headTap) {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+}
+
 .head > .art,
 .headTap > .art {
   width: 72px;
@@ -213,34 +300,17 @@
   font-size: var(--text-lg);
 }
 
-.heart,
-.footButton,
-.mode {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  color: var(--text-secondary);
-  -webkit-tap-highlight-color: transparent;
-  transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), scale var(--duration-fast) var(--ease-standard);
+.headOps {
+  display: none;
 }
 
-.heart:hover:not(:disabled),
-.footButton:hover:not(:disabled),
-.footButton[aria-pressed="true"],
-.mode:hover:not(:disabled) {
-  color: var(--foreground);
-  background: oklch(50% 0 0 / .08);
-}
-
-.heart:active:not(:disabled),
-.mode:active:not(:disabled) {
-  scale: .9;
+.heart {
+  width: 44px;
+  height: 44px;
 }
 
 .heart[data-on] {
-  color: var(--foreground);
+  color: oklch(64% .2 18);
 }
 
 .heart[data-on] svg {
@@ -251,30 +321,11 @@
   40% { scale: 1.22; }
 }
 
-/* Shuffle and repeat sit at the ends of the controls, quieter, with a dot under them when on. */
-.mode {
-  position: relative;
-  width: 34px;
-  height: 34px;
-}
-
-.mode[data-on] {
-  color: var(--foreground);
-}
-
-.mode[data-on]::after {
-  content: "";
-  position: absolute;
-  bottom: 2px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
 .body {
   display: grid;
+  align-content: center;
   gap: 18px;
+  min-height: 0;
 }
 
 .timeline {
@@ -282,10 +333,15 @@
   gap: 8px;
 }
 
+.timeline[data-empty] {
+  opacity: .5;
+}
+
 .scrubber {
+  position: relative;
   display: grid;
-  padding-block: 8px;
-  margin-block: -8px;
+  padding-block: 10px;
+  margin-block: -10px;
   border-radius: 999px;
   touch-action: none;
 }
@@ -294,13 +350,38 @@
   cursor: pointer;
 }
 
-.scrubber[data-seekable]:hover .rail,
-.scrubber[data-seekable]:focus-visible .rail {
-  height: 5px;
-}
-
 .scrubber .rail {
   transition: height var(--duration-fast) var(--ease-standard);
+}
+
+.scrubber[data-seekable]:hover .rail,
+.scrubber[data-seekable]:focus-visible .rail,
+.scrubber[data-scrubbing] .rail {
+  height: 6px;
+}
+
+.knob {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--foreground);
+  box-shadow: 0 2px 8px oklch(0% 0 0 / .3);
+  translate: -50% -50%;
+  scale: 0;
+  pointer-events: none;
+  transition: scale var(--duration-fast) var(--ease-standard);
+}
+
+.scrubber:hover .knob,
+.scrubber:focus-visible .knob,
+.scrubber[data-scrubbing] .knob {
+  scale: 1;
+}
+
+@media (hover: none) {
+  .card .knob { scale: .8; }
 }
 
 .clock {
@@ -321,69 +402,186 @@
   clip-path: inset(50%);
 }
 
-/* Queue on the left, where it plays in the middle, and the output picker on the right, like a phone's player. */
-.foot {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  margin: -6px -6px -8px;
+.volume {
+  color: var(--text-secondary);
 }
 
-.where {
+.mute {
+  width: 36px;
+  height: 36px;
+  margin: -8px;
+}
+
+.mute[aria-pressed="true"] {
+  color: var(--foreground);
+}
+
+.volume[data-muted] > * {
+  opacity: .7;
+}
+
+/* Library, up next, and where it plays, along the bottom like a phone's player. */
+.foot {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  margin: 0 -6px -6px;
+}
+
+.footButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+}
+
+.footButton > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footButton[data-where] {
+  justify-self: end;
+  max-width: 100%;
+}
+
+.footButton:hover:not(:disabled),
+.footButton[aria-pressed="true"] {
+  color: var(--foreground);
+  background: oklch(50% 0 0 / .1);
+}
+
+.footButton[aria-pressed="true"] {
+  font-weight: 500;
+}
+
+/* A panel takes the controls' place in a tile, with play, pause and skip kept in the header. */
+.panel {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  margin-inline: -6px;
+  padding-inline: 6px;
+}
+
+.player[data-panel] .body,
+.player[data-panel] .heart {
+  display: none;
+}
+
+.player[data-panel] .headOps {
+  display: block;
+}
+
+.player[data-panel] .head > .art,
+.player[data-panel] .headTap > .art {
+  width: 52px;
+  border-radius: 10px;
+}
+
+.player[data-panel] .head .title {
+  font-size: var(--text-base);
+}
+
+.list {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.viewHead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
   gap: 6px;
+  min-height: 44px;
+}
+
+.back {
+  width: 40px;
+  height: 40px;
+  margin-left: -8px;
+}
+
+.viewTitle {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
+  color: var(--foreground);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Where picks play, beside the library's title. */
+.target {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 50%;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .1);
   color: var(--text-secondary);
   font-size: var(--text-xs);
   white-space: nowrap;
 }
 
-.footSpacer {
-  width: 36px;
+.target span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.list {
-  display: grid;
-  gap: 8px;
-  max-height: min(52vh, 420px);
-  overflow-y: auto;
+.target:hover:not(:disabled) {
+  color: var(--foreground);
+  background: oklch(50% 0 0 / .16);
+}
+
+.sources {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
   scrollbar-width: none;
 }
 
-.viewHead {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.back {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  margin-left: -6px;
-  border-radius: 50%;
-  color: var(--text-secondary);
-}
-
-.back:hover {
-  color: var(--foreground);
+.source {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
   background: oklch(50% 0 0 / .08);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
 }
 
-.viewTitle,
-.groupLabel {
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
+.source[aria-checked="true"] {
+  background: var(--foreground);
+  color: var(--background);
   font-weight: 500;
 }
 
 .groupLabel {
-  padding: 6px 10px 0;
+  padding: 4px 4px 0;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
 }
 
 .rows {
@@ -397,35 +595,71 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  min-height: 44px;
-  padding: 0 10px;
-  border-radius: 12px;
+  min-height: 56px;
+  padding: 6px 10px;
+  border-radius: 14px;
   color: var(--foreground);
   font-size: var(--text-sm);
   text-align: start;
-  transition: background-color var(--duration-fast) var(--ease-standard);
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) var(--ease-standard), scale var(--duration-fast) var(--ease-standard);
 }
 
-button.row:hover {
-  background: oklch(50% 0 0 / .07);
-}
-
-.row[aria-checked="true"] {
+button.row:hover:not(:disabled) {
   background: oklch(50% 0 0 / .08);
+}
+
+button.row:active:not(:disabled) {
+  scale: .99;
+}
+
+.row[data-current] {
+  background: oklch(50% 0 0 / .1);
+}
+
+.row[data-current] .rowName {
   font-weight: 500;
+}
+
+.row[data-dim] .rowName,
+.row[data-dim] .rowIcon {
+  opacity: .6;
 }
 
 .rowIcon {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: oklch(50% 0 0 / .09);
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: oklch(50% 0 0 / .1);
   color: var(--text-secondary);
 }
 
-.rowName {
+.rowIcon[data-round] {
+  border-radius: 50%;
+}
+
+.rowIcon[data-on] {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.rowArt {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rowText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rowName,
+.rowMeta {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -433,22 +667,31 @@ button.row:hover {
 
 .rowMeta {
   color: var(--text-secondary);
-  font-weight: 400;
+  font-size: var(--text-xs);
+}
+
+.rowChevron {
+  color: var(--text-muted);
 }
 
 .tick {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  box-shadow: inset 0 0 0 1.5px var(--border-strong);
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1.5px var(--border-strong, oklch(50% 0 0 / .35));
 }
 
 .tick[data-on] {
   background: var(--foreground);
   color: var(--background);
   box-shadow: none;
+}
+
+.speaker {
+  display: grid;
+  gap: 4px;
 }
 
 .trackRow {
@@ -458,40 +701,41 @@ button.row:hover {
 }
 
 .remove {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+  width: 36px;
+  height: 36px;
   color: var(--text-muted);
-}
-
-.remove:hover {
-  color: var(--foreground);
-  background: oklch(50% 0 0 / .08);
 }
 
 .note {
-  padding-inline: 10px;
+  padding-inline: 4px;
   color: var(--text-muted);
-  font-size: var(--text-xs);
-  line-height: 1.4;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.callout {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: oklch(75% .12 75 / .16);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  line-height: 1.45;
 }
 
 .search {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
-  padding: 0 6px 0 12px;
-  border-radius: 12px;
-  background: oklch(50% 0 0 / .08);
+  min-height: 44px;
+  padding: 0 6px 0 14px;
+  border-radius: 14px;
+  background: oklch(50% 0 0 / .09);
   color: var(--text-secondary);
   transition: background var(--duration-fast) var(--ease-standard);
 }
 
 .search:focus-within {
-  background: oklch(50% 0 0 / .12);
+  background: oklch(50% 0 0 / .13);
   color: var(--foreground);
 }
 
@@ -502,7 +746,7 @@ button.row:hover {
   background: transparent;
   color: var(--foreground);
   font: inherit;
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   outline: 0;
 }
 
@@ -515,50 +759,278 @@ button.row:hover {
 }
 
 .searchClear {
+  width: 32px;
+  height: 32px;
+}
+
+/* The library's top folders. */
+.folders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
+  gap: 8px;
+}
+
+.folder {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: oklch(50% 0 0 / .08);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: start;
+  transition: background-color var(--duration-fast) var(--ease-standard), scale var(--duration-fast) var(--ease-standard);
+}
+
+.folder:hover:not(:disabled) {
+  background: oklch(50% 0 0 / .13);
+}
+
+.folder:active:not(:disabled) {
+  scale: .98;
+}
+
+.folderIcon {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  color: var(--text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--foreground);
+  color: var(--background);
 }
 
-.searchClear:hover {
-  color: var(--foreground);
-  background: oklch(50% 0 0 / .08);
-}
-
-.rowIcon[data-art] {
+.folderName {
   overflow: hidden;
-  border-radius: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.rowArt {
+/* Albums, playlists, and artists as covers. */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 18px 14px;
+}
+
+.coverCard {
+  position: relative;
+  min-width: 0;
+}
+
+.cardOpen {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  text-align: start;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cardCover {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  margin-bottom: 6px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(148deg, oklch(50% 0 0 / .14), oklch(50% 0 0 / .06));
+  color: var(--text-secondary);
+  box-shadow: 0 10px 24px -16px oklch(0% 0 0 / .6);
+  transition: scale var(--duration-fast) var(--ease-standard);
+}
+
+.coverCard[data-kind="artist"] .cardCover {
+  border-radius: 50%;
+}
+
+.cardCover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.rowChevron {
-  color: var(--text-muted);
+.cardOpen:active:not(:disabled) .cardCover {
+  scale: .97;
+}
+
+.cardTitle,
+.cardMeta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardTitle {
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.cardMeta {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+/* Sits on the cover's lower corner; the cover is square, so its width places it. */
+.cardPlay {
+  position: absolute;
+  top: calc(min(100%, 100cqw) - 52px);
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--foreground);
+  color: var(--background);
+  box-shadow: 0 8px 18px -8px oklch(0% 0 0 / .55);
+  transition: opacity var(--duration-fast) var(--ease-standard), scale var(--duration-fast) var(--ease-standard);
+}
+
+.coverCard {
+  container-type: inline-size;
+}
+
+.cardPlay:active:not(:disabled) {
+  scale: .92;
+}
+
+@media (hover: hover) {
+  .cardPlay { opacity: 0; scale: .9; }
+  .coverCard:hover .cardPlay,
+  .cardPlay:focus-visible { opacity: 1; scale: 1; }
+}
+
+/* An open album or playlist: its cover, name, and play and shuffle. */
+.hero {
+  display: grid;
+  grid-template-columns: clamp(96px, 28%, 144px) minmax(0, 1fr);
+  align-items: end;
+  gap: 16px;
+  padding: 4px 0 6px;
+}
+
+.heroCover {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 16px;
+  background: oklch(50% 0 0 / .1);
+  color: var(--text-secondary);
+  box-shadow: 0 16px 32px -18px oklch(0% 0 0 / .6);
+}
+
+.hero[data-kind="artist"] .heroCover {
+  border-radius: 50%;
+}
+
+.heroCover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroText {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.heroKind {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.heroTitle {
+  color: var(--foreground);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  letter-spacing: -.015em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.heroMeta {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .playAll {
   display: inline-flex;
   align-items: center;
-  justify-self: start;
   gap: 8px;
-  min-height: 36px;
-  padding: 0 16px;
+  min-height: 44px;
+  padding: 0 18px;
   border-radius: 999px;
   background: var(--foreground);
   color: var(--background);
   font-size: var(--text-sm);
   font-weight: 500;
+  transition: scale var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
 }
 
-.playAll:active {
+.playAll[data-quiet] {
+  background: oklch(50% 0 0 / .12);
+  color: var(--foreground);
+}
+
+.playAll:active:not(:disabled) {
   scale: .97;
+}
+
+.skeletonRow {
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, oklch(50% 0 0 / .07), oklch(50% 0 0 / .13), oklch(50% 0 0 / .07)) 0 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+
+/* What is playing in a list: three bars that bounce. */
+.bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  margin-right: 4px;
+}
+
+.bars span {
+  width: 3px;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--foreground);
+  transform-origin: bottom;
+  animation: bounce .9s ease-in-out infinite alternate;
+}
+
+.bars span:nth-child(2) { animation-delay: -.3s; }
+.bars span:nth-child(3) { animation-delay: -.6s; }
+
+.bars[data-paused] span {
+  animation-play-state: paused;
+}
+
+@keyframes bounce {
+  from { scale: 1 .3; }
+  to { scale: 1 1; }
 }
 
 /* The cover's own colour washes the glass, so the tile changes with the music. It is state, like a light's glow. */
@@ -567,7 +1039,7 @@ button.row:hover {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: -2;
   border-radius: inherit;
   background: linear-gradient(160deg, color-mix(in oklab, var(--tint) 30%, transparent), color-mix(in oklab, var(--tint) 12%, transparent) 70%);
   pointer-events: none;
@@ -577,25 +1049,6 @@ button.row:hover {
 :root[data-theme="dark"] .tile[data-tinted]::after,
 :root[data-theme="dark"] .card[data-tinted]::after {
   background: linear-gradient(160deg, color-mix(in oklab, var(--tint) 34%, transparent), color-mix(in oklab, var(--tint) 10%, transparent) 70%);
-}
-
-/* While it plays, a soft light runs along the progress line. */
-.run {
-  position: relative;
-  overflow: hidden;
-}
-
-[data-playing] .run::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, oklch(100% 0 0 / .55), transparent);
-  translate: -100% 0;
-  animation: sheen 2.6s var(--ease-standard) infinite;
-}
-
-@keyframes sheen {
-  to { translate: 100% 0; }
 }
 
 /* A player tile too short for everything drops the volume first, then the clock. */
@@ -610,6 +1063,10 @@ button.row:hover {
   .tile .head > .art { width: 56px; }
 }
 
+@container cell (max-width: 420px) {
+  .tile .footButton:not([data-where]) > span { display: none; }
+}
+
 /* No blur behind the open player: it covers the screen, and a live blur redrawn on every frame of the morph is
    what made opening and closing stutter. */
 .scrim {
@@ -619,7 +1076,6 @@ button.row:hover {
   background: oklch(20% .01 260 / .3);
 }
 
-/* The open player is the whole screen, edge to edge, so the artwork and controls read from across a room. */
 .stage {
   position: fixed;
   inset: 0;
@@ -638,7 +1094,6 @@ button.row:hover {
   will-change: transform;
 }
 
-/* The open player is a solid surface rather than frosted glass, for the same reason. */
 .stage .card {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -646,12 +1101,32 @@ button.row:hover {
 }
 
 :root[data-theme="dark"] .stage .card {
-  background: oklch(17% .006 260);
+  background: oklch(16% .006 260);
+}
+
+/* The cover, blurred, fills the open player. It fades in once the morph has landed, so the blur is painted once. */
+.ambient {
+  position: absolute;
+  inset: -12%;
+  z-index: -1;
+  background: center / cover no-repeat;
+  filter: blur(72px) saturate(1.4);
+  opacity: .42;
+  pointer-events: none;
+  animation: ambient .8s .45s var(--ease-standard) backwards;
+}
+
+:root[data-theme="dark"] .ambient {
+  opacity: .34;
+}
+
+@keyframes ambient {
+  from { opacity: 0; }
 }
 
 .card .player {
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 460px);
-  grid-template-rows: 1fr auto auto auto 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 480px);
+  grid-template-rows: minmax(0, 1fr) auto auto auto minmax(0, 1fr);
   grid-template-areas: "art ." "art text" "art body" "art foot" "art .";
   align-content: center;
   column-gap: clamp(32px, 6vw, 96px);
@@ -670,13 +1145,14 @@ button.row:hover {
   align-self: center;
   width: min(100%, 64vh);
   border-radius: 24px;
-  box-shadow: 0 30px 60px -24px oklch(0% 0 0 / .55);
+  box-shadow: 0 40px 80px -30px oklch(0% 0 0 / .6), inset 0 0 0 1px oklch(100% 0 0 / .08);
 }
 
 .card .text {
   grid-area: text;
   align-self: end;
-  padding-right: 96px;
+  gap: 6px;
+  padding-right: 56px;
 }
 
 .card .head .title {
@@ -687,17 +1163,19 @@ button.row:hover {
 
 .card .head .by {
   font-size: clamp(var(--text-base), 1.8vw, var(--text-xl));
+  white-space: normal;
 }
 
 .card .heart {
-  position: absolute;
-  top: clamp(20px, 4vh, 40px);
-  right: calc(clamp(20px, 4vw, 48px) + 52px);
+  grid-area: text;
+  justify-self: end;
+  align-self: end;
 }
 
 .card .body {
   grid-area: body;
   align-self: start;
+  gap: 24px;
 }
 
 .card .foot {
@@ -705,42 +1183,144 @@ button.row:hover {
   align-self: start;
 }
 
+.card .headOps {
+  display: none;
+}
+
 .collapse {
   position: absolute;
-  top: clamp(20px, 4vh, 40px);
-  right: clamp(20px, 4vw, 48px);
+  top: max(clamp(16px, 3vh, 32px), env(safe-area-inset-top));
+  right: max(clamp(16px, 3vw, 40px), env(safe-area-inset-right));
+  z-index: 3;
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: oklch(50% 0 0 / .12);
+  background: oklch(50% 0 0 / .14);
   color: var(--foreground);
   transition: background-color var(--duration-fast) var(--ease-standard);
 }
 
 .collapse:hover {
-  background: oklch(50% 0 0 / .2);
+  background: oklch(50% 0 0 / .22);
 }
 
-/* Upright screens stack the artwork over the controls. */
+/* Wide screens keep the controls and open a panel beside them, with the cover smaller. */
+.card .player[data-panel] {
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  grid-template-areas: ". panel" "art panel" "text panel" "body panel" "foot panel" ". panel";
+  grid-template-rows: minmax(0, 1fr) auto auto auto auto minmax(0, 1fr);
+  align-content: stretch;
+  column-gap: clamp(28px, 4vw, 64px);
+  row-gap: 20px;
+}
+
+.card .player[data-panel] .headTap > .art {
+  width: min(100%, 36vh);
+  border-radius: 20px;
+}
+
+.card .player[data-panel] .body,
+.card .player[data-panel] .heart {
+  display: grid;
+}
+
+.card .player[data-panel] .headOps {
+  display: none;
+}
+
+.card .player[data-panel] .head .title {
+  font-size: var(--text-xl);
+}
+
+.card .player[data-panel] .head .by {
+  font-size: var(--text-base);
+}
+
+.card .panel {
+  grid-area: panel;
+  align-self: stretch;
+  padding: 4px 64px 24px 24px;
+  margin: calc(-1 * clamp(8px, 2vh, 24px)) calc(-1 * clamp(16px, 3vw, 48px)) calc(-1 * clamp(8px, 2vh, 24px)) 0;
+  border-radius: 28px;
+  background: oklch(100% 0 0 / .5);
+  box-shadow: inset 0 0 0 1px oklch(100% 0 0 / .5);
+}
+
+:root[data-theme="dark"] .card .panel {
+  background: oklch(100% 0 0 / .05);
+  box-shadow: inset 0 0 0 1px oklch(100% 0 0 / .06);
+}
+
+.card .viewHead {
+  padding-top: 16px;
+  padding-bottom: 6px;
+}
+
+/* Upright screens stack the cover over the controls, and a panel takes their place under a small header. */
 @media (max-aspect-ratio: 1/1) {
   .card .player {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
     grid-template-areas: "art" "text" "body" "foot";
     row-gap: 24px;
+    padding-top: max(76px, env(safe-area-inset-top));
   }
 
-  .card .headTap > .art { width: min(100%, 44vh); }
-  .card .text { padding-right: 0; text-align: center; }
+  .card .headTap > .art { width: min(100%, 42vh); }
+  .card .text { padding-right: 52px; padding-left: 52px; text-align: center; }
+  .card .heart { justify-self: end; }
+
+  .card .player[data-panel] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "head" "panel" "foot";
+    row-gap: 12px;
+    padding-top: max(20px, env(safe-area-inset-top));
+  }
+
+  .card .player[data-panel] .head {
+    grid-area: head;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 44px;
+  }
+
+  .card .player[data-panel] .headTap {
+    display: grid;
+  }
+
+  .card .player[data-panel] .headTap > .art { grid-area: auto; justify-self: start; width: 52px; border-radius: 10px; box-shadow: none; }
+  .card .player[data-panel] .text { grid-area: auto; align-self: center; padding: 0; text-align: start; }
+  .card .player[data-panel] .head .title { font-size: var(--text-base); white-space: nowrap; }
+  .card .player[data-panel] .head .by { font-size: var(--text-sm); white-space: nowrap; }
+  .card .player[data-panel] .headOps { display: block; }
+  .card .player[data-panel] .body,
+  .card .player[data-panel] .heart { display: none; }
+  .card .player[data-panel] .collapse { position: static; }
+
+  .card .panel,
+  :root[data-theme="dark"] .card .panel {
+    padding: 0 6px 12px;
+    margin: 0 -6px;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .card .viewHead { padding-top: 0; }
+  .card .foot { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .card .footButton { padding: 0 10px; }
 }
 
-.tile {
-  isolation: isolate;
+@media (max-aspect-ratio: 1/1) and (max-width: 480px) {
+  .card .player { padding-inline: max(20px, env(safe-area-inset-left)); }
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ops[data-size="large"] .op[data-side] { width: 52px; height: 52px; }
+  .ops[data-size="large"] .op[data-lead] { width: 68px; height: 68px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .art, .op, .row, .heart, .mode, .footButton, .scrubber .rail { transition: none; }
-  [data-playing] .run::after, .heart[data-on] svg { animation: none; }
+  .art, .op, .row, .heart, .mode, .footButton, .scrubber .rail, .knob, .folder, .cardCover, .cardPlay, .playAll { transition: none; }
+  [data-playing] .run::after, .heart[data-on] svg, .ambient, .skeletonRow, .bars span { animation: none; }
 }

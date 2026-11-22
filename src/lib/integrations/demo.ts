@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { db } from "@/lib/db";
 import { demoState } from "@/lib/db/schema";
 import { DEMO_CAN, seedDemoDevices, TRACKS } from "./demo-devices";
-import { browseLibrary, searchLibrary, songsOf } from "./demo-library";
+import { albumOf, browseLibrary, searchLibrary, songsOf } from "./demo-library";
 import { IntegrationError, type DeviceList, type HistoryPoint, type Provider } from "./types";
 
 const DEMO_CAMERA_PICTURES: Record<string, string> = { "front-camera": "front-door-doorbell.jpg", "backyard-camera": "backyard-wyze.jpg" };
@@ -115,6 +115,22 @@ function demoUsage(nativeId: string, current: number, from: Date, to: Date): His
   return points;
 }
 
+/**
+ * The seed with the music library and mute every demo speaker has, and a Cast-style speaker that cannot join a
+ * group, so the output picker shows each way a speaker can be reached.
+ */
+function seedDevices(integrationId: string): Device[] {
+  const devices = seedDemoDevices(integrationId).map(device => device.kind === "media_player"
+    ? { ...device, muted: false, can: { ...device.can, mute: true, browse: true, search: true } }
+    : device);
+  return [...devices, {
+    id: deviceId(integrationId, "bedroom-mini"), integrationId, name: "Bedroom mini", room: "Bedroom", available: true, platform: "cast",
+    kind: "media_player", state: "off", title: null, artist: null, artwork: null, position: null, positionAt: null, duration: null,
+    volume: 30, muted: false, outputs: [], output: null, shuffle: null, repeat: null, group: [], media: null,
+    can: { ...DEMO_CAN, shuffle: false, repeat: false, group: false, queue: false, output: false, mute: true },
+  }];
+}
+
 /** Device maps already filled in from the seed. */
 const filled = new WeakSet<Map<string, Device>>();
 
@@ -123,7 +139,7 @@ export class DemoProvider implements Provider {
 
   private seed(): DemoHome {
     return {
-      devices: new Map(seedDemoDevices(this.integrationId).map(device => [device.id, device])), moving: new Map(), updatedAt: Date.now(), version: 0, listeners: new Set(),
+      devices: new Map(seedDevices(this.integrationId).map(device => [device.id, device])), moving: new Map(), updatedAt: Date.now(), version: 0, listeners: new Set(),
       lists: new Map([[deviceId(this.integrationId, "shopping"), ["Milk", "Eggs", "Coffee beans"].map(summary => ({ uid: summary.toLowerCase().replaceAll(" ", "-"), summary, done: false })).concat({ uid: "bread", summary: "Bread", done: true })]]),
     };
   }
@@ -148,10 +164,10 @@ export class DemoProvider implements Provider {
   /** A home saved, or kept in memory, before a device gained new details takes them from the seed, so it never lacks one. */
   private fillIn(home: DemoHome) {
     if (filled.has(home.devices)) return;
-    const seeded = new Map(seedDemoDevices(this.integrationId).map(device => [device.id, device]));
-    for (const [id, device] of home.devices) {
-      const seed = seeded.get(id);
-      if (seed) home.devices.set(id, { ...seed, ...device, ...("can" in seed && "can" in device ? { can: { ...seed.can, ...device.can } } : {}) } as Device);
+    const seeded = new Map(seedDevices(this.integrationId).map(device => [device.id, device]));
+    for (const [id, seed] of seeded) {
+      const device = home.devices.get(id);
+      home.devices.set(id, device ? { ...seed, ...device, ...("can" in seed && "can" in device ? { can: { ...seed.can, ...device.can } } : {}) } as Device : seed);
     }
     filled.add(home.devices);
   }
@@ -207,7 +223,8 @@ export class DemoProvider implements Provider {
   }
 
   async listDevices(): Promise<DeviceList> {
-    return { devices: [...(await this.home()).devices.values()], unsupported: {} };
+    const devices = [...(await this.home()).devices.values()].map(device => device.kind === "media_player" ? { ...device, album: albumOf(device.title) } : device);
+    return { devices, unsupported: {} };
   }
 
   async todoItems(nativeId: string) {
@@ -231,8 +248,8 @@ export class DemoProvider implements Provider {
     return searchLibrary(query);
   }
 
-  async browseMedia(_nativeId: string, media: { id: string }) {
-    const found = browseLibrary(media.id);
+  async browseMedia(_nativeId: string, media: { id: string } | null) {
+    const found = browseLibrary(media?.id ?? null);
     if (!found) throw new IntegrationError("That is not in the demo's music.");
     return found;
   }
@@ -260,8 +277,9 @@ export class DemoProvider implements Provider {
     } else if (command.type === "playMedia") {
       const at = TRACKS.findIndex(track => track.media.id === command.id);
       const song = songsOf(command.id)[0];
-      if (at >= 0) home.devices.set(leaderId, playTrack(leader, 0, at));
-      else if (song) home.devices.set(leaderId, { ...leader, title: song.title, artist: song.artist, duration: song.duration, artwork: song.artwork, media: song.media, state: "playing", position: 0, positionAt: new Date().toISOString() });
+      const output = command.output ?? leader.output;
+      if (at >= 0) home.devices.set(leaderId, { ...playTrack(leader, 0, at), output });
+      else if (song) home.devices.set(leaderId, { ...leader, output, title: song.title, artist: song.artist, duration: song.duration, artwork: song.artwork, media: song.media, state: "playing", position: 0, positionAt: new Date().toISOString() });
     } else if (command.type === "join") {
       home.devices.set(device.id, applyCommand(device, command));
     } else if (command.type === "unjoin") {
@@ -273,7 +291,8 @@ export class DemoProvider implements Provider {
       }
       return;
     } else {
-      home.devices.set(command.type === "volume" || command.type === "output" ? device.id : leaderId, applyCommand(command.type === "volume" || command.type === "output" ? device : leader, command));
+      const own = command.type === "volume" || command.type === "mute" || command.type === "output";
+      home.devices.set(own ? device.id : leaderId, applyCommand(own ? device : leader, command));
     }
     followLeader(home, leaderId);
   }

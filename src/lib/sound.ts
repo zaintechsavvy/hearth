@@ -80,6 +80,7 @@ export function commandCue(device: Device, command: DeviceCommand): Cue | null {
     case "thermostatFan":
     case "vacuumFanSpeed":
     case "output":
+    case "mute":
     case "repeat":
     case "join":
     case "unjoin":

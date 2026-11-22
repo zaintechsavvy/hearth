@@ -34,8 +34,8 @@ export interface Provider {
   mediaQueue?(nativeId: string, current: string | null, askQueue: boolean): Promise<{ recent: { title: string; artist: string | null; media: { id: string; type: string } | null }[]; next: { title: string; artist: string | null; media: { id: string; type: string } | null } | null }>;
   /** Music a media player can find by name: songs, albums, artists, and playlists. */
   searchMedia?(nativeId: string, query: string): Promise<MediaItem[]>;
-  /** What is inside an album, artist, or playlist that search found. */
-  browseMedia?(nativeId: string, media: { id: string; type: string }): Promise<{ title: string; items: MediaItem[] }>;
+  /** What is inside an album, artist, or playlist; with no media, the top of the player's library. */
+  browseMedia?(nativeId: string, media: { id: string; type: string } | null): Promise<{ title: string; items: MediaItem[] }>;
   /** The rooms a robot vacuum has mapped and can be sent to clean, by the integration's own area ids. */
   vacuumAreas?(nativeId: string): Promise<{ id: string; name: string }[]>;
   /** The items on a shopping or to-do list. */

@@ -192,7 +192,7 @@ export function mapHassState(integrationId: string, entity: HassState, unit: Tem
 }
 
 /** Home Assistant's `MediaPlayerEntityFeature` bits that Hearth uses. */
-const MEDIA = { pause: 1, seek: 2, volume: 4, previous: 16, next: 32, play: 512, output: 2048, shuffle: 32_768, repeat: 262_144, group: 524_288 } as const;
+const MEDIA = { pause: 1, seek: 2, volume: 4, mute: 8, previous: 16, next: 32, play: 512, output: 2048, shuffle: 32_768, browse: 131_072, repeat: 262_144, group: 524_288, search: 4_194_304 } as const;
 const REPEAT: Record<string, RepeatMode> = { off: "off", all: "all", one: "one" };
 const MEDIA_STATES: Record<string, MediaState> = { playing: "playing", buffering: "playing", paused: "paused", on: "idle", idle: "idle", standby: "idle", off: "off" };
 
@@ -219,11 +219,13 @@ function mapMediaPlayer(base: Pick<MediaPlayerDevice, "id" | "integrationId" | "
     state: MEDIA_STATES[entity.state] ?? "idle",
     title: str(attributes.media_title),
     artist: str(attributes.media_artist) ?? str(attributes.media_album_name) ?? str(attributes.app_name),
+    album: str(attributes.media_artist) ? str(attributes.media_album_name) : null,
     artwork: picture ? `/api/devices/${encodeURIComponent(base.id)}/artwork?v=${artworkKey(picture)}` : null,
     position: num(attributes.media_position),
     positionAt: str(attributes.media_position_updated_at),
     duration: num(attributes.media_duration),
     volume: level === null ? null : Math.round(level * 100),
+    muted: typeof attributes.is_volume_muted === "boolean" ? attributes.is_volume_muted : null,
     outputs,
     output: str(attributes.source),
     shuffle: typeof attributes.shuffle === "boolean" ? attributes.shuffle : null,
@@ -234,6 +236,7 @@ function mapMediaPlayer(base: Pick<MediaPlayerDevice, "id" | "integrationId" | "
       pause: has(MEDIA.pause), seek: has(MEDIA.seek), next: has(MEDIA.next), previous: has(MEDIA.previous), volume: has(MEDIA.volume) && level !== null,
       output: has(MEDIA.output) && outputs.length > 0, shuffle: has(MEDIA.shuffle), repeat: has(MEDIA.repeat), group: has(MEDIA.group), play: has(MEDIA.play),
       queue: "mass_player_type" in attributes,
+      mute: has(MEDIA.mute), browse: has(MEDIA.browse), search: has(MEDIA.search),
     },
   };
 }
@@ -464,7 +467,10 @@ export class HomeAssistantProvider implements Provider {
       // A person's phone battery lives on the tracker that follows them.
       if (device?.kind === "person") device = { ...device, battery: num(byId.get(str(state.attributes.source) ?? "")?.attributes.battery_level) };
       if (!device) skipped.push(state.entity_id.split(".")[0]);
-      else devices.push(this.live.auxiliary.has(state.entity_id) ? { ...device, auxiliary: true } : device);
+      else {
+        const platform = device.kind === "media_player" ? this.live.platforms.get(state.entity_id) : undefined;
+        devices.push({ ...device, ...(platform ? { platform } : {}), ...(this.live.auxiliary.has(state.entity_id) ? { auxiliary: true } : {}) } as Device);
+      }
     }
     return { devices, unsupported: countBy(skipped) } satisfies DeviceList;
   }
@@ -676,9 +682,10 @@ export class HomeAssistantProvider implements Provider {
     return (result.service_response?.[entityId]?.result ?? []).flatMap(mediaItem);
   }
 
-  async browseMedia(entityId: string, media: { id: string; type: string }) {
+  /** Without an id, the top of the player's library, such as Spotify's playlists, albums, and artists. */
+  async browseMedia(entityId: string, media: { id: string; type: string } | null) {
     if (!entityId.startsWith("media_player.")) throw new IntegrationError("That device is not a media player.");
-    const answer = await this.live.request<HassBrowse>({ type: "media_player/browse_media", entity_id: entityId, media_content_id: media.id, media_content_type: media.type })
+    const answer = await this.live.request<HassBrowse>({ type: "media_player/browse_media", entity_id: entityId, ...(media ? { media_content_id: media.id, media_content_type: media.type } : {}) })
       .catch(() => { throw new IntegrationError("This player could not open that."); });
     return { title: str(answer.result.title) ?? "", items: (answer.result.children ?? []).flatMap(mediaItem) };
   }
@@ -789,6 +796,8 @@ export class HomeAssistantProvider implements Provider {
         return void await this.call("media_player", "media_seek", { ...target, seek_position: Math.max(0, command.position) });
       case "volume":
         return void await this.call("media_player", "volume_set", { ...target, volume_level: clamp(command.value, 0, 100) / 100 });
+      case "mute":
+        return void await this.call("media_player", "volume_mute", { ...target, is_volume_muted: command.on });
       case "output":
         return void await this.call("media_player", "select_source", { ...target, source: command.output });
       case "shuffle":
@@ -802,7 +811,10 @@ export class HomeAssistantProvider implements Provider {
       case "unjoin":
         return void await this.call("media_player", "unjoin", target);
       case "playMedia":
-        return void await this.call("media_player", "play_media", { ...target, media_content_id: command.id, media_content_type: command.mediaType });
+        // Spotify starts on whichever speaker it last used, then moves; choosing the speaker first can start it paused.
+        await this.call("media_player", "play_media", { ...target, media_content_id: command.id, media_content_type: command.mediaType });
+        if (command.output) await this.call("media_player", "select_source", { ...target, source: command.output });
+        return;
       case "announce": {
         const speech = await this.speechService();
         if (!speech) throw new IntegrationError("Home Assistant has no text-to-speech service yet. Add one, such as Google Translate text-to-speech, under Settings, Devices and services.");

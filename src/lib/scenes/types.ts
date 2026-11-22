@@ -75,6 +75,8 @@ export function describeAction(device: Device, command: DeviceCommand) {
       return "Seek";
     case "volume":
       return `Volume ${command.value}%`;
+    case "mute":
+      return command.on ? "Mute" : "Unmute";
     case "output":
       return `Play on ${command.output}`;
     case "shuffle":

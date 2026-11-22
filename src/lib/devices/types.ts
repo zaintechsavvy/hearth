@@ -168,6 +168,7 @@ export interface MediaPlayerDevice extends DeviceBase {
   state: MediaState;
   title: string | null;
   artist: string | null;
+  album?: string | null;
   /** An address the browser can load the cover from, which changes with the track. */
   artwork: string | null;
   /** Seconds into the track at `positionAt`; the browser runs the clock forward while it plays. */
@@ -176,6 +177,7 @@ export interface MediaPlayerDevice extends DeviceBase {
   duration: number | null;
   /** 0 to 100, or null when the player has no volume. */
   volume: number | null;
+  muted?: boolean | null;
   /** Where it can play: speakers, Bluetooth devices, or a receiver's inputs, as the integration names them. */
   outputs: string[];
   output: string | null;
@@ -185,11 +187,17 @@ export interface MediaPlayerDevice extends DeviceBase {
   group: string[];
   /** What is playing, as the player can be asked to play it again. */
   media: { id: string; type: string } | null;
+  /** The integration behind it inside its source, such as `spotify` or `cast` in Home Assistant. */
+  platform?: string;
   can: {
     pause: boolean; seek: boolean; next: boolean; previous: boolean; volume: boolean; output: boolean;
     shuffle: boolean; repeat: boolean; group: boolean; play: boolean;
     /** It can say what plays next, as Music Assistant players can. */
     queue: boolean;
+    mute?: boolean;
+    /** It has a music library to browse with `Provider.browseMedia`, and to search with `Provider.searchMedia`. */
+    browse?: boolean;
+    search?: boolean;
   };
 }
 
@@ -266,13 +274,15 @@ export type DeviceCommand =
   | { type: "media"; action: "play" | "pause" | "next" | "previous" }
   | { type: "seek"; position: number }
   | { type: "volume"; value: number }
+  | { type: "mute"; on: boolean }
   | { type: "output"; output: string }
   | { type: "shuffle"; on: boolean }
   | { type: "repeat"; mode: RepeatMode }
   /** Adds players to this one's group; `members` are device ids. */
   | { type: "join"; members: string[] }
   | { type: "unjoin" }
-  | { type: "playMedia"; id: string; mediaType: string }
+  /** `output` moves the music there once it starts, for players such as Spotify whose outputs are other speakers. */
+  | { type: "playMedia"; id: string; mediaType: string; output?: string }
   | { type: "announce"; message: string }
   | { type: "vacuum"; action: "start" | "pause" | "stop" | "dock" | "locate" | "spot" }
   | { type: "vacuumFanSpeed"; speed: string }
@@ -360,6 +370,8 @@ export function applyCommand<T extends Device>(device: T, command: DeviceCommand
       return device.kind === "media_player" ? { ...device, position: command.position, positionAt: new Date().toISOString() } : device;
     case "volume":
       return device.kind === "media_player" ? { ...device, volume: clamp(command.value, 0, 100) } : device;
+    case "mute":
+      return device.kind === "media_player" ? { ...device, muted: command.on } : device;
     case "output":
       return device.kind === "media_player" ? { ...device, output: command.output } : device;
     case "shuffle":
@@ -371,7 +383,7 @@ export function applyCommand<T extends Device>(device: T, command: DeviceCommand
     case "unjoin":
       return device.kind === "media_player" ? { ...device, group: [] } : device;
     case "playMedia":
-      return device.kind === "media_player" ? { ...device, state: "playing" } : device;
+      return device.kind === "media_player" ? { ...device, state: "playing", output: command.output ?? device.output } : device;
     case "announce":
       return device;
     case "vacuum":
