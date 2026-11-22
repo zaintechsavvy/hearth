@@ -3,7 +3,7 @@
 import { ChevronDown, Search, X } from "lucide-react";
 import { useState } from "react";
 import { useHome } from "@/components/dashboard/use-home";
-import { librariesFor, planPlay } from "@/lib/devices/speakers";
+import { librariesFor, planPlay, playingOn } from "@/lib/devices/speakers";
 import type { MediaPlayerDevice } from "@/lib/devices/types";
 import type { MediaItem } from "@/lib/integrations/types";
 import { LibraryBrowse } from "./library-browse";
@@ -27,7 +27,7 @@ export function LibraryPanel({ device, disabled, onBack, onOutputs }: { device: 
   const [notice, setNotice] = useState<string | null>(null);
   const searched = useDebounced(query.trim(), 300);
   const opened = trail.at(-1) ?? null;
-  const where = device.group.length > 1 ? `${device.group.length} speakers` : device.output ?? device.name;
+  const where = playingOn(device);
 
   if (!library) {
     return (

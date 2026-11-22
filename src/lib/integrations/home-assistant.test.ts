@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { logbookEntries, mapHassState, recentTracks } from "./home-assistant";
+import { logbookEntries, mapHassState, mediaPlatform, recentTracks } from "./home-assistant";
 
 describe("mapHassState", () => {
   it("maps a dimmable light to a 0 to 100 brightness", () => {
@@ -139,5 +139,16 @@ describe("logbookEntries", () => {
       ["switch.lamp", "turned on", null, "at the device"],
       ["light.porch", "turned on", "the Sunset automation", null],
     ]);
+  });
+});
+
+describe("mediaPlatform", () => {
+  const player = (entity_id: string, friendly_name: string) => ({ entity_id, state: "idle", attributes: { friendly_name } });
+
+  it("takes the registry's platform, and knows Spotify by its id or name when the registry is not loaded", () => {
+    expect(mediaPlatform(player("media_player.living_room", "Living room"), "cast")).toBe("cast");
+    expect(mediaPlatform(player("media_player.spotify_alex", "Spotify Alex"))).toBe("spotify");
+    expect(mediaPlatform(player("media_player.music", "Spotify"))).toBe("spotify");
+    expect(mediaPlatform(player("media_player.bedroom_mini", "Bedroom mini"))).toBeUndefined();
   });
 });

@@ -64,7 +64,7 @@ export function MediaTile({ tileId, device, layout, interactive, onCommand }: Me
     <LayoutGroup id={`media-${tileId}-${mount}`}>
       {open ? <div className={styles.lifted} aria-hidden="true" /> : (
         <motion.div layoutId="card" className={`${glassClass("panel")} ${styles.tile}`} {...look} style={{ ...look.style, borderRadius: 26 }} transition={transition}>
-          <NowPlayingBar device={device} send={send} interactive={interactive} opener={opener} onOpen={() => setOpen(true)} />
+          <NowPlayingBar device={device} send={send} interactive={interactive} opener={opener} onOpen={() => { setView(!device.title && device.can.browse ? "library" : "controls"); setOpen(true); }} />
         </motion.div>
       )}
       {client && createPortal(

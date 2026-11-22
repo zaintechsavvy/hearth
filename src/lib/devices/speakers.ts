@@ -54,6 +54,10 @@ export function speakersFor(device: MediaPlayerDevice, devices: Device[]): Speak
   return list.sort((a, b) => rank(a) - rank(b));
 }
 
+/** Where `device` plays now, for its "Playing on" button. Spotify is a service, not a speaker, so idle it asks for one. */
+export const playingOn = (device: MediaPlayerDevice) =>
+  device.group.length > 1 ? `${device.group.length} speakers` : device.output ?? (device.platform === "spotify" ? "Choose a speaker" : device.name);
+
 /** Players with a music library to browse, Spotify first, then `device` itself. */
 export function librariesFor(device: MediaPlayerDevice, devices: Device[]) {
   const players = devices.filter((other): other is MediaPlayerDevice => other.kind === "media_player" && other.available && Boolean(other.can.browse));

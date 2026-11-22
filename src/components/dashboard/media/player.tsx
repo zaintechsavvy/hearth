@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronDown, Library, ListMusic } from "lucide-react";
 import { useId } from "react";
+import { playingOn } from "@/lib/devices/speakers";
 import type { MediaPlayerDevice } from "@/lib/devices/types";
 import { CoverArt } from "./cover-art";
 import { FavouriteButton } from "./favourite-button";
@@ -39,7 +40,7 @@ export function Player({ device, send, interactive, view, onView, autoFocus, onC
   const fade = { initial: { opacity: 0, y: reduce ? 0 : 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0 }, transition: { duration: reduce ? 0 : 0.18 } };
   const toggle = (next: View) => onView(view === next ? "controls" : next);
   const back = () => onView("controls");
-  const where = device.group.length > 1 ? `${device.group.length} speakers` : device.output ?? device.name;
+  const where = playingOn(device);
   return (
     <div className={styles.player} data-panel={view !== "controls" || undefined}>
       {onCollapse && device.artwork && <span className={styles.ambient} style={{ backgroundImage: `url("${device.artwork}")` }} aria-hidden="true" />}

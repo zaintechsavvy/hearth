@@ -242,6 +242,15 @@ function mapMediaPlayer(base: Pick<MediaPlayerDevice, "id" | "integrationId" | "
 }
 
 const VACUUM = { pause: 4, stop: 8, dock: 16, fanSpeed: 32, locate: 512, spot: 1024, start: 8192, areas: 16384 } as const;
+/**
+ * A media player's integration. The entity registry says, but it is read over the live socket, which a cold server has
+ * not opened yet; Spotify's own entity is then known by the id and name Home Assistant gives it.
+ */
+export function mediaPlatform(state: HassState, registered?: string) {
+  if (registered) return registered;
+  if (/^media_player\.spotify(_|$)/.test(state.entity_id) || /^spotify\b/i.test(str(state.attributes.friendly_name) ?? "")) return "spotify";
+}
+
 const strings = (value: unknown) => Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 const VACUUM_STATES: Record<string, VacuumState> = { cleaning: "cleaning", docked: "docked", returning: "returning", paused: "paused", idle: "idle", error: "error" };
 const ALARM_MODES: Record<ArmMode, number> = { home: 1, away: 2, night: 4, vacation: 32 };
@@ -468,7 +477,7 @@ export class HomeAssistantProvider implements Provider {
       if (device?.kind === "person") device = { ...device, battery: num(byId.get(str(state.attributes.source) ?? "")?.attributes.battery_level) };
       if (!device) skipped.push(state.entity_id.split(".")[0]);
       else {
-        const platform = device.kind === "media_player" ? this.live.platforms.get(state.entity_id) : undefined;
+        const platform = device.kind === "media_player" ? mediaPlatform(state, this.live.platforms.get(state.entity_id)) : undefined;
         devices.push({ ...device, ...(platform ? { platform } : {}), ...(this.live.auxiliary.has(state.entity_id) ? { auxiliary: true } : {}) } as Device);
       }
     }
