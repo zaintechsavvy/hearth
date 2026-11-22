@@ -695,7 +695,7 @@ export class HomeAssistantProvider implements Provider {
   async browseMedia(entityId: string, media: { id: string; type: string } | null) {
     if (!entityId.startsWith("media_player.")) throw new IntegrationError("That device is not a media player.");
     const answer = await this.live.request<HassBrowse>({ type: "media_player/browse_media", entity_id: entityId, ...(media ? { media_content_id: media.id, media_content_type: media.type } : {}) })
-      .catch(() => { throw new IntegrationError("This player could not open that."); });
+      .catch((error: unknown) => { throw new IntegrationError(error instanceof IntegrationError ? `This player could not open that. Home Assistant said: ${error.message}` : "This player could not open that."); });
     return { title: str(answer.result.title) ?? "", items: (answer.result.children ?? []).flatMap(mediaItem) };
   }
 

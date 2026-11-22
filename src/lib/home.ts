@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { activity, camera, deviceOverride, integration, preference, scene, widgetItem } from "@/lib/db/schema";
+import { activity, camera, deviceOverride, integration, preference, scene, spotifyLink, widgetItem } from "@/lib/db/schema";
 import { commandChange } from "@/lib/activity-diff";
 import { unseal } from "@/lib/crypto";
 import type { WidgetItem } from "@/lib/widgets/items";
@@ -61,6 +61,8 @@ export interface HomeSnapshot {
   transitSample: boolean;
   /** An Immich album is set for the wall tablet's photo frame. */
   photoAlbum: boolean;
+  /** Spotify is signed in from Hearth itself, so the music library uses it. */
+  spotifyLinked: boolean;
 }
 
 type Override = { name: string | null; room: string | null; kind?: SwitchableKind | null; camera?: string | null; quiet?: boolean; hideListen?: boolean; hideTalk?: boolean; asDoorbell?: boolean };
@@ -136,13 +138,14 @@ export async function getPreferences(userId: string) {
 }
 
 export async function loadHome(userId: string): Promise<HomeSnapshot> {
-  const [rows, preferences, cameraRows, scenes, overrideRows, itemRows] = await Promise.all([
+  const [rows, preferences, cameraRows, scenes, overrideRows, itemRows, spotify] = await Promise.all([
     db.select().from(integration).where(eq(integration.userId, userId)).orderBy(integration.createdAt),
     getPreferences(userId),
     db.select({ id: camera.id, name: camera.name }).from(camera).where(eq(camera.userId, userId)).orderBy(camera.createdAt),
     db.select({ id: scene.id, name: scene.name, icon: scene.icon, actions: scene.actions }).from(scene).where(eq(scene.userId, userId)).orderBy(scene.createdAt),
     db.select().from(deviceOverride).where(eq(deviceOverride.userId, userId)),
     db.select().from(widgetItem).where(eq(widgetItem.userId, userId)).orderBy(widgetItem.position, widgetItem.createdAt),
+    db.query.spotifyLink.findFirst({ where: eq(spotifyLink.userId, userId), columns: { refreshToken: true } }),
   ]);
   const overrides = new Map(overrideRows.map(row => [row.deviceId, row]));
   const results = await Promise.allSettled(rows.map(row => Promise.resolve().then(() => withTimeout(createProvider(row).listDevices(), LIST_TIMEOUT_MS, `${row.name} took too long to answer.`))));
@@ -167,7 +170,7 @@ export async function loadHome(userId: string): Promise<HomeSnapshot> {
   const pages = preferences.pages.map(page => ({ ...page, layout: withoutOrphanTiles(page.layout, connected) }));
   const times = preferences.location ? sunTimes(new Date(), preferences.location.latitude, preferences.location.longitude) : null;
   const sun = times ? { sunrise: times.sunrise.toISOString(), sunset: times.sunset.toISOString() } : null;
-  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, pinLength: preferences.security.method === "pin" ? preferences.security.length ?? null : null, sun, bedtime: preferences.bedtime, transitReady: Boolean(preferences.transit), transitSample: Boolean(preferences.transit?.sample), photoAlbum: Boolean(preferences.photos) };
+  return { devices, integrations, cameras, scenes, layout: pages[0].layout, pages, rooms: orderedRooms(preferences.rooms, devices), widgets, openMethod: preferences.security.method, pinLength: preferences.security.method === "pin" ? preferences.security.length ?? null : null, sun, bedtime: preferences.bedtime, transitReady: Boolean(preferences.transit), transitSample: Boolean(preferences.transit?.sample), photoAlbum: Boolean(preferences.photos), spotifyLinked: Boolean(spotify?.refreshToken) };
 }
 
 /** Sends a device a command. `by` says who, for the activity log: a person, the assistant, a scene, or an automation. */

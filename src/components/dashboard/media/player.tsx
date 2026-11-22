@@ -69,7 +69,7 @@ export function Player({ device, send, interactive, view, onView, autoFocus, onC
         {view !== "controls" && (
           <motion.section key={view} className={styles.panel} {...fade}>
             {view === "library" && <LibraryPanel device={device} disabled={disabled} onBack={back} onOutputs={() => onView("outputs")} />}
-            {view === "outputs" && <OutputPicker device={device} send={send} disabled={disabled} onDone={back} />}
+            {view === "outputs" && <OutputPicker device={device} send={send} disabled={disabled} onDone={back} onLibrary={() => onView("library")} />}
             {view === "queue" && <QueuePanel device={device} send={send} disabled={disabled} onBack={back} />}
           </motion.section>
         )}

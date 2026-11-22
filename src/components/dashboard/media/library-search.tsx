@@ -2,6 +2,7 @@
 
 import { Fragment } from "react";
 import useSWR from "swr";
+import { libraryUrl, type Library } from "@/lib/devices/speakers";
 import type { MediaPlayerDevice } from "@/lib/devices/types";
 import type { MediaItem } from "@/lib/integrations/types";
 import { fetchJson } from "./media-hooks";
@@ -11,9 +12,9 @@ import styles from "./media-tile.module.css";
 const SECTIONS = [["track", "Songs"], ["playlist", "Playlists"], ["album", "Albums"], ["artist", "Artists"], ["other", "More"]] as const;
 
 export function LibrarySearch({ library, query, device, disabled, onOpen, onPlay }: {
-  library: MediaPlayerDevice; query: string; device: MediaPlayerDevice; disabled: boolean; onOpen: (item: MediaItem) => void; onPlay: (item: MediaItem) => void;
+  library: Library; query: string; device: MediaPlayerDevice; disabled: boolean; onOpen: (item: MediaItem) => void; onPlay: (item: MediaItem) => void;
 }) {
-  const { data, error } = useSWR<{ items: MediaItem[] }>(query ? `/api/devices/${encodeURIComponent(library.id)}/media/search?q=${encodeURIComponent(query)}` : null, fetchJson, { revalidateOnFocus: false });
+  const { data, error } = useSWR<{ items: MediaItem[] }>(query ? `${libraryUrl(library, "search")}?q=${encodeURIComponent(query)}` : null, fetchJson, { revalidateOnFocus: false });
   if (error) return <p className={styles.note}>{error.message || "Search did not work just now. Try again in a moment."}</p>;
   if (!query || !data) return <p className={styles.note} role="status">Searching…</p>;
   if (!data.items.length) return <p className={styles.note}>Nothing found for “{query}”.</p>;

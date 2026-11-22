@@ -13,13 +13,18 @@ import { OutputIcon } from "./output-icon";
 import { ViewHead } from "./view-head";
 import styles from "./media-tile.module.css";
 
+const playOnSpotify = (body: { media: MediaItem["media"]; speakers: string[]; shuffle: boolean }) =>
+  fetch("/api/spotify/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(async response => {
+    if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? "");
+  });
+
 /**
  * The music a player can reach: Spotify's library when the home has Spotify, otherwise the player's own. Picks play on
  * this player, through Spotify Connect when the library is Spotify's and this player is one of its speakers.
  */
 export function LibraryPanel({ device, disabled, onBack, onOutputs }: { device: MediaPlayerDevice; disabled: boolean; onBack?: () => void; onOutputs?: () => void }) {
   const { home, send } = useHome();
-  const libraries = librariesFor(device, home?.devices ?? []);
+  const libraries = librariesFor(device, home?.devices ?? [], home?.spotifyLinked);
   const [chosen, setChosen] = useState<string | null>(null);
   const library = libraries.find(item => item.id === chosen) ?? libraries[0];
   const [trail, setTrail] = useState<MediaItem[]>([]);
@@ -33,7 +38,7 @@ export function LibraryPanel({ device, disabled, onBack, onOutputs }: { device: 
     return (
       <div className={styles.list}>
         <ViewHead title="Library" onBack={onBack} />
-        <p className={styles.note}>{device.name} has no music library to browse. Add Spotify to Home Assistant and its playlists, albums, and artists show up here.</p>
+        <p className={styles.note}>{device.name} has no music library to browse. Connect Spotify in Settings, or add it to Home Assistant, and its playlists, albums, and artists show up here.</p>
       </div>
     );
   }
@@ -43,6 +48,7 @@ export function LibraryPanel({ device, disabled, onBack, onOutputs }: { device: 
     if ("error" in plan) return setNotice(plan.error);
     setNotice(null);
     try {
+      if ("spotify" in plan) return await playOnSpotify({ media: item.media, speakers: plan.spotify, shuffle });
       if (shuffle && plan.to.can.shuffle) await send(plan.to, { type: "shuffle", on: true });
       await send(plan.to, plan.command);
     } catch (error) {
@@ -67,12 +73,12 @@ export function LibraryPanel({ device, disabled, onBack, onOutputs }: { device: 
         <div className={styles.sources} role="radiogroup" aria-label="Library">
           {libraries.map(item => (
             <button key={item.id} type="button" role="radio" aria-checked={item.id === library.id} className={styles.source} onClick={() => switchTo(item.id)}>
-              {item.platform === "spotify" ? "Spotify" : item.name}
+              {item.name}
             </button>
           ))}
         </div>
       )}
-      {!opened && library.can.search && (
+      {!opened && library.search && !library.asleep && (
         <label className={styles.search}>
           <Search size={16} strokeWidth={1.75} aria-hidden="true" />
           <input type="search" className={styles.searchInput} value={query} onChange={event => setQuery(event.target.value)} disabled={disabled}
@@ -81,7 +87,12 @@ export function LibraryPanel({ device, disabled, onBack, onOutputs }: { device: 
         </label>
       )}
       {notice && <p className={styles.callout} role="alert">{notice}</p>}
-      {!opened && query.trim()
+      {library.asleep ? (
+        <div className={`${styles.note} ${styles.asleep}`}>
+          <p>Home Assistant opens Spotify&apos;s playlists only while Spotify is playing on a speaker, and cannot search them. Choose a speaker to start Spotify there, or connect Spotify in Settings to browse and search any time.</p>
+          {onOutputs && library.device?.id === device.id && <button type="button" className={styles.playAll} disabled={disabled} onClick={onOutputs}>Choose a speaker</button>}
+        </div>
+      ) : !opened && query.trim()
         ? <LibrarySearch library={library} query={query.trim() === searched ? searched : ""} device={device} disabled={disabled} onOpen={open} onPlay={item => void play(item)} />
         : <LibraryBrowse key={`${library.id}:${opened?.media.id ?? ""}`} library={library} item={opened} device={device} disabled={disabled} onOpen={open} onPlay={(item, shuffle) => void play(item, shuffle)} />}
     </div>

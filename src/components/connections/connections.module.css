@@ -298,6 +298,12 @@
   overflow-wrap: anywhere;
 }
 
+.redirectUri {
+  flex: 1;
+  min-width: 0;
+  padding-inline: var(--space-2);
+}
+
 /* An invite sits low in the page, closer to the middle than the top, its words and button on one left edge. */
 .join {
   display: grid;

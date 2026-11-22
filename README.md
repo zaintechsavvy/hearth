@@ -78,6 +78,7 @@ Open http://localhost:3000. Without `DATABASE_URL`, Hearth keeps its data in an 
 | `DATABASE_URL` | Optional Postgres (Neon, Supabase, your own). Empty means the bundled database. |
 | `STREAM_RELAY_URL` | The go2rtc relay for cameras. |
 | `DISABLE_SIGNUP` | `true` closes sign up. |
+| `SPOTIFY_CLIENT_ID` | Optional. Your Spotify app's Client ID, instead of pasting it in Settings, Spotify. |
 
 ## Privacy
 

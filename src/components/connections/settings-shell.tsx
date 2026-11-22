@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Bell, CalendarDays, Camera, ChevronLeft, ChevronRight, LayoutGrid, Moon, Palette, Plug, ShieldCheck, Sparkles, Tablet, UserRound, Users, type LucideIcon,
+  Bell, CalendarDays, Camera, ChevronLeft, ChevronRight, LayoutGrid, Moon, Music, Palette, Plug, ShieldCheck, Sparkles, Tablet, UserRound, Users, type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
@@ -10,7 +10,7 @@ import styles from "./settings-shell.module.css";
 
 export const SETTINGS_ICONS = {
   connections: Plug, household: Users, rooms: LayoutGrid, alerts: Bell, security: ShieldCheck, bedtime: Moon,
-  assistants: Sparkles, cameras: Camera, calendars: CalendarDays, appearance: Palette, wall: Tablet, account: UserRound,
+  assistants: Sparkles, cameras: Camera, spotify: Music, calendars: CalendarDays, appearance: Palette, wall: Tablet, account: UserRound,
 } satisfies Record<string, LucideIcon>;
 
 export interface SettingsNavItem {

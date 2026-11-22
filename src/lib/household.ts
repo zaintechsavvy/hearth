@@ -56,6 +56,7 @@ export function guestView(home: HomeSnapshot, allowed: string[]): HomeSnapshot {
     layout: pages[0]?.layout ?? [],
     rooms: home.rooms.filter(room => devices.some(device => device.room === room)),
     widgets: home.widgets.filter(item => kinds.has(widgetKind[item.kind] as never)),
+    spotifyLinked: false,
   };
 }
 

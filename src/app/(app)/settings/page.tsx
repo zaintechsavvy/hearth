@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { and, eq, gt } from "drizzle-orm";
+import { headers } from "next/headers";
 import { AccountSection } from "@/components/connections/account-section";
 import { AlertsSection } from "@/components/connections/alerts-section";
 import { AppearanceSection } from "@/components/connections/appearance-section";
@@ -11,6 +12,7 @@ import { IntegrationsSection } from "@/components/connections/integrations-secti
 import { RoomsSection } from "@/components/connections/rooms-section";
 import { SecuritySection } from "@/components/connections/security-section";
 import { SettingsShell } from "@/components/connections/settings-shell";
+import { SpotifySection, type SpotifySettings } from "@/components/connections/spotify-section";
 import { WallSection } from "@/components/connections/wall-section";
 import styles from "@/components/connections/connections.module.css";
 import type { CameraSource } from "@/lib/cameras/stream-relay";
@@ -20,6 +22,8 @@ import { calendar, camera, integration, invite, membership, user as users } from
 import { getPreferences, streamRelayUrl } from "@/lib/home";
 import { publicConfig } from "@/lib/integrations/registry";
 import { requireHome } from "@/lib/session";
+import { appOrigin, redirectUri } from "@/lib/spotify/auth";
+import { envClientId, spotifyLinkOf } from "@/lib/spotify/client";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -31,18 +35,38 @@ function hostOf(url: string) {
   }
 }
 
-export default async function ConnectionsPage() {
+const OUTCOMES: Record<string, SpotifySettings["outcome"]> = {
+  connected: { tone: "success", text: "Open the music player's library to find your playlists." },
+  denied: { tone: "danger", text: "Spotify was not allowed to share your library. Try again and choose Agree." },
+  expired: { tone: "danger", text: "That sign in took too long or came back to another Hearth. Start again from here." },
+  client: { tone: "danger", text: "Add your Spotify app's Client ID first." },
+};
+
+async function openedAt() {
+  const list = await headers();
+  return `${list.get("x-forwarded-proto") ?? "http"}://${list.get("x-forwarded-host") ?? list.get("host")}`;
+}
+
+export default async function ConnectionsPage({ searchParams }: PageProps<"/settings">) {
   const home = await requireHome("member");
   const { user } = home;
   const homeId = home.homeId;
-  const [integrations, cameras, relayUrl, calendars, preferences] = await Promise.all([
+  const [integrations, cameras, relayUrl, calendars, preferences, spotify, opened, query] = await Promise.all([
     db.select().from(integration).where(eq(integration.userId, homeId)).orderBy(integration.createdAt),
     db.select().from(camera).where(eq(camera.userId, homeId)).orderBy(camera.createdAt),
     streamRelayUrl(homeId),
     db.select().from(calendar).where(eq(calendar.userId, homeId)).orderBy(calendar.createdAt),
     getPreferences(homeId),
+    spotifyLinkOf(homeId),
+    openedAt(),
+    searchParams,
   ]);
   const owner = home.role === "owner";
+  const outcome = typeof query.spotify === "string" ? OUTCOMES[query.spotify] ?? { tone: "danger" as const, text: typeof query.reason === "string" ? query.reason : "Spotify did not finish signing in. Try again." } : null;
+  const spotifySettings: SpotifySettings = {
+    clientId: spotify?.clientId ?? "", fromEnv: Boolean(envClientId()), account: spotify?.account ?? null, linked: Boolean(spotify?.refreshToken),
+    redirectUri: redirectUri(opened), openedAt: appOrigin(opened) === new URL(opened).origin ? null : opened, outcome,
+  };
   const [members, invites] = owner ? await Promise.all([
     db.select({ id: membership.memberId, role: membership.role, pages: membership.pages, name: users.name, email: users.email }).from(membership).innerJoin(users, eq(users.id, membership.memberId)).where(eq(membership.ownerId, homeId)),
     db.select({ code: invite.code, role: invite.role, expiresAt: invite.expiresAt }).from(invite).where(and(eq(invite.ownerId, homeId), gt(invite.expiresAt, new Date()))),
@@ -55,6 +79,7 @@ export default async function ConnectionsPage() {
           ...(owner ? [{ id: "connections" as const, label: "Connections", summary: integrations.length ? integrations.map(row => row.name).join(", ") : "Nothing connected yet" }] : []),
           { id: "rooms", label: "Rooms", summary: "Names and order" },
           ...(owner ? [{ id: "cameras" as const, label: "Cameras", summary: cameras.length ? `${cameras.length} ${cameras.length === 1 ? "camera" : "cameras"}` : "None added" }] : []),
+          ...(owner ? [{ id: "spotify" as const, label: "Spotify", summary: spotifySettings.linked ? `Signed in${spotifySettings.account ? ` as ${spotifySettings.account}` : ""}` : "Not connected" }] : []),
           { id: "calendars", label: "Calendars", summary: calendars.length ? `${calendars.length} ${calendars.length === 1 ? "calendar" : "calendars"}` : "None added" },
         ] },
         { title: "People", items: [
@@ -79,6 +104,7 @@ export default async function ConnectionsPage() {
       <BedtimeSection owner={owner} />
       {owner && <CamerasSection cameras={cameras.map(row => ({ id: row.id, name: row.name, host: hostOf(unseal<CameraSource>(row.source).url) }))} relayUrl={relayUrl}
         homeAssistants={integrations.filter(row => row.kind === "home-assistant").map(row => ({ id: row.id, name: row.name }))} />}
+      {owner && <SpotifySection settings={spotifySettings} />}
       <CalendarsSection calendars={calendars.map(row => ({ id: row.id, name: row.name, color: row.color, host: hostOf(unseal<string>(row.url)) }))} />
       <AppearanceSection pages={preferences.pages.map(page => ({ id: page.id, name: page.name }))} />
       <WallSection />

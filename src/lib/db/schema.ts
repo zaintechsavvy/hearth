@@ -308,3 +308,17 @@ export const homeWatch = pgTable("home_watch", {
   devices: jsonb("devices").$type<Device[]>().notNull(),
   checkedAt: timestamp("checked_at").notNull(),
 });
+
+/** A home's own Spotify sign in, made with PKCE so no client secret is kept. Tokens are sealed. */
+export const spotifyLink = pgTable("spotify_link", {
+  userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
+  /** The Spotify app's Client ID, when it is set in Settings rather than by SPOTIFY_CLIENT_ID. */
+  clientId: text("client_id"),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at"),
+  /** The Spotify account's display name. */
+  account: text("account"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});

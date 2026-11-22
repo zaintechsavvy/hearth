@@ -18,6 +18,7 @@ Under **Settings**, **Environment Variables**, add:
 | `BETTER_AUTH_URL` | The address you open Hearth at, such as `https://hearth-you.vercel.app` or your own domain. |
 | `TRUSTED_ORIGINS` | Optional. Other addresses that may sign in, comma separated, such as a second domain. |
 | `CRON_SECRET` | A long random value: `openssl rand -hex 32`. The same value goes in the GitHub repository's **Settings**, **Secrets and variables**, **Actions**, as a secret called `CRON_SECRET`. A scheduled job then looks at every home every five minutes, so Activity and alerts keep up with no screen open. |
+| `SPOTIFY_CLIENT_ID` | Optional. Your Spotify app's Client ID, for Settings, Spotify. It can be pasted there instead. |
 | `DISABLE_SIGNUP` | Optional. `true` once everyone in your household has an account. A public deployment lets anyone who finds it sign up until then. |
 
 ## 3. Redeploy

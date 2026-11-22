@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mapHassState } from "@/lib/integrations/home-assistant";
 import type { MediaItem } from "@/lib/integrations/types";
-import { librariesFor, planPlay, speakersFor } from "./speakers";
+import { librariesFor, planPlay, playingOn, speakersFor, SPOTIFY_LIBRARY, type Library } from "./speakers";
 import type { MediaPlayerDevice } from "./types";
 
 const player = (entity_id: string, state: string, attributes: Record<string, unknown>, extra: Partial<MediaPlayerDevice> = {}) =>
@@ -17,6 +17,8 @@ const mini = player("media_player.bedroom_mini", "off", { friendly_name: "Bedroo
 const hidden = player("media_player.bedroom_mini_2", "off", { friendly_name: "Bedroom mini" }, { auxiliary: true });
 const offline = player("media_player.garage", "unavailable", { friendly_name: "Garage" });
 const home = [spotify, kitchen, mini, hidden, offline];
+/** A player's own library, as the library panel finds it. */
+const own = (device: MediaPlayerDevice) => librariesFor(device, [device]).find(library => library.id === device.id) as Library;
 const track: MediaItem = { title: "Night Bus", subtitle: null, kind: "track", media: { id: "spotify:track:9", type: "spotify://track" }, artwork: null, playable: true, expandable: false };
 
 describe("speakersFor", () => {
@@ -49,17 +51,63 @@ describe("speakersFor", () => {
 
 describe("planPlay", () => {
   it("plays Spotify on a Cast speaker through Spotify Connect when Spotify sees it, and explains when it does not", () => {
-    expect(planPlay(track, spotify, kitchen)).toMatchObject({ to: { id: spotify.id }, command: { type: "playMedia", id: "spotify:track:9", output: "Kitchen speaker" } });
-    expect(planPlay(track, spotify, mini)).toMatchObject({ error: expect.stringMatching(/Spotify cannot see Bedroom mini/) });
-    expect(planPlay(track, spotify, spotify)).toMatchObject({ to: { id: spotify.id }, command: { type: "playMedia" } });
+    expect(planPlay(track, own(spotify), kitchen)).toMatchObject({ to: { id: spotify.id }, command: { type: "playMedia", id: "spotify:track:9", output: "Kitchen speaker" } });
+    expect(planPlay(track, own(spotify), mini)).toMatchObject({ error: expect.stringMatching(/Spotify cannot see Bedroom mini/) });
+    expect(planPlay(track, own(spotify), spotify)).toMatchObject({ to: { id: spotify.id }, command: { type: "playMedia" } });
   });
 
   it("plays anything else on the speaker itself", () => {
     const station = { ...track, media: { id: "media-source://radio_browser/abc", type: "audio/mpeg" } };
-    expect(planPlay(station, kitchen, mini)).toMatchObject({ to: { id: mini.id }, command: { id: "media-source://radio_browser/abc" } });
+    expect(planPlay(station, own(kitchen), mini)).toMatchObject({ to: { id: mini.id }, command: { id: "media-source://radio_browser/abc" } });
   });
 
+  it("plays from Spotify signed in from Hearth on the Spotify Connect device named like the speaker", () => {
+    expect(planPlay(track, SPOTIFY_LIBRARY, { ...kitchen, sourceName: "Kitchen Home" })).toEqual({ spotify: ["Kitchen speaker", "Kitchen Home"] });
+    expect(planPlay(track, SPOTIFY_LIBRARY, spotify)).toEqual({ spotify: ["Alex's iPhone"] });
+    expect(planPlay(track, SPOTIFY_LIBRARY, idleSpotify)).toEqual({ spotify: [] });
+  });
+});
+
+/** Home Assistant's Spotify with nothing playing: it reports only choosing a source, and refuses to browse. */
+const idleSpotify = player("media_player.spotify_alex", "idle", { friendly_name: "Spotify Alex", supported_features: 2048, source_list: ["Kitchen speaker"] }, { platform: "spotify" });
+
+describe("librariesFor", () => {
   it("offers Spotify's library first, then the speaker's own", () => {
-    expect(librariesFor(mini, home).map(library => library.name)).toEqual(["Spotify Alex", "Bedroom mini"]);
+    expect(librariesFor(mini, home).map(library => library.name)).toEqual(["Spotify", "Bedroom mini"]);
+  });
+
+  it("keeps Home Assistant's Spotify while it is idle and cannot browse, marked asleep", () => {
+    expect(idleSpotify.can.browse).toBe(false);
+    expect(librariesFor(mini, [idleSpotify, mini]).map(library => [library.name, library.asleep])).toEqual([["Spotify", true], ["Bedroom mini", false]]);
+    expect(librariesFor(idleSpotify, [idleSpotify]).map(library => [library.id, library.asleep])).toEqual([[idleSpotify.id, true]]);
+  });
+
+  it("uses Spotify signed in from Hearth in place of Home Assistant's, which cannot search", () => {
+    expect(librariesFor(mini, home, true).map(library => library.id)).toEqual(["spotify", mini.id]);
+    expect(librariesFor(idleSpotify, [idleSpotify], true)).toEqual([SPOTIFY_LIBRARY]);
+    expect(librariesFor(kitchen, [kitchen], false).map(library => [library.name, library.search])).toEqual([["Kitchen speaker", false]]);
+  });
+});
+
+describe("app inputs", () => {
+  const receiver = player("media_player.den", "on", {
+    friendly_name: "Den receiver", supported_features: 2048 | 512 | 1, source_list: ["TV", "Spotify", "TuneIn", "Bluetooth", "AirPlay", "Apple Music"], source: "Spotify",
+  }, { platform: "denonavr" });
+
+  it("are not offered as speakers, and Spotify among them opens the Spotify library when there is one", () => {
+    expect(speakersFor(receiver, [receiver]).map(speaker => [speaker.name, speaker.via])).toEqual([["TV", "output"], ["Bluetooth", "output"]]);
+    expect(speakersFor(receiver, [receiver], true).map(speaker => [speaker.name, speaker.via])).toEqual([["Spotify", "library"], ["TV", "output"], ["Bluetooth", "output"]]);
+  });
+
+  it("are not where the music plays", () => {
+    expect(playingOn(receiver)).toBe("Den receiver");
+    expect(playingOn({ ...receiver, output: "TV" })).toBe("TV");
+    expect(playingOn(spotify)).toBe("Alex's iPhone");
+    expect(playingOn(idleSpotify)).toBe("Choose a speaker");
+  });
+
+  it("stay as Spotify's own Spotify Connect devices", () => {
+    const named = { ...spotify, outputs: ["Spotify Connect", "Kitchen speaker"] };
+    expect(speakersFor(named, home).filter(speaker => speaker.via === "output").map(speaker => speaker.name)).toEqual(["Spotify Connect", "Kitchen speaker"]);
   });
 });

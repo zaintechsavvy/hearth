@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, Info } from "lucide-react";
+import { Check, ChevronRight, Info } from "lucide-react";
 import { useState } from "react";
 import { useHome } from "@/components/dashboard/use-home";
-import { speakersFor, type Speaker } from "@/lib/devices/speakers";
+import { librariesFor, speakersFor, type Speaker } from "@/lib/devices/speakers";
 import type { MediaPlayerDevice } from "@/lib/devices/types";
 import type { Send } from "./media-hooks";
 import { OutputIcon } from "./output-icon";
@@ -12,17 +12,20 @@ import styles from "./media-tile.module.css";
 
 /**
  * Every speaker in the home: the player's own outputs, such as Spotify Connect devices, speakers it groups with, and
- * the rest, which take the music over. A speaker it cannot reach stays listed and says why.
+ * the rest, which take the music over. A speaker it cannot reach stays listed and says why. A speaker's Spotify input
+ * opens Spotify's library, since switching the speaker to it plays nothing.
  */
-export function OutputPicker({ device, send, disabled, onDone }: { device: MediaPlayerDevice; send: Send; disabled: boolean; onDone?: () => void }) {
+export function OutputPicker({ device, send, disabled, onDone, onLibrary }: { device: MediaPlayerDevice; send: Send; disabled: boolean; onDone?: () => void; onLibrary?: () => void }) {
   const { home, send: sendTo } = useHome();
   const [why, setWhy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const speakers = speakersFor(device, home?.devices ?? []);
+  const devices = home?.devices ?? [];
+  const speakers = speakersFor(device, devices, Boolean(onLibrary) && librariesFor(device, devices, home?.spotifyLinked).some(library => library.name === "Spotify"));
   const run = (work: Promise<unknown>) => { setError(null); work.catch((failure: Error) => setError(failure.message || "That speaker did not answer.")); };
 
   const pick = (speaker: Speaker) => {
     if (speaker.via === "unreachable") return setWhy(why === speaker.key ? null : speaker.key);
+    if (speaker.via === "library") return onLibrary?.();
     setWhy(null);
     if (speaker.via === "output" && speaker.output && !speaker.current) run(send({ type: "output", output: speaker.output }));
     if (speaker.via === "group" && speaker.device) run(speaker.grouped ? sendTo(speaker.device, { type: "unjoin" }) : send({ type: "join", members: [speaker.device.id] }));
@@ -43,11 +46,12 @@ export function OutputPicker({ device, send, disabled, onDone }: { device: Media
           const detail = speaker.via === "group" ? (speaker.grouped ? "Playing together" : "Add to the group")
             : speaker.via === "move" ? (speaker.device?.state === "playing" && speaker.device.title ? `Playing ${speaker.device.title}` : "Move the music here")
             : speaker.via === "unreachable" ? "Not reachable from here"
+            : speaker.via === "library" ? "Open Spotify's playlists"
             : speaker.current ? "Playing here" : null;
           return (
             <div key={speaker.key} role="listitem" className={styles.speaker}>
               <button type="button" className={styles.row} data-current={checked || undefined} data-dim={speaker.via === "unreachable" || undefined}
-                aria-pressed={speaker.via === "unreachable" ? undefined : checked} aria-expanded={speaker.via === "unreachable" ? why === speaker.key : undefined}
+                aria-pressed={speaker.via === "unreachable" || speaker.via === "library" ? undefined : checked} aria-expanded={speaker.via === "unreachable" ? why === speaker.key : undefined}
                 disabled={disabled || (speaker.via === "move" && !device.media)} onClick={() => pick(speaker)}>
                 <span className={styles.rowIcon} data-on={checked || undefined}><OutputIcon name={speaker.name} size={18} /></span>
                 <span className={styles.rowText}>
@@ -56,6 +60,7 @@ export function OutputPicker({ device, send, disabled, onDone }: { device: Media
                 </span>
                 {speaker.via === "unreachable" ? <Info size={16} strokeWidth={1.75} className={styles.rowChevron} aria-hidden="true" />
                   : speaker.via === "group" ? <span className={styles.tick} data-on={speaker.grouped || undefined} aria-hidden="true">{speaker.grouped && <Check size={14} strokeWidth={2} />}</span>
+                  : speaker.via === "library" ? <ChevronRight size={18} strokeWidth={1.75} className={styles.rowChevron} aria-hidden="true" />
                   : speaker.current ? <Check size={18} strokeWidth={2} aria-hidden="true" /> : null}
               </button>
               {why === speaker.key && <p className={styles.callout}>{speaker.reason}</p>}

@@ -4,7 +4,9 @@ import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/r
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
+import { useHome } from "@/components/dashboard/use-home";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
+import { librariesFor } from "@/lib/devices/speakers";
 import type { DeviceCommand, MediaPlayerDevice } from "@/lib/devices/types";
 import { useCoverTint, type Send, type View } from "./media-hooks";
 import { NowPlayingBar } from "./now-playing-bar";
@@ -31,6 +33,7 @@ export function MediaTile({ tileId, device, layout, interactive, onCommand }: Me
   // last one stood.
   const [mount] = useState(() => ++mounted);
   const [view, setView] = useState<View>("controls");
+  const { home } = useHome();
   const reduce = useReducedMotion();
   const client = useSyncExternalStore(subscribeNothing, () => true, () => false);
   const opener = useRef<HTMLButtonElement>(null);
@@ -64,7 +67,7 @@ export function MediaTile({ tileId, device, layout, interactive, onCommand }: Me
     <LayoutGroup id={`media-${tileId}-${mount}`}>
       {open ? <div className={styles.lifted} aria-hidden="true" /> : (
         <motion.div layoutId="card" className={`${glassClass("panel")} ${styles.tile}`} {...look} style={{ ...look.style, borderRadius: 26 }} transition={transition}>
-          <NowPlayingBar device={device} send={send} interactive={interactive} opener={opener} onOpen={() => { setView(!device.title && device.can.browse ? "library" : "controls"); setOpen(true); }} />
+          <NowPlayingBar device={device} send={send} interactive={interactive} opener={opener} onOpen={() => { setView(!device.title && librariesFor(device, home?.devices ?? [], home?.spotifyLinked).length ? "library" : "controls"); setOpen(true); }} />
         </motion.div>
       )}
       {client && createPortal(

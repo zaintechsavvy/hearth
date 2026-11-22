@@ -713,6 +713,12 @@ button.row:active:not(:disabled) {
   line-height: 1.45;
 }
 
+.asleep {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
 .callout {
   padding: 12px 14px;
   border-radius: 14px;
