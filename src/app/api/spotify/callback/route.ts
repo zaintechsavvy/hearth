@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { unseal } from "@/lib/crypto";
 import { readableError } from "@/lib/home";
-import { SIGN_IN_COOKIE } from "@/lib/spotify/auth";
+import { SIGN_IN_COOKIE, appOrigin } from "@/lib/spotify/auth";
 import { completeSignIn } from "@/lib/spotify/client";
 import { getHome } from "@/lib/session";
 
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     pending = raw ? unseal<Pending>(raw) : null;
   } catch {}
   const back = (outcome: string, reason?: string) => {
-    const response = NextResponse.redirect(new URL(`/settings?${new URLSearchParams({ spotify: outcome, ...(reason ? { reason } : {}) })}#spotify`, request.url));
+    const response = NextResponse.redirect(new URL(`/settings?${new URLSearchParams({ spotify: outcome, ...(reason ? { reason } : {}) })}#spotify`, appOrigin(request.url)));
     response.cookies.delete({ name: SIGN_IN_COOKIE, path: "/api/spotify" });
     return response;
   };
