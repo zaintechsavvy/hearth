@@ -63,6 +63,8 @@ export interface MediaItem {
   playable: boolean;
   /** It holds more items, such as an album's songs. */
   expandable: boolean;
+  /** A song's length in seconds, when the integration says. */
+  duration?: number | null;
 }
 
 export interface LogbookEntry {

@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { authed, OK, type ActionResult } from "@/lib/action-helpers";
 import { db } from "@/lib/db";
 import { spotifyLink } from "@/lib/db/schema";
-import { isClientId } from "./auth";
 import { signOut, spotifyLinkOf } from "./client";
+import { isClientId } from "./items";
 
 /** A new Client ID belongs to another Spotify app, so the sign in made with the old one goes. Empty falls back to SPOTIFY_CLIENT_ID. */
 export async function saveSpotifyClientId(input: unknown): Promise<ActionResult> {

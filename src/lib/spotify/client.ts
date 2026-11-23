@@ -5,8 +5,9 @@ import { db } from "@/lib/db";
 import { spotifyLink } from "@/lib/db/schema";
 import { IntegrationError, type MediaItem } from "@/lib/integrations/types";
 import {
-  ALBUMS, ARTISTS, LIKED, albumItem, artistItem, folderItem, likedItem, matchDevice, playBody, playlistItem, spotifyMessage, trackItem,
-  type SpotifyAlbum, type SpotifyArtist, type SpotifyDevice, type SpotifyPlaylist, type SpotifyTrack,
+  ALBUMS, ARTISTS, LIKED, SEARCH_LIMIT, SEARCH_TYPES, albumItem, artistItem, folderItem, likedItem, matchDevice, playBody, playlistItem, recentContexts, recentTracks,
+  spotifyMessage, topResult, trackItem,
+  type SearchResult, type SearchType, type SpotifyAlbum, type SpotifyArtist, type SpotifyDevice, type SpotifyPlay, type SpotifyPlaylist, type SpotifyTrack,
 } from "./items";
 
 const API = "https://api.spotify.com/v1/";
@@ -155,23 +156,65 @@ export async function browse(homeId: string, media: { id: string; type: string }
   throw new IntegrationError("Spotify cannot open that.");
 }
 
-/** Matching playlists of the home's own first, which Spotify's search leaves out, then Spotify's songs, playlists, albums, and artists. */
-export async function search(homeId: string, query: string): Promise<MediaItem[]> {
+/**
+ * Every kind of result, or one kind from `offset` on. The home's own matching playlists, which Spotify's search
+ * leaves out, lead the playlists on the first page.
+ */
+export async function search(homeId: string, query: string, type: SearchType | null, offset = 0): Promise<SearchResult> {
+  const types = type ? [type] : [...SEARCH_TYPES];
   const words = query.toLowerCase();
   const [own, found] = await Promise.all([
-    ownPlaylists(homeId),
-    spotify<Record<"tracks" | "playlists" | "albums" | "artists", Page<unknown> | undefined>>(homeId, `search?${new URLSearchParams({ q: query, type: "track,playlist,album,artist", limit: "10" })}`),
+    types.includes("playlist") && offset === 0 ? ownPlaylists(homeId) : [],
+    spotify<Partial<Record<`${SearchType}s`, Page<unknown | null>>>>(homeId, `search?${new URLSearchParams({ q: query, type: types.join(","), limit: String(SEARCH_LIMIT), offset: String(offset) })}`),
   ]);
   const mine = own.filter(item => item.title.toLowerCase().includes(words));
   const known = new Set(mine.map(item => item.media.id));
-  const list = <T,>(page: Page<unknown> | undefined) => (page?.items ?? []).filter(Boolean) as T[];
-  return [
-    ...list<SpotifyTrack>(found.tracks).flatMap(track => trackItem(track)),
-    ...mine,
-    ...list<SpotifyPlaylist>(found.playlists).map(playlistItem).filter(item => !known.has(item.media.id)),
-    ...list<SpotifyAlbum>(found.albums).map(albumItem),
-    ...list<SpotifyArtist>(found.artists).map(artistItem),
-  ];
+  const map = {
+    track: (track: unknown) => trackItem(track as SpotifyTrack),
+    artist: (artist: unknown) => [artistItem(artist as SpotifyArtist)],
+    album: (album: unknown) => [albumItem(album as SpotifyAlbum)],
+    playlist: (playlist: unknown) => [playlistItem(playlist as SpotifyPlaylist)].filter(item => !known.has(item.media.id)),
+  };
+  const result: SearchResult = { top: null, sections: {}, next: {} };
+  for (const kind of types) {
+    const page = found[`${kind}s`];
+    result.sections[kind] = [...(kind === "playlist" ? mine : []), ...(page?.items ?? []).flatMap(entry => entry ? map[kind](entry) : [])];
+    result.next[kind] = page?.next ? offset + SEARCH_LIMIT : null;
+  }
+  if (!type) result.top = topResult(query, result.sections);
+  return result;
+}
+
+/** What each recently played album, playlist, or artist is called and looks like, kept a while since that seldom changes. */
+const contexts = new Map<string, { at: number; item: MediaItem }>();
+
+async function contextItem(homeId: string, { type, uri, track }: ReturnType<typeof recentContexts>[number], own: MediaItem[]) {
+  if (type === "collection") return likedItem();
+  const key = `${homeId}:${uri}`;
+  const kept = contexts.get(key);
+  if (kept && Date.now() - kept.at < 600_000) return kept.item;
+  const item = type === "album" ? albumItem(track.album?.uri === uri && track.album.name ? track.album as SpotifyAlbum : await spotify<SpotifyAlbum>(homeId, `albums/${spotifyId(uri)}`))
+    : type === "playlist" ? own.find(mine => mine.media.id === uri) ?? playlistItem(await spotify<SpotifyPlaylist>(homeId, `playlists/${spotifyId(uri)}?fields=name,uri,images,owner(display_name)`))
+    : artistItem(await spotify<SpotifyArtist>(homeId, `artists/${spotifyId(uri)}`));
+  contexts.set(key, { at: Date.now(), item });
+  return item;
+}
+
+/**
+ * What played lately: the albums, playlists, and artists, then the songs. A sign in from before Hearth asked to read
+ * recent plays is refused by Spotify, which says to connect again rather than failing.
+ */
+export async function recent(homeId: string): Promise<{ items: MediaItem[]; tracks: MediaItem[] } | { reconnect: true }> {
+  let plays: SpotifyPlay[];
+  try {
+    plays = (await spotify<{ items: SpotifyPlay[] }>(homeId, "me/player/recently-played?limit=50")).items;
+  } catch (error) {
+    if (error instanceof SpotifyError && (error.status === 401 || error.status === 403)) return { reconnect: true };
+    throw error;
+  }
+  const own = await ownPlaylists(homeId).catch(() => []);
+  const items = await Promise.allSettled(recentContexts(plays).map(context => contextItem(homeId, context, own)));
+  return { items: items.flatMap(answer => answer.status === "fulfilled" ? [answer.value] : []), tracks: recentTracks(plays) };
 }
 
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

@@ -3,7 +3,7 @@
 import { Check, ChevronRight, Info } from "lucide-react";
 import { useState } from "react";
 import { useHome } from "@/components/dashboard/use-home";
-import { librariesFor, speakersFor, type Speaker } from "@/lib/devices/speakers";
+import { speakersFor, type Speaker } from "@/lib/devices/speakers";
 import type { MediaPlayerDevice } from "@/lib/devices/types";
 import type { Send } from "./media-hooks";
 import { OutputIcon } from "./output-icon";
@@ -20,7 +20,7 @@ export function OutputPicker({ device, send, disabled, onDone, onLibrary }: { de
   const [why, setWhy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const devices = home?.devices ?? [];
-  const speakers = speakersFor(device, devices, Boolean(onLibrary) && librariesFor(device, devices, home?.spotifyLinked).some(library => library.name === "Spotify"));
+  const speakers = speakersFor(device, devices, Boolean(onLibrary));
   const run = (work: Promise<unknown>) => { setError(null); work.catch((failure: Error) => setError(failure.message || "That speaker did not answer.")); };
 
   const pick = (speaker: Speaker) => {

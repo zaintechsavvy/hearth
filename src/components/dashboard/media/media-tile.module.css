@@ -562,8 +562,9 @@
 }
 
 .source {
-  min-height: 36px;
-  padding: 0 14px;
+  flex: none;
+  min-height: 40px;
+  padding: 0 16px;
   border-radius: 999px;
   background: oklch(50% 0 0 / .08);
   color: var(--text-secondary);
@@ -674,6 +675,12 @@ button.row:active:not(:disabled) {
   color: var(--text-muted);
 }
 
+.rowTime {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
 .tick {
   display: grid;
   place-items: center;
@@ -713,12 +720,6 @@ button.row:active:not(:disabled) {
   line-height: 1.45;
 }
 
-.asleep {
-  display: grid;
-  gap: 12px;
-  justify-items: start;
-}
-
 .callout {
   padding: 12px 14px;
   border-radius: 14px;
@@ -731,10 +732,10 @@ button.row:active:not(:disabled) {
 .search {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 6px 0 14px;
-  border-radius: 14px;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 6px 0 16px;
+  border-radius: 16px;
   background: oklch(50% 0 0 / .09);
   color: var(--text-secondary);
   transition: background var(--duration-fast) var(--ease-standard);
@@ -765,8 +766,8 @@ button.row:active:not(:disabled) {
 }
 
 .searchClear {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
 }
 
 /* The library's top folders. */
@@ -1330,3 +1331,8 @@ button.row:active:not(:disabled) {
   .art, .op, .row, .heart, .mode, .footButton, .scrubber .rail, .knob, .folder, .cardCover, .cardPlay, .playAll { transition: none; }
   [data-playing] .run::after, .heart[data-on] svg, .ambient, .skeletonRow, .bars span { animation: none; }
 }
+
+/* Over a dark cover's glow a grey tint vanishes, so the library's fields and chips lift with white instead. */
+:root[data-theme="dark"] .search,
+:root[data-theme="dark"] .source:not([aria-checked="true"]) { background: oklch(100% 0 0 / .08); }
+:root[data-theme="dark"] .search:focus-within { background: oklch(100% 0 0 / .12); }

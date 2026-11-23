@@ -1,5 +1,6 @@
 import { ChevronRight, Disc3, ListMusic, Music, Play, User } from "lucide-react";
 import type { MediaItem } from "@/lib/integrations/types";
+import { clock } from "./media-hooks";
 import { PlayingBars } from "./playing-bars";
 import styles from "./media-tile.module.css";
 
@@ -21,7 +22,9 @@ export function MediaRow({ item, playing, paused, disabled, onOpen, onPlay }: { 
         <span className={styles.rowName}>{item.title}</span>
         {item.subtitle && <span className={styles.rowMeta}>{item.subtitle}</span>}
       </span>
-      {playing ? <PlayingBars paused={Boolean(paused)} /> : opens ? <ChevronRight size={18} strokeWidth={1.75} className={styles.rowChevron} aria-hidden="true" /> : null}
+      {playing ? <PlayingBars paused={Boolean(paused)} />
+        : opens ? <ChevronRight size={18} strokeWidth={1.75} className={styles.rowChevron} aria-hidden="true" />
+        : item.duration ? <span className={styles.rowTime}>{clock(item.duration)}</span> : null}
     </>
   );
   if (opens) return <button type="button" className={styles.row} aria-label={`Open ${item.title}`} disabled={disabled} onClick={() => onOpen(item)}>{body}</button>;

@@ -1,30 +1,30 @@
 "use client";
 
-import { Fragment } from "react";
-import useSWR from "swr";
-import { libraryUrl, type Library } from "@/lib/devices/speakers";
+import { useState } from "react";
 import type { MediaPlayerDevice } from "@/lib/devices/types";
 import type { MediaItem } from "@/lib/integrations/types";
-import { fetchJson } from "./media-hooks";
-import { MediaItems } from "./media-items";
+import type { SearchType } from "@/lib/spotify/items";
+import { SearchList } from "./search-list";
+import { SearchOverview } from "./search-overview";
 import styles from "./media-tile.module.css";
 
-const SECTIONS = [["track", "Songs"], ["playlist", "Playlists"], ["album", "Albums"], ["artist", "Artists"], ["other", "More"]] as const;
+const FILTERS = [["top", "Top"], ["track", "Songs"], ["artist", "Artists"], ["album", "Albums"], ["playlist", "Playlists"]] as const;
 
-export function LibrarySearch({ library, query, device, disabled, onOpen, onPlay }: {
-  library: Library; query: string; device: MediaPlayerDevice; disabled: boolean; onOpen: (item: MediaItem) => void; onPlay: (item: MediaItem) => void;
+/** Searching Spotify: everything at once under Top, or one kind at a time. */
+export function LibrarySearch({ query, device, disabled, onOpen, onPlay }: {
+  query: string; device: MediaPlayerDevice; disabled: boolean; onOpen: (item: MediaItem) => void; onPlay: (item: MediaItem) => void;
 }) {
-  const { data, error } = useSWR<{ items: MediaItem[] }>(query ? `${libraryUrl(library, "search")}?q=${encodeURIComponent(query)}` : null, fetchJson, { revalidateOnFocus: false });
-  if (error) return <p className={styles.note}>{error.message || "Search did not work just now. Try again in a moment."}</p>;
-  if (!query || !data) return <p className={styles.note} role="status">Searching…</p>;
-  if (!data.items.length) return <p className={styles.note}>Nothing found for “{query}”.</p>;
-  return SECTIONS.map(([kind, label]) => {
-    const items = data.items.filter(item => item.kind === kind);
-    return items.length > 0 && (
-      <Fragment key={kind}>
-        <span className={styles.groupLabel}>{label}</span>
-        <MediaItems items={items} device={device} disabled={disabled} onOpen={onOpen} onPlay={onPlay} />
-      </Fragment>
-    );
-  });
+  const [filter, setFilter] = useState<SearchType | "top">("top");
+  return (
+    <>
+      <div className={styles.sources} role="radiogroup" aria-label="Show">
+        {FILTERS.map(([value, label]) => (
+          <button key={value} type="button" role="radio" aria-checked={filter === value} className={styles.source} onClick={() => setFilter(value)}>{label}</button>
+        ))}
+      </div>
+      {filter === "top"
+        ? <SearchOverview query={query} device={device} disabled={disabled} onType={setFilter} onOpen={onOpen} onPlay={onPlay} />
+        : <SearchList key={filter} query={query} type={filter} device={device} disabled={disabled} onOpen={onOpen} onPlay={onPlay} />}
+    </>
+  );
 }

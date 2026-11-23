@@ -36,10 +36,10 @@ function hostOf(url: string) {
 }
 
 const OUTCOMES: Record<string, SpotifySettings["outcome"]> = {
-  connected: { tone: "success", text: "Open the music player's library to find your playlists." },
-  denied: { tone: "danger", text: "Spotify was not allowed to share your library. Try again and choose Agree." },
-  expired: { tone: "danger", text: "That sign in took too long or came back to another Hearth. Start again from here." },
-  client: { tone: "danger", text: "Add your Spotify app's Client ID first." },
+  connected: { tone: "success", title: "Spotify is connected", text: "Open the music player's library to find your playlists and recent plays." },
+  denied: { tone: "danger", title: "Spotify was not allowed", text: "Spotify was not allowed to share your library. Connect again and choose Agree." },
+  expired: { tone: "danger", title: "That sign in ran out", text: "It took too long or came back to another Hearth. Connect again from here." },
+  client: { tone: "danger", title: "Add a Client ID first", text: "Paste your Spotify app's Client ID in step 2, then connect." },
 };
 
 async function openedAt() {
@@ -62,7 +62,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<"/sett
     searchParams,
   ]);
   const owner = home.role === "owner";
-  const outcome = typeof query.spotify === "string" ? OUTCOMES[query.spotify] ?? { tone: "danger" as const, text: typeof query.reason === "string" ? query.reason : "Spotify did not finish signing in. Try again." } : null;
+  const outcome = typeof query.spotify === "string" ? OUTCOMES[query.spotify] ?? { tone: "danger" as const, title: "Spotify did not connect", text: typeof query.reason === "string" ? query.reason : "Spotify did not finish signing in. Try again." } : null;
   const spotifySettings: SpotifySettings = {
     clientId: spotify?.clientId ?? "", fromEnv: Boolean(envClientId()), account: spotify?.account ?? null, linked: Boolean(spotify?.refreshToken),
     redirectUri: redirectUri(opened), openedAt: appOrigin(opened) === new URL(opened).origin ? null : opened, outcome,

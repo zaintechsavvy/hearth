@@ -1,5 +1,4 @@
-import type { MediaItem } from "@/lib/integrations/types";
-import type { Device, DeviceCommand, MediaPlayerDevice } from "./types";
+import type { Device, MediaPlayerDevice } from "./types";
 
 /**
  * A place a player can play: one of its own outputs (Spotify Connect devices, Bluetooth, a receiver's inputs), the
@@ -43,7 +42,7 @@ const spotifyReason = (name: string) => `Spotify cannot see ${name} yet. Play to
 
 /**
  * Every speaker in the home, as `device` can reach it, with a speaker its outputs already name listed once. With
- * `spotify`, a Spotify library the home can open, a speaker's own Spotify input leads to it.
+ * `spotify`, a speaker's own Spotify input leads to the Spotify library.
  */
 export function speakersFor(device: MediaPlayerDevice, devices: Device[], spotify = false): Speaker[] {
   const others = homeSpeakers(devices).filter(other => other.id !== device.id);
@@ -75,55 +74,9 @@ export function playingOn(device: MediaPlayerDevice) {
   return output ?? (device.platform === "spotify" ? "Choose a speaker" : device.name);
 }
 
-/** Music to browse: a player's own library, or Spotify signed in from Hearth, which has no player of its own. */
-export interface Library {
-  id: string;
-  name: string;
-  device: MediaPlayerDevice | null;
-  search: boolean;
-  shuffle: boolean;
-  /** Home Assistant's Spotify opens its library only while it is playing somewhere; idle it refuses. */
-  asleep: boolean;
-}
-
-export const SPOTIFY_LIBRARY: Library = { id: "spotify", name: "Spotify", device: null, search: true, shuffle: true, asleep: false };
-
-const libraryOf = (player: MediaPlayerDevice): Library => ({
-  id: player.id, name: player.platform === "spotify" ? "Spotify" : player.name, device: player,
-  search: Boolean(player.can.search), shuffle: player.can.shuffle, asleep: player.platform === "spotify" && !player.can.browse,
-});
-
 /**
- * Libraries `device` can play from, Spotify first, then its own. Spotify signed in from Hearth (`linked`) stands in for
- * Home Assistant's, which cannot search and shuts its library while idle. Home Assistant's Spotify reports no browsing
- * while idle, yet it is still the home's Spotify, so it is listed asleep rather than dropped.
+ * The names to look for among Spotify Connect devices to play on `device`: the speaker's own, or for Home Assistant's
+ * Spotify, the device it plays on now. None means wherever Spotify plays now.
  */
-export function librariesFor(device: MediaPlayerDevice, devices: Device[], linked = false): Library[] {
-  const isLibrary = (player: MediaPlayerDevice) => player.platform === "spotify" ? !linked : Boolean(player.can.browse);
-  const spotify = devices.filter((other): other is MediaPlayerDevice => other.kind === "media_player" && other.available && other.platform === "spotify" && other.id !== device.id && isLibrary(other));
-  return [...(linked ? [SPOTIFY_LIBRARY] : []), ...spotify.map(libraryOf), ...(isLibrary(device) ? [libraryOf(device)] : [])]
-    .sort((a, b) => Number(b.name === "Spotify") - Number(a.name === "Spotify"));
-}
-
-export const libraryUrl = (library: Library, what: "browse" | "search") =>
-  library.device ? `/api/devices/${encodeURIComponent(library.device.id)}/media/${what}` : `/api/spotify/${what}`;
-
-/** A command for a player, or for Spotify signed in from Hearth, the names to look for among its Spotify Connect devices. */
-export type PlayPlan = { to: MediaPlayerDevice; command: DeviceCommand } | { spotify: string[] } | { error: string };
-
-/**
- * How to play something from `library` on `device`. Spotify signed in from Hearth plays on the Spotify Connect device
- * that shares the speaker's name, or for Home Assistant's Spotify, the one it plays on now. The library's own player
- * plays it where it plays now; another library plays it on `device` through one of its outputs that names it, or by
- * `device` itself when it can.
- */
-export function planPlay(item: MediaItem, library: Library, device: MediaPlayerDevice): PlayPlan {
-  if (!library.device) return { spotify: device.platform === "spotify" ? (device.output ? [device.output] : []) : [device.name, device.sourceName].filter((name): name is string => Boolean(name)) };
-  const source = library.device;
-  const command = { type: "playMedia", id: item.media.id, mediaType: item.media.type } as const;
-  if (source.id === device.id) return { to: source, command };
-  const output = source.outputs.find(name => same(name, device.name));
-  if (output) return { to: source, command: { ...command, output } };
-  if (!isSpotifyMedia(item.media.id) && device.can.play) return { to: device, command };
-  return { error: source.platform === "spotify" ? spotifyReason(device.name) : `${source.name} cannot play on ${device.name}.` };
-}
+export const spotifyTargets = (device: MediaPlayerDevice) =>
+  device.platform === "spotify" ? (device.output ? [device.output] : []) : [device.name, device.sourceName].filter((name): name is string => Boolean(name));

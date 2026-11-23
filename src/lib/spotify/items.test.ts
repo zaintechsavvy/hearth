@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { LIKED, matchDevice, playBody, playlistItem, spotifyMessage, trackItem, type SpotifyDevice } from "./items";
+import type { MediaItem } from "@/lib/integrations/types";
+import {
+  LIKED, isClientId, matchDevice, playBody, playlistItem, recentContexts, recentTracks, spotifyMessage, topResult, trackItem, type SpotifyDevice, type SpotifyPlay, type SpotifyTrack,
+} from "./items";
 
 const device = (name: string, extra: Partial<SpotifyDevice> = {}): SpotifyDevice => ({ id: name.toLowerCase().replaceAll(" ", "-"), name, is_active: false, is_restricted: false, ...extra });
 
@@ -51,5 +54,60 @@ describe("spotifyMessage", () => {
     expect(spotifyMessage(404, { error: { status: 404, message: "Player command failed: No active device found", reason: "NO_ACTIVE_DEVICE" } })).toMatch(/Choose a speaker/);
     expect(spotifyMessage(400, { error: { status: 400, message: "Invalid context uri" } })).toBe("Spotify said: Invalid context uri");
     expect(spotifyMessage(500, null)).toBe("Spotify answered with 500.");
+  });
+});
+
+it("knows a Client ID when it sees one", () => {
+  expect(isClientId("0123456789abcdef0123456789ABCDEF")).toBe(true);
+  expect(isClientId("not-an-id")).toBe(false);
+});
+
+const song = (id: string, album = "a1"): SpotifyTrack => ({ name: `Song ${id}`, uri: `spotify:track:${id}`, duration_ms: 201_400, artists: [{ name: "Someone" }], album: { name: `Album ${album}`, uri: `spotify:album:${album}`, images: [{ url: `https://i/${album}` }] } });
+const played = (track: SpotifyTrack | null, context: SpotifyPlay["context"] = null): SpotifyPlay => ({ track, context });
+
+describe("recent plays", () => {
+  const plays = [
+    played(song("1"), { type: "playlist", uri: "spotify:playlist:p1" }),
+    played(song("2"), { type: "playlist", uri: "spotify:playlist:p1" }),
+    played(song("3", "a2")),
+    played(song("1"), { type: "artist", uri: "spotify:artist:r1" }),
+    played(song("4"), { type: "collection", uri: "spotify:user:me:collection" }),
+    played(song("5", "a3"), { type: "album", uri: "spotify:album:a3" }),
+    played(null, { type: "show", uri: "spotify:show:s1" }),
+    played(song("6", "a2"), { type: "show", uri: "spotify:show:s1" }),
+  ];
+
+  it("lists each album, playlist, artist, and liked songs once, newest first, counting a song with no context as its album", () => {
+    expect(recentContexts(plays).map(context => [context.type, context.uri])).toEqual([
+      ["playlist", "spotify:playlist:p1"], ["album", "spotify:album:a2"], ["artist", "spotify:artist:r1"], ["collection", "spotify:user:me:collection"], ["album", "spotify:album:a3"],
+    ]);
+    expect(recentContexts(plays)[1].track.uri).toBe("spotify:track:3");
+    expect(recentContexts(plays, 2)).toHaveLength(2);
+  });
+
+  it("lists each song once, playing on through where it was played from", () => {
+    const tracks = recentTracks(plays);
+    expect(tracks.map(track => [track.media.id, track.media.type])).toEqual([
+      ["spotify:track:1", "spotify:playlist:p1"], ["spotify:track:2", "spotify:playlist:p1"], ["spotify:track:3", "spotify:album:a2"],
+      ["spotify:track:4", LIKED], ["spotify:track:5", "spotify:album:a3"], ["spotify:track:6", "spotify:album:a2"],
+    ]);
+    expect(tracks[0]).toMatchObject({ duration: 201, artwork: "https://i/a1" });
+    expect(recentTracks(plays, 3)).toHaveLength(3);
+  });
+});
+
+describe("topResult", () => {
+  const item = (title: string, kind: MediaItem["kind"]): MediaItem => ({ title, kind, subtitle: null, media: { id: `${kind}:${title}`, type: kind }, artwork: null, playable: true, expandable: kind !== "track" });
+
+  it("prefers what is named exactly as searched, an artist first", () => {
+    const sections = { track: [item("Hello", "track")], artist: [item("Adele", "artist"), item("Hello", "artist")], album: [item("Hello", "album")] };
+    expect(topResult("hello", sections)?.kind).toBe("artist");
+    expect(topResult("Hello!", { ...sections, artist: [] })?.kind).toBe("track");
+  });
+
+  it("then an artist whose name starts with the search, then the first song", () => {
+    expect(topResult("radioh", { track: [item("Creep", "track")], artist: [item("Radiohead", "artist")] })?.title).toBe("Radiohead");
+    expect(topResult("creep", { track: [item("Creep (Acoustic)", "track")], artist: [item("Radiohead", "artist")] })?.title).toBe("Creep (Acoustic)");
+    expect(topResult("anything", {})).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { SPOTIFY_SCOPES, authorizeUrl, isClientId, pkcePair, redirectUri } from "./auth";
+import { SPOTIFY_SCOPES, authorizeUrl, pkcePair, redirectUri } from "./auth";
 
 describe("Spotify sign in", () => {
   it("makes a PKCE verifier and its S256 challenge", () => {
@@ -23,10 +23,5 @@ describe("Spotify sign in", () => {
     expect(redirectUri("http://127.0.0.1:3000", { BETTER_AUTH_URL: "https://hearth.example.com/" })).toBe("https://hearth.example.com/api/spotify/callback");
     expect(redirectUri("http://127.0.0.1:3000", { VERCEL_PROJECT_PRODUCTION_URL: "hearth.vercel.app" })).toBe("https://hearth.vercel.app/api/spotify/callback");
     expect(redirectUri("http://127.0.0.1:3000", {})).toBe("http://127.0.0.1:3000/api/spotify/callback");
-  });
-
-  it("knows a Client ID when it sees one", () => {
-    expect(isClientId("0123456789abcdef0123456789ABCDEF")).toBe(true);
-    expect(isClientId("not-an-id")).toBe(false);
   });
 });
