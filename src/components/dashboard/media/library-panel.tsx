@@ -8,7 +8,7 @@ import type { MediaPlayerDevice } from "@/lib/devices/types";
 import type { MediaItem } from "@/lib/integrations/types";
 import { LibraryBrowse } from "./library-browse";
 import { LibrarySearch } from "./library-search";
-import { playOnSpotify, useDebounced } from "./media-hooks";
+import { playOnSpotify, useDebounced, useSourceDevice } from "./media-hooks";
 import { OutputIcon } from "./output-icon";
 import { RecentShelf } from "./recent-shelf";
 import { SpotifyPrompt } from "./spotify-prompt";
@@ -25,6 +25,7 @@ export function LibraryPanel({ device, disabled, onBack, onOutputs }: { device: 
   const searched = useDebounced(query.trim(), 280);
   const opened = trail.at(-1) ?? null;
   const where = playingOn(device);
+  const source = useSourceDevice(device);
 
   if (!home?.spotifyLinked) {
     return (
@@ -39,7 +40,7 @@ export function LibraryPanel({ device, disabled, onBack, onOutputs }: { device: 
     setNotice(null);
     setStarting(true);
     try {
-      await playOnSpotify({ media: item.media, speakers: spotifyTargets(device), device: wakeTarget(device), shuffle });
+      await playOnSpotify({ media: item.media, speakers: spotifyTargets(source), device: wakeTarget(source), shuffle });
     } catch (error) {
       setNotice(error instanceof Error && error.message ? error.message : "That did not start just now. Try again in a moment.");
     } finally {

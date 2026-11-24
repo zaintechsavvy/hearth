@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTick } from "@/components/dashboard/household/use-tick";
+import { useHome } from "@/components/dashboard/use-home";
 import { paletteFromImage } from "@/components/shell/image-tools";
 import { hexToHsl, hslToHex } from "@/lib/backgrounds/palette";
 import { livePosition, type DeviceCommand, type MediaPlayerDevice } from "@/lib/devices/types";
@@ -27,6 +28,13 @@ export const playOnSpotify = (body: { media: { id: string; type: string } | null
     if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? "");
   });
 
+/** The player as its integration names it, which is how Spotify knows it: a tile can carry a name of its own. */
+export function useSourceDevice(device: MediaPlayerDevice) {
+  const { home } = useHome();
+  const source = home?.devices.find(item => item.id === device.id);
+  return source?.kind === "media_player" ? source : device;
+}
+
 export function useDebounced<T>(value: T, ms: number) {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
@@ -36,9 +44,9 @@ export function useDebounced<T>(value: T, ms: number) {
   return settled;
 }
 
-/** Where the track is now, moving once a second while it plays. */
-export function usePosition(device: MediaPlayerDevice) {
-  const now = useTick(device.state === "playing" ? 1000 : 60_000);
+/** Where the track is now, moving every `ms` while it plays. */
+export function usePosition(device: MediaPlayerDevice, ms = 1000) {
+  const now = useTick(device.state === "playing" ? ms : 60_000);
   return now === null ? device.position : livePosition(device, now);
 }
 

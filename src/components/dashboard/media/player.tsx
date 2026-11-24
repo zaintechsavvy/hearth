@@ -25,6 +25,8 @@ interface PlayerProps {
   view: View;
   onView: (view: View) => void;
   autoFocus?: boolean;
+  /** Kept current from Spotify itself, whose queue Up next then shows. */
+  spotify?: boolean;
   /** Set when the player is open over the page, which it folds back into the bar. */
   onCollapse?: () => void;
 }
@@ -33,7 +35,7 @@ interface PlayerProps {
  * The full player. The library, up next, and speakers open beside the controls on a wide screen and in their place
  * on a narrow one, where a small set of controls stays in the header.
  */
-export function Player({ device, send, interactive, view, onView, autoFocus, onCollapse }: PlayerProps) {
+export function Player({ device, send, interactive, view, onView, autoFocus, spotify = false, onCollapse }: PlayerProps) {
   const titleId = useId();
   const reduce = useReducedMotion();
   const disabled = !interactive;
@@ -70,7 +72,7 @@ export function Player({ device, send, interactive, view, onView, autoFocus, onC
           <motion.section key={view} className={styles.panel} {...fade}>
             {view === "library" && <LibraryPanel device={device} disabled={disabled} onBack={back} onOutputs={() => onView("outputs")} />}
             {view === "outputs" && <OutputPicker device={device} send={send} disabled={disabled} onDone={back} onLibrary={() => onView("library")} />}
-            {view === "queue" && <QueuePanel device={device} send={send} disabled={disabled} onBack={back} />}
+            {view === "queue" && <QueuePanel device={device} send={send} disabled={disabled} spotify={spotify} onBack={back} />}
           </motion.section>
         )}
       </AnimatePresence>

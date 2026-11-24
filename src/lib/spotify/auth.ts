@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 /** Reading playlists, the library, and what played lately, and seeing and moving what plays. */
-export const SPOTIFY_SCOPES = ["playlist-read-private", "playlist-read-collaborative", "user-library-read", "user-follow-read", "user-read-recently-played", "user-read-playback-state", "user-modify-playback-state"];
+export const SPOTIFY_SCOPES = ["playlist-read-private", "playlist-read-collaborative", "user-library-read", "user-follow-read", "user-read-recently-played", "user-read-playback-state", "user-read-currently-playing", "user-modify-playback-state"];
 
 /** Holds the PKCE verifier between sending someone to Spotify and Spotify sending them back. */
 export const SIGN_IN_COOKIE = "hearth_spotify_sign_in";

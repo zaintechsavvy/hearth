@@ -8,7 +8,7 @@ import styles from "./media-tile.module.css";
 
 /** The rail with elapsed and remaining time. Where the player allows it, a press or a drag on the rail moves through the track. */
 export function Timeline({ device, send, disabled }: { device: MediaPlayerDevice; send: Send; disabled: boolean }) {
-  const live = usePosition(device);
+  const live = usePosition(device, 250);
   const [scrub, setScrub] = useState<number | null>(null);
   const rail = useRef<HTMLDivElement>(null);
   const { duration } = device;

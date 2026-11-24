@@ -10,6 +10,8 @@ import type { DeviceCommand, MediaPlayerDevice } from "@/lib/devices/types";
 import { useCoverTint, type Send, type View } from "./media-hooks";
 import { NowPlayingBar } from "./now-playing-bar";
 import { Player } from "./player";
+import { usePlayerRequests } from "./player-requests";
+import { useLivePlayer } from "./use-live-player";
 import styles from "./media-tile.module.css";
 
 interface MediaTileProps {
@@ -26,7 +28,7 @@ const subscribeNothing = () => () => {};
 let mounted = 0;
 
 /** Now playing, as a bar that opens into the full player and folds back as one. */
-export function MediaTile({ tileId, device, layout, interactive, onCommand }: MediaTileProps) {
+export function MediaTile({ tileId, device: reported, layout, interactive, onCommand }: MediaTileProps) {
   const [open, setOpen] = useState(false);
   // Each mount morphs on its own: a tile mounted again, as when switching rooms, must not glide in from where the
   // last one stood.
@@ -36,9 +38,13 @@ export function MediaTile({ tileId, device, layout, interactive, onCommand }: Me
   const reduce = useReducedMotion();
   const client = useSyncExternalStore(subscribeNothing, () => true, () => false);
   const opener = useRef<HTMLButtonElement>(null);
+  const live = useLivePlayer(reported, onCommand, open || layout === "player");
+  const device = live.device;
   const tint = useCoverTint(device.artwork);
   const transition = reduce ? { duration: 0 } : motionTokens.spring.morph;
-  const send: Send = command => onCommand(command).catch(() => {});
+  const send: Send = command => live.send(command).catch(() => {});
+  const openPlayer = () => { setView(!device.title && home?.spotifyLinked ? "library" : "controls"); setOpen(true); };
+  usePlayerRequests(reported.id, () => { if (interactive && layout === "bar") openPlayer(); });
   const look = { "data-tinted": tint ? "" : undefined, "data-playing": device.state === "playing" ? "" : undefined, style: tint ? { "--tint": tint } as CSSProperties : undefined };
 
   useEffect(() => {
@@ -59,14 +65,14 @@ export function MediaTile({ tileId, device, layout, interactive, onCommand }: Me
   }
 
   if (layout === "player") {
-    return <div className={`${glassClass("panel")} ${styles.tile}`} {...look}><Player device={device} send={send} interactive={interactive} view={view} onView={setView} /></div>;
+    return <div className={`${glassClass("panel")} ${styles.tile}`} {...look}><Player device={device} send={send} interactive={interactive} view={view} onView={setView} spotify={live.spotify} /></div>;
   }
 
   return (
     <LayoutGroup id={`media-${tileId}-${mount}`}>
       {open ? <div className={styles.lifted} aria-hidden="true" /> : (
         <motion.div layoutId="card" className={`${glassClass("panel")} ${styles.tile}`} {...look} style={{ ...look.style, borderRadius: 26 }} transition={transition}>
-          <NowPlayingBar device={device} send={send} interactive={interactive} opener={opener} onOpen={() => { setView(!device.title && home?.spotifyLinked ? "library" : "controls"); setOpen(true); }} />
+          <NowPlayingBar device={device} send={send} interactive={interactive} opener={opener} onOpen={openPlayer} />
         </motion.div>
       )}
       {client && createPortal(
@@ -77,7 +83,7 @@ export function MediaTile({ tileId, device, layout, interactive, onCommand }: Me
           {open && (
             <div key="stage" className={styles.stage}>
               <motion.div layoutId="card" role="dialog" aria-modal="true" aria-label={`${device.name}, now playing`} className={`${glassSheetClass} ${styles.card}`} {...look} style={{ ...look.style, borderRadius: 0 }} transition={transition}>
-                <Player device={device} send={send} interactive={interactive} view={view} onView={setView} autoFocus onCollapse={close} />
+                <Player device={device} send={send} interactive={interactive} view={view} onView={setView} spotify={live.spotify} autoFocus onCollapse={close} />
               </motion.div>
             </div>
           )}

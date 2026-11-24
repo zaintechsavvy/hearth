@@ -9,6 +9,7 @@ import {
   spotifyMessage, topResult, trackItem,
   type SearchResult, type SearchType, type SpotifyAlbum, type SpotifyArtist, type SpotifyDevice, type SpotifyPlay, type SpotifyPlaylist, type SpotifyTrack,
 } from "./items";
+import { playbackOf, queueOf, type SpotifyControl, type SpotifyItem, type SpotifyState } from "./playback";
 
 const API = "https://api.spotify.com/v1/";
 
@@ -259,4 +260,35 @@ export async function play(homeId: string, { media, speakers, shuffle, wake }: {
     await start();
   }
   if (shuffle) await spotify(homeId, `me/player/shuffle?state=true${target ? `&${target}` : ""}`, { method: "PUT" });
+}
+
+/** What Spotify plays now and where, or null when it plays nothing. */
+export const playback = async (homeId: string) => playbackOf(await spotify<SpotifyState | null>(homeId, "me/player?additional_types=episode"));
+
+/** What Spotify plays next. A sign in from before Hearth asked to read the queue is refused, which says to connect again. */
+export async function queue(homeId: string) {
+  try {
+    const answer = await spotify<{ queue?: (SpotifyItem | null)[] } | null>(homeId, "me/player/queue");
+    return { tracks: queueOf(answer?.queue ?? []) };
+  } catch (error) {
+    if (error instanceof SpotifyError && (error.status === 401 || error.status === 403)) return { reconnect: true as const };
+    throw error;
+  }
+}
+
+const REPEAT_STATE = { off: "off", all: "context", one: "track" } as const;
+
+/** Controls Spotify wherever it plays now. `skip` goes forward through the queue, one track at a time, as Spotify has no jump. */
+export async function control(homeId: string, command: SpotifyControl) {
+  const put = (path: string) => spotify(homeId, `me/player/${path}`, { method: "PUT" });
+  const post = (path: string) => spotify(homeId, `me/player/${path}`, { method: "POST" });
+  switch (command.action) {
+    case "play": case "pause": return void await put(command.action);
+    case "next": case "previous": return void await post(command.action);
+    case "seek": return void await put(`seek?position_ms=${Math.max(0, Math.round(command.position * 1000))}`);
+    case "volume": return void await put(`volume?volume_percent=${Math.round(Math.min(100, Math.max(0, command.value)))}`);
+    case "shuffle": return void await put(`shuffle?state=${command.on}`);
+    case "repeat": return void await put(`repeat?state=${REPEAT_STATE[command.mode]}`);
+    case "skip": for (let step = 0; step < command.count; step++) await post("next");
+  }
 }
