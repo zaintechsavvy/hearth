@@ -1092,11 +1092,14 @@ button.row:active:not(:disabled) {
   pointer-events: none;
 }
 
+/* `clip`, not `hidden`: the ambient glow overhangs the card, and a hidden overflow is still a scroller that focusing a
+   control mid-morph scrolls sideways, shifting the player left over the glow. */
 .card {
   isolation: isolate;
   width: 100%;
   height: 100%;
   overflow: hidden;
+  overflow: clip;
   pointer-events: auto;
   will-change: transform;
 }

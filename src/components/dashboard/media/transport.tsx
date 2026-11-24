@@ -14,7 +14,7 @@ const REPEAT_LABEL: Record<RepeatMode, string> = { off: "Repeat", all: "Repeatin
 export function Transport({ device, send, disabled, size, morph = false, autoFocus }: { device: MediaPlayerDevice; send: Send; disabled: boolean; size: "bar" | "mini" | "large"; morph?: boolean; autoFocus?: boolean }) {
   const playing = device.state === "playing";
   const lead = useRef<HTMLButtonElement>(null);
-  useEffect(() => { if (autoFocus) lead.current?.focus(); }, [autoFocus]);
+  useEffect(() => { if (autoFocus) lead.current?.focus({ preventScroll: true }); }, [autoFocus]);
   const icon = size === "large" ? 26 : 18;
   const repeat = device.repeat ?? "off";
   const large = size === "large";
