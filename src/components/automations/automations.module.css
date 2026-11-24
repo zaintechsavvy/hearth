@@ -1,8 +1,14 @@
 .page {
   display: grid;
+  align-content: start;
   gap: var(--space-5);
   width: min(100%, 860px);
   margin: 0 auto;
+}
+
+/* The heading clears the clock and menu in the wall tablet's corner. */
+:global(:root[data-wall]) .page {
+  padding-top: 54px;
 }
 
 .header {
