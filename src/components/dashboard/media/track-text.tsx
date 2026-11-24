@@ -5,7 +5,8 @@ import type { MediaPlayerDevice } from "@/lib/devices/types";
 import styles from "./media-tile.module.css";
 
 export function TrackText({ device, id, morph = true, album = false }: { device: MediaPlayerDevice; id?: string; morph?: boolean; album?: boolean }) {
-  const title = device.title ?? (device.state === "off" ? "Off" : "Nothing playing");
+  // Home Assistant calls an idle Google Cast speaker off, though it plays the moment it is asked.
+  const title = device.title ?? (device.state === "off" && !device.can.play ? "Off" : "Nothing playing");
   const by = device.title ? device.artist : device.output ?? device.name;
   return (
     <motion.span layoutId={morph ? "text" : undefined} layout={morph ? "position" : undefined} className={styles.text}>

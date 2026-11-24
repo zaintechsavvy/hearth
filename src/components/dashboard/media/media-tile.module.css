@@ -121,8 +121,8 @@
 }
 
 .op {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   color: var(--foreground);
 }
 
@@ -340,8 +340,8 @@
 .scrubber {
   position: relative;
   display: grid;
-  padding-block: 10px;
-  margin-block: -10px;
+  padding-block: 20px;
+  margin-block: -20px;
   border-radius: 999px;
   touch-action: none;
 }
@@ -407,9 +407,9 @@
 }
 
 .mute {
-  width: 36px;
-  height: 36px;
-  margin: -8px;
+  width: 44px;
+  height: 44px;
+  margin: -12px;
 }
 
 .mute[aria-pressed="true"] {
@@ -512,9 +512,9 @@
 }
 
 .back {
-  width: 40px;
-  height: 40px;
-  margin-left: -8px;
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
 }
 
 .viewTitle {
@@ -535,7 +535,7 @@
   align-items: center;
   gap: 6px;
   max-width: 50%;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 12px;
   border-radius: 999px;
   background: oklch(50% 0 0 / .1);
