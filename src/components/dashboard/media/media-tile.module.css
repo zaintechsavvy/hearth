@@ -1248,9 +1248,12 @@ button.row:active:not(:disabled) {
   font-size: var(--text-base);
 }
 
+/* Sized by the rows, never by its own list: a long library would otherwise stretch them and push the controls
+   off the screen. It scrolls instead. */
 .card .panel {
   grid-area: panel;
   align-self: stretch;
+  contain: size;
   padding: 4px 64px 24px 24px;
   margin: calc(-1 * clamp(8px, 2vh, 24px)) calc(-1 * clamp(16px, 3vw, 48px)) calc(-1 * clamp(8px, 2vh, 24px)) 0;
   border-radius: 28px;
