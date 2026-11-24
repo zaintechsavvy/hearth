@@ -30,13 +30,13 @@ const STEPS = [
   },
   {
     id: "rest", title: "Pick a resting screen", settings: "/settings#wall", visual: <FacesVisual />,
-    body: "After a few quiet minutes the tablet rests on a clock you can read across the room. Each face takes its own colours: large digits you can stack and make bolder, an analog face, or a luxury dial shaped to the screen.",
+    body: "After a few quiet minutes the tablet rests on a clock you can read across the room. Each face takes its own colours: large digits you can stack and make bolder, an analog face, a luxury dial shaped to the screen, the time in words, or the sun's path across the day. Settings shows each one exactly as it will look on that screen.",
     points: ["Pick the colour, or your own, and how bright it shows.", "Choose hand colours and whether the seconds tick, sweep or stay off.", "Lights, fans, locks and the garage play a short moment on the screen when they change while it rests."],
   },
   {
     id: "wake", title: "Wake it when someone needs it", settings: "/settings#wall", visual: <WakeVisual />,
     body: "A touch wakes the screen. It can also wake on its own, so the home is already showing when someone walks up to it.",
-    points: ["Pick motion, presence or door sensors near the tablet in Wall tablet settings.", "The doorbell takes over the screen with the camera, then lets it rest again.", "At night the screen dims, and the clock can turn a soft red.", "To let the display turn off and light up for the garage, see When the screen sleeps below."],
+    points: ["Pick motion, presence or door sensors near the tablet in Wall tablet settings.", "The doorbell takes over the screen with the camera, then lets it rest again.", "At night the screen dims and the clock turns a dim red, as bright as you choose.", "To let the display turn off and light up for the garage, see When the screen sleeps below."],
   },
   {
     id: "night", title: "Set up Good night", settings: "/settings#bedtime", visual: <GoodNightVisual />,

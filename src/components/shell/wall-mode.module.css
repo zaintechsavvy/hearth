@@ -7,10 +7,12 @@
   transition: opacity 1.5s var(--ease-standard);
 }
 
+/* A size container, so the resting screen sizes itself by its own box, and a preview of it scaled into Settings matches. */
 .saver {
   position: fixed;
   inset: 0;
   z-index: 80;
+  container-type: size;
   display: grid;
   place-items: center;
   background: radial-gradient(120% 90% at 50% 0%, oklch(22% .01 260), oklch(8% .005 260));
@@ -30,26 +32,26 @@
 .glance {
   display: grid;
   justify-items: center;
-  width: min(92vw, 1100px);
+  width: min(92cqw, 1100px);
   opacity: var(--saver-dim, 1);
 }
 
 .date {
-  font-size: clamp(var(--text-lg), 2.6vw, 32px);
+  font-size: clamp(var(--text-lg), 2.6cqw, 32px);
   font-weight: 500;
   color: color-mix(in oklab, currentColor 62%, transparent);
 }
 
 .clock {
-  margin-top: clamp(4px, 1vh, 12px);
+  margin-top: clamp(4px, 1cqh, 12px);
 }
 
 .weather {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  margin-top: clamp(12px, 2.4vh, 28px);
-  font-size: clamp(var(--text-lg), 2.2vw, 26px);
+  margin-top: clamp(12px, 2.4cqh, 28px);
+  font-size: clamp(var(--text-lg), 2.2cqw, 26px);
   color: color-mix(in oklab, currentColor 80%, transparent);
 }
 
@@ -59,7 +61,7 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--space-3);
-  margin-top: clamp(28px, 6vh, 64px);
+  margin-top: clamp(28px, 6cqh, 64px);
 }
 
 .card {
@@ -108,7 +110,7 @@
 
 .timerTime {
   font-family: var(--font-display);
-  font-size: clamp(30px, 3.6vw, 44px);
+  font-size: clamp(30px, 3.6cqw, 44px);
   font-weight: 500;
   letter-spacing: -.03em;
   line-height: 1;
@@ -285,22 +287,22 @@
 /* Over photos the clock moves to the lower left and steps down a size, so the photo is the picture. */
 .glance[data-frame] {
   position: absolute;
-  left: max(5vw, calc(env(safe-area-inset-left) + var(--space-6)));
-  bottom: max(8vh, calc(env(safe-area-inset-bottom) + var(--space-10)));
+  left: max(5cqw, calc(env(safe-area-inset-left) + var(--space-6)));
+  bottom: max(8cqh, calc(env(safe-area-inset-bottom) + var(--space-10)));
   z-index: 1;
-  width: min(90vw, 760px);
+  width: min(90cqw, 760px);
   justify-items: start;
   text-align: start;
   text-shadow: 0 2px 28px oklch(0% 0 0 / .5);
 }
 
 .glance[data-frame] .clock {
-  --size: clamp(64px, 11vw, 168px);
+  --size: clamp(64px, 11cqw, 168px);
 }
 
 .glance[data-frame] .cards {
   justify-content: flex-start;
-  margin-top: clamp(16px, 3vh, 32px);
+  margin-top: clamp(16px, 3cqh, 32px);
 }
 
 /* Or in the middle, low enough that the photo still reads above it. */
@@ -346,7 +348,7 @@
   color: var(--foreground);
 }
 
-.analog {
+.restFace {
   display: contents;
 }
 

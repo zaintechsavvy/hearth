@@ -1,0 +1,17 @@
+.preview {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border-radius: var(--radius-control);
+  background: black;
+  box-shadow: 0 0 0 1px var(--border-subtle);
+}
+
+/* The whole screen at full size, scaled from the corner: its transform also holds the fixed-position faces inside it. */
+.screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}

@@ -3,10 +3,10 @@ export interface WallSettings {
   enabled: boolean;
   /** Minutes without a touch before the screensaver; 0 never. */
   idleMinutes: number;
-  /** When the night dim starts and ends, as HH:MM. */
+  /** When night starts and ends, as HH:MM: the dashboard dims and the resting clock can turn red. */
   dimFrom: string;
   dimTo: string;
-  /** How dark the night dim gets, 0 to 0.85. */
+  /** How dark the dashboard dims at night, 0 to 0.85. */
   dimLevel: number;
   /** Motion, presence, or door sensors that wake the screen. */
   wakeSensors: string[];
@@ -20,7 +20,7 @@ export interface WallSettings {
   /** A colour of the person's own, as `#rrggbb`. */
   customColor: string;
   clockBrightness: number;
-  /** Rest on large digits, an analog face filled with the clock colour, or a luxury watch dial. */
+  /** The face the screen rests on; see `CLOCK_FACES`. */
   clockFace: ClockFace;
   /** The hour and minute hands' colour as `#rrggbb`, or null for the face's own. */
   handColor: string | null;
@@ -31,6 +31,8 @@ export interface WallSettings {
   digitScale: number;
   /** Turn the resting clock a dim red in the night window, instead of the chosen colour. */
   nightRed: boolean;
+  /** How bright the red clock shows at night, 0.05 to 0.6. */
+  redBrightness: number;
   /** After dark, point out a door, window, or garage door open for longer than `openMinutes`. */
   openReminder: boolean;
   openMinutes: number;
@@ -61,7 +63,14 @@ export const CLOCK_COLORS = {
   violet: "oklch(76% 0.12 300)",
 } as const;
 export type ClockColor = keyof typeof CLOCK_COLORS;
-export type ClockFace = "digital" | "analog" | "luxury";
+export const CLOCK_FACES = [
+  { value: "digital", label: "Digital" },
+  { value: "analog", label: "Analog" },
+  { value: "luxury", label: "Luxury" },
+  { value: "words", label: "Words" },
+  { value: "daylight", label: "Daylight" },
+] as const;
+export type ClockFace = typeof CLOCK_FACES[number]["value"];
 
 /** The analog face's fill for each clock colour: soft enough to sit on a wall all day, dark numerals on top. */
 export const FACE_COLORS: Record<ClockColor, string> = {
@@ -109,11 +118,15 @@ export function isLight(color: string) {
 export const WALL_KEY = "hearth-wall";
 
 export const DEFAULT_WALL: WallSettings = {
-  enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: "always",
-  clockColor: "white", customColor: "#7aa7ff", clockBrightness: 0.85, clockFace: "digital", handColor: null, secondHand: "tick", digitLayout: "inline", digitScale: 1, nightRed: false, openReminder: true, openMinutes: 15,
+  enabled: false, idleMinutes: 5, dimFrom: "22:30", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: "always",
+  clockColor: "white", customColor: "#7aa7ff", clockBrightness: 0.85, clockFace: "digital", handColor: null, secondHand: "tick", digitLayout: "inline", digitScale: 1, nightRed: true, redBrightness: 0.15, openReminder: true, openMinutes: 15,
   frame: false, frameSource: "uploads", frameSeconds: 20, frameAtNight: false, frameClock: "corner",
   awakeMinutes: 5, darkRest: false,
 };
+
+/** How bright the resting clock shows: its own brightness by day, the red brightness at night when red, otherwise dimmed with the dashboard. */
+export const restBrightness = (settings: Pick<WallSettings, "clockBrightness" | "dimLevel" | "nightRed" | "redBrightness">, night: boolean) =>
+  !night ? settings.clockBrightness : settings.nightRed ? settings.redBrightness : settings.clockBrightness * (1 - settings.dimLevel * 0.6);
 
 const minutes = (time: string) => {
   const [hours, mins] = time.split(":").map(Number);

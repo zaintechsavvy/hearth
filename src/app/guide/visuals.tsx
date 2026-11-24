@@ -2,13 +2,12 @@
 
 import { BellRing, Clapperboard, DoorClosed, Fan, Lamp, Lightbulb, Lock, LogOut, MonitorPause, Moon, Paintbrush, Plug, Radar, Settings, Thermometer, Warehouse } from "lucide-react";
 import type { ReactNode } from "react";
-import { AnalogFace, useClockNow } from "@/components/shell/analog-face";
-import { DigitalTime } from "@/components/shell/digital-time";
-import { LuxuryFace } from "@/components/shell/luxury-face";
-import { DEFAULT_WALL, type WallSettings } from "@/lib/wall";
+import { RestPreview } from "@/components/shell/rest-preview";
+import { CLOCK_FACES, DEFAULT_WALL, type ClockFace, type WallSettings } from "@/lib/wall";
 import styles from "./guide.module.css";
 
 const face: WallSettings = { ...DEFAULT_WALL, clockBrightness: 1, secondHand: "smooth" };
+const FACE_LOOKS: Partial<Record<ClockFace, Partial<WallSettings>>> = { digital: { digitLayout: "stacked" }, analog: { clockColor: "blue" }, luxury: { clockColor: "green" }, words: { clockColor: "warm" } };
 
 const Row = ({ icon, title, meta, end }: { icon: ReactNode; title: string; meta?: string; end?: ReactNode }) => (
   <div className={styles.row}>
@@ -49,27 +48,20 @@ export function WallVisual() {
     <div className={styles.panel}>
       <Row icon={<Settings size={18} strokeWidth={1.75} />} title="Use this screen as a wall tablet" meta="Hides the menus, keeps the screen awake, dims at night" end={<Toggle />} />
       <Row icon={<MonitorPause size={18} strokeWidth={1.75} />} title="Rest after" meta="5 min" />
-      <Row icon={<Moon size={18} strokeWidth={1.75} />} title="Dim from 22:00 until 07:00" />
+      <Row icon={<Moon size={18} strokeWidth={1.75} />} title="Night from 22:30 until 07:00" />
     </div>
   );
 }
 
 export function FacesVisual() {
-  const now = useClockNow();
   return (
     <div className={styles.faces}>
-      <figure className={styles.face}>
-        <span className={`${styles.screen} ${styles.digital}`} aria-hidden="true"><DigitalTime now={now} settings={{ ...face, digitLayout: "stacked" }} className={styles.digitalTime} /></span>
-        <figcaption>Digital</figcaption>
-      </figure>
-      <figure className={styles.face}>
-        <span className={styles.screen} aria-hidden="true"><AnalogFace inline night={false} settings={{ ...face, clockColor: "blue" }} /></span>
-        <figcaption>Analog</figcaption>
-      </figure>
-      <figure className={styles.face}>
-        <span className={styles.screen} aria-hidden="true"><LuxuryFace inline night={false} settings={{ ...face, clockColor: "green" }} /></span>
-        <figcaption>Luxury</figcaption>
-      </figure>
+      {CLOCK_FACES.map(({ value, label }) => (
+        <figure key={value} className={styles.face}>
+          <RestPreview settings={{ ...face, clockFace: value, ...FACE_LOOKS[value] }} />
+          <figcaption>{label}</figcaption>
+        </figure>
+      ))}
     </div>
   );
 }

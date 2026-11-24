@@ -1,21 +1,28 @@
+/* The face's own ink and hands come in as `--day-*`, so night and red can still override them. */
 .face {
+  --ink: var(--day-ink);
+  --hand: var(--day-hand);
   position: fixed;
   inset: 0;
   overflow: hidden;
-  container-type: size;
   background: oklch(6% 0.004 250);
   opacity: var(--saver-dim, 1);
 }
 
-/* The dial is the whole screen in the clock colour, a touch lighter at the centre, with no frame around it. */
+/* The dial is the whole screen: the clock colour, lit from above, under a fine sunray brush from the centre. */
 .dial {
   position: absolute;
   inset: 0;
-  background: radial-gradient(75% 95% at 50% 45%, color-mix(in oklab, var(--dial) 88%, white), var(--dial) 60%, color-mix(in oklab, var(--dial) 80%, black));
+  background: radial-gradient(70% 90% at 50% 38%, color-mix(in oklab, var(--dial) 84%, white), var(--dial) 58%, color-mix(in oklab, var(--dial) 72%, black));
 }
 
-.inline .dial {
-  border-radius: inherit;
+/* The brush fades out towards the middle, where its rays would otherwise meet in a moiré. */
+.dial::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, oklch(100% 0 0 / .04) 0deg .5deg, oklch(0% 0 0 / .04) .5deg 1deg);
+  mask-image: radial-gradient(circle at 50% 50%, transparent 4%, black 30%);
 }
 
 .marks {
@@ -25,11 +32,19 @@
   height: 100%;
 }
 
-.rail {
+.rail,
+.innerRail {
   fill: none;
   stroke: var(--ink);
-  stroke-width: 2;
-  opacity: .75;
+}
+
+.rail {
+  stroke-width: 2.5;
+}
+
+.innerRail {
+  stroke-width: 1;
+  opacity: .5;
 }
 
 .tick,
@@ -39,18 +54,25 @@
 
 .tick {
   stroke-width: 2;
-  opacity: .75;
+  opacity: .7;
 }
 
 .hourTick {
-  stroke-width: 5;
+  stroke-width: 7;
 }
 
 .numeral {
   fill: var(--ink);
   font-family: var(--font-serif), "Bodoni 72", Didot, Georgia, serif;
   font-weight: 400;
-  letter-spacing: .01em;
+}
+
+.signature {
+  fill: var(--ink);
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 500;
+  letter-spacing: .42em;
+  opacity: .72;
 }
 
 .second line,
@@ -68,11 +90,15 @@
   background: color-mix(in oklab, var(--dial) 38%, black);
 }
 
+.face:is([data-night], [data-red]) .dial::after {
+  display: none;
+}
+
 .face[data-night] {
   --ink: oklch(82% 0.01 90);
 }
 
-.face[data-night] :is(.rail, .tick, .hourTick, .numeral) {
+.face[data-night] :is(.rail, .tick, .hourTick, .numeral, .signature) {
   opacity: .55;
 }
 
@@ -83,9 +109,4 @@
 
 .face[data-red] .dial {
   background: oklch(9% 0.01 25);
-}
-
-.inline {
-  position: absolute;
-  border-radius: inherit;
 }
