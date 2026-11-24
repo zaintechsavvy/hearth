@@ -1,0 +1,53 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(360px, 40vw);
+  min-height: 32px;
+  margin-inline-start: .5em;
+  padding: 3px 12px 3px 3px;
+  border-radius: 999px;
+  background: oklch(50% 0 0 / .12);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  vertical-align: middle;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) var(--ease-standard), scale var(--duration-fast) var(--ease-standard);
+}
+
+/* A larger target than it looks, for a finger on a wall tablet. */
+button.chip {
+  position: relative;
+}
+
+button.chip::before {
+  content: "";
+  position: absolute;
+  inset: -6px -2px;
+}
+
+button.chip:hover {
+  background: oklch(50% 0 0 / .18);
+}
+
+button.chip:active {
+  scale: .97;
+}
+
+.art {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip { transition: none; }
+}

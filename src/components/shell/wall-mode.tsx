@@ -31,6 +31,7 @@ import { doseSlots, groupPickups, pickupWords, timerColors, timerRemaining, form
 import { skyWords } from "@/lib/widgets/weather-codes";
 import type { Forecast } from "@/lib/widgets/weather";
 import { RestActivity } from "./rest-activity";
+import { RestNowPlaying } from "./rest-now-playing";
 import styles from "./wall-mode.module.css";
 
 const NIGHT_RED = "oklch(52% 0.16 25)";
@@ -219,6 +220,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
             onClick={() => { lastActive.current = Date.now(); setResting(false); }}>
             <Glance night={night} settings={settings} leftOpen={leftOpen.items} />
             <RestActivity since={restedAt} />
+            <RestNowPlaying />
           </motion.button>
         )}
       </AnimatePresence>

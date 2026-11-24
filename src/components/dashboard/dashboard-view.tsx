@@ -54,6 +54,7 @@ import { PersonTile } from "./devices/person-tile";
 import { TodoTile } from "./devices/todo-tile";
 import { VacuumTile } from "./devices/vacuum-tile";
 import { MediaTile } from "./media/media-tile";
+import { NowPlayingChip } from "./media/now-playing-chip";
 import { useMinute } from "./widgets/use-minute";
 import { activeRule, NO_PAGE_RULES, PAGE_SCHEDULE_KEY, type PageRule } from "@/lib/page-schedule";
 import { PlaceholderTile } from "./tiles/placeholder-tile";
@@ -606,6 +607,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
           <p className={styles.summary}>
             {today && <span className={styles.today} data-wall-show>{today}</span>}
             {summarize(home.devices)}
+            <NowPlayingChip />
             <span className={styles.live} data-wall-hide data-live={live || undefined} title={live ? "Updates arrive as they happen" : "Connecting to live updates"}>{live ? "Live" : "Connecting"}</span>
           </p>
         </div>
