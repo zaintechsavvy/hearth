@@ -32,6 +32,11 @@ export interface Provider {
   cameraHls?(nativeId: string): Promise<string>;
   /** What a media player played recently, and what it plays next when it knows. */
   mediaQueue?(nativeId: string, current: string | null, askQueue: boolean): Promise<{ recent: { title: string; artist: string | null; media: { id: string; type: string } | null }[]; next: { title: string; artist: string | null; media: { id: string; type: string } | null } | null }>;
+  /**
+   * Starts Spotify on a speaker Spotify Connect cannot see yet, or wakes it so it joins: `started` when Spotify plays
+   * `media` there already, `woken` when it should show up in Spotify Connect shortly. Throws a readable reason when it cannot.
+   */
+  startSpotify?(nativeId: string, start: { media: { id: string; type: string } | null; shuffle: boolean }): Promise<"started" | "woken">;
   /** Music a media player can find by name: songs, albums, artists, and playlists. */
   searchMedia?(nativeId: string, query: string): Promise<MediaItem[]>;
   /** What is inside an album, artist, or playlist; with no media, the top of the player's library. */

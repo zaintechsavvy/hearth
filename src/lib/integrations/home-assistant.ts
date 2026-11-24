@@ -3,6 +3,7 @@ import {
 } from "@/lib/devices/types";
 import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
 import { unreachableMessage } from "./reach";
+import { spotcastCall } from "./spotcast";
 import { IntegrationError, WebRtcUnsupportedError, countBy, type DeviceList, type HistoryPoint, type IceCandidate, type LogbookEntry, type IceServer, type MediaItem, type Provider, type WebRtcAnswer } from "./types";
 
 export interface HassState {
@@ -240,6 +241,10 @@ function mapMediaPlayer(base: Pick<MediaPlayerDevice, "id" | "integrationId" | "
     },
   };
 }
+
+const TURN_ON = 128;
+/** Each Home Assistant's actions, by its address, for `startSpotify`. */
+const actionsByServer = new Map<string, { at: number; names: Set<string> }>();
 
 const VACUUM = { pause: 4, stop: 8, dock: 16, fanSpeed: 32, locate: 512, spot: 1024, start: 8192, areas: 16384 } as const;
 /**
@@ -689,6 +694,40 @@ export class HomeAssistantProvider implements Provider {
       method: "POST", body: JSON.stringify({ entity_id: entityId, search_query: query }),
     }).catch(() => { throw new IntegrationError("This player cannot search for music."); });
     return (result.service_response?.[entityId]?.result ?? []).flatMap(mediaItem);
+  }
+
+  /** Every action this Home Assistant offers, as `domain.action`, kept a few minutes: they change when an integration is added. */
+  private async actions() {
+    const kept = actionsByServer.get(this.base.href);
+    if (kept && Date.now() - kept.at < 300_000) return kept.names;
+    const domains = await this.request<{ domain: string; services: Record<string, unknown> }[]>("api/services");
+    const names = new Set(domains.flatMap(({ domain, services }) => Object.keys(services).map(service => `${domain}.${service}`)));
+    actionsByServer.set(this.base.href, { at: Date.now(), names });
+    return names;
+  }
+
+  /**
+   * Spotify on a speaker Spotify Connect cannot see yet. An idle Google Cast speaker needs Spotcast, the one way to
+   * cast Spotify onto it; any other speaker that is off is turned on, which brings a Spotify Connect speaker back.
+   */
+  async startSpotify(entityId: string, { media, shuffle }: { media: { id: string; type: string } | null; shuffle: boolean }) {
+    if (!entityId.startsWith("media_player.")) throw new IntegrationError("That device is not a media player.");
+    const [entity, actions] = await Promise.all([this.request<HassState>(`api/states/${entityId}`), this.actions()]);
+    const name = str(entity.attributes.friendly_name) ?? entityId;
+    const cast = this.live.platforms.get(entityId) === "cast";
+    const spotcast = cast || !this.live.platforms.has(entityId) ? spotcastCall(actions, entityId, media, shuffle) : null;
+    if (spotcast) {
+      await this.call("spotcast", spotcast.service, spotcast.data).catch((error: unknown) => {
+        throw new IntegrationError(`Spotcast could not start Spotify on ${name}${error instanceof IntegrationError ? `: ${error.message}` : "."}`);
+      });
+      return spotcast.started ? "started" as const : "woken" as const;
+    }
+    if (cast) throw new IntegrationError(`Spotify cannot start on ${name} while it is idle. Add Spotcast to Home Assistant and Hearth wakes it for you, or play to it once from the Spotify app.`);
+    if (entity.state === "off" && (num(entity.attributes.supported_features) ?? 0) & TURN_ON) {
+      await this.call("media_player", "turn_on", { entity_id: entityId });
+      return "woken" as const;
+    }
+    throw new IntegrationError(`Spotify cannot see ${name}. Turn on Spotify Connect on it, or play to it once from the Spotify app.`);
   }
 
   /** Without an id, the top of the player's library, such as Spotify's playlists, albums, and artists. */

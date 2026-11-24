@@ -30,7 +30,13 @@ describe("speakersFor", () => {
       ["Bedroom mini", "unreachable", false],
     ]);
     expect(speakers[1].device?.id).toBe(kitchen.id);
-    expect(speakers[2].reason).toMatch(/Spotify cannot see Bedroom mini/);
+    expect(speakers[2].reason).toMatch(/Connect Spotify in Settings/);
+  });
+
+  it("moves Spotify to an idle speaker Spotify Connect cannot see yet once Spotify is connected to Hearth", () => {
+    expect(speakersFor(spotify, home, { linked: true }).find(speaker => speaker.name === "Bedroom mini")).toMatchObject({ via: "spotify", device: { id: mini.id } });
+    const castPlayingSpotify = { ...kitchen, state: "playing" as const, media: { id: "spotify:track:1", type: "music" } };
+    expect(speakersFor(castPlayingSpotify, home, { linked: true }).map(speaker => [speaker.name, speaker.via])).toEqual([["Kitchen speaker", "self"], ["Bedroom mini", "spotify"]]);
   });
 
   it("shows a Cast speaker's own place and the others it can take the music to, but not the Spotify account", () => {
@@ -63,7 +69,7 @@ describe("app inputs", () => {
 
   it("are not offered as speakers, and Spotify among them opens the Spotify library when there is one", () => {
     expect(speakersFor(receiver, [receiver]).map(speaker => [speaker.name, speaker.via])).toEqual([["TV", "output"], ["Bluetooth", "output"]]);
-    expect(speakersFor(receiver, [receiver], true).map(speaker => [speaker.name, speaker.via])).toEqual([["Spotify", "library"], ["TV", "output"], ["Bluetooth", "output"]]);
+    expect(speakersFor(receiver, [receiver], { library: true }).map(speaker => [speaker.name, speaker.via])).toEqual([["Spotify", "library"], ["TV", "output"], ["Bluetooth", "output"]]);
   });
 
   it("are not where the music plays", () => {

@@ -21,6 +21,12 @@ export const fetchJson = <T,>(url: string): Promise<T> => fetch(url).then(async 
   return body as T;
 });
 
+/** Starts `media` on a speaker through the home's Spotify; without media, moves what Spotify plays there. */
+export const playOnSpotify = (body: { media: { id: string; type: string } | null; speakers: string[]; device?: string; shuffle?: boolean }) =>
+  fetch("/api/spotify/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(async response => {
+    if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? "");
+  });
+
 export function useDebounced<T>(value: T, ms: number) {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
