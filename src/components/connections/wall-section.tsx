@@ -1,39 +1,29 @@
 "use client";
 
 import { Download, Tablet } from "lucide-react";
-import { useSyncExternalStore, type CSSProperties } from "react";
+import { useSyncExternalStore } from "react";
 import { Button } from "@/components/arc/button/button";
-import { Input } from "@/components/arc/input/input";
-import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { Slider } from "@/components/arc/slider/slider";
 import { Switch } from "@/components/arc/switch/switch";
 import { useHome } from "@/components/dashboard/use-home";
-import { useMinute } from "@/components/dashboard/widgets/use-minute";
 import { Glass } from "@/components/glass/glass";
 import { installPrompt } from "@/components/shell/service-worker";
 import { useStoredJson } from "@/components/shell/use-stored-json";
-import { CLOCK_COLORS, clockColorOf, DEFAULT_WALL, dialColorOf, faceColorOf, WALL_KEY, type ClockColor, type ClockFace, type WallSettings } from "@/lib/wall";
+import { DEFAULT_WALL, WALL_KEY, type WallSettings } from "@/lib/wall";
 import styles from "./connections.module.css";
+import { NightSettings } from "./night-settings";
 import { PhotoFrameSettings } from "./photo-frame-settings";
-import { AnalogFace } from "@/components/shell/analog-face";
-import { LuxuryFace } from "@/components/shell/luxury-face";
-import { DigitalTime } from "@/components/shell/digital-time";
+import { RestingScreenSettings } from "./resting-screen-settings";
 import Link from "next/link";
 import { SettingsSection } from "./settings-section";
 
 const WAKE_CLASSES = new Set(["motion", "occupancy", "door", "opening", "garage"]);
-const HAND_COLORS: { label: string; value: string | null }[] = [
-  { label: "The face's own", value: null }, { label: "White", value: "#f7f7f5" }, { label: "Black", value: "#1d1f24" },
-  { label: "Gold", value: "#e2c27a" }, { label: "Rose gold", value: "#e8a98f" }, { label: "Red", value: "#e2503f" },
-];
-const titled = (word: string) => word[0].toUpperCase() + word.slice(1);
 const standalone = () => matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches;
 
 /** Turns this screen into a wall tablet. Settings stay on this device, so each tablet can behave differently. */
 export function WallSection() {
   const [stored, setSettings] = useStoredJson<WallSettings>(WALL_KEY, DEFAULT_WALL);
   const settings = { ...DEFAULT_WALL, ...stored };
-  const now = useMinute();
   const { home } = useHome();
   const canInstall = useSyncExternalStore(installPrompt.subscribe, () => Boolean(installPrompt.get()), () => false);
   const installed = useSyncExternalStore(() => () => {}, standalone, () => false);
@@ -58,70 +48,10 @@ export function WallSection() {
         </div>
         <div className={`${styles.row} ${styles.stacked}`}>
           <Slider label="Rest after" value={settings.idleMinutes} min={0} max={30} format={value => value === 0 ? "Never" : `${value} min`} onValueChange={idleMinutes => set({ idleMinutes })} />
-          <div className={styles.times}>
-            <Input label="Dim from" type="time" value={settings.dimFrom} onChange={event => set({ dimFrom: event.target.value })} />
-            <Input label="Until" type="time" value={settings.dimTo} onChange={event => set({ dimTo: event.target.value })} />
-          </div>
-          <Slider label="Night dimming" value={Math.round(settings.dimLevel * 100)} min={0} max={85} format={value => `${value}%`} onValueChange={value => set({ dimLevel: value / 100 })} />
           <Switch label="Keep the screen awake" checked={settings.keepAwake} onCheckedChange={keepAwake => set({ keepAwake })} />
         </div>
-        <div className={`${styles.row} ${styles.stacked}`}>
-          <div className={styles.rowText}>
-            <span className={styles.rowTitle}>Resting screen</span>
-            <span className={styles.rowMeta}>The clock this screen rests on.</span>
-          </div>
-          <SegmentedControl label="Clock style" value={settings.clockFace} onValueChange={value => set({ clockFace: value as ClockFace })} options={[{ value: "digital", label: "Digital" }, { value: "analog", label: "Analog" }, { value: "luxury", label: "Luxury" }]} />
-          {settings.clockFace === "digital" ? (
-            <div className={styles.clockPreview} style={{ color: clockColorOf(settings), "--clock-brightness": settings.clockBrightness } as CSSProperties} aria-hidden="true">
-              <span className={styles.clockPreviewDate}>{now ? new Date(now).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : "\u00a0"}</span>
-              <DigitalTime now={now ?? 0} settings={settings} className={styles.clockPreviewTime} />
-            </div>
-          ) : (
-            <div className={`${styles.analogPreview} ${settings.clockFace === "luxury" ? styles.luxuryPreview : ""}`} style={{ "--saver-dim": settings.clockBrightness } as CSSProperties} aria-hidden="true">
-              {settings.clockFace === "luxury" ? <LuxuryFace inline night={false} settings={settings} /> : <AnalogFace inline night={false} settings={settings} />}
-            </div>
-          )}
-          {settings.clockFace === "digital" && (
-            <>
-              <SegmentedControl label="Digits" value={settings.digitLayout} onValueChange={value => set({ digitLayout: value as WallSettings["digitLayout"] })}
-                options={[{ value: "inline", label: "Side by side" }, { value: "stacked", label: "Stacked" }]} />
-              <Slider label="Size" value={Math.round(settings.digitScale * 100)} min={70} max={130} step={5} format={value => `${value}%`} onValueChange={value => set({ digitScale: value / 100 })} />
-            </>
-          )}
-          <span className={styles.swatchLabel}>{settings.clockFace === "luxury" ? "Dial" : settings.clockFace === "analog" ? "Face" : "Colour"}</span>
-          <div role="radiogroup" aria-label="Clock colour" className={styles.clockColors}>
-            {(Object.keys(CLOCK_COLORS) as ClockColor[]).map(color => {
-              const swatch = { clockColor: color, customColor: settings.customColor };
-              return (
-                <button key={color} type="button" role="radio" aria-checked={settings.clockColor === color} aria-label={titled(color)} title={titled(color)} className={styles.clockColor}
-                  style={{ background: settings.clockFace === "luxury" ? dialColorOf(swatch) : settings.clockFace === "analog" ? faceColorOf(swatch) : clockColorOf(swatch) }} onClick={() => set({ clockColor: color })} />
-              );
-            })}
-            <label className={`${styles.clockColor} ${styles.customColor}`} data-checked={settings.clockColor === "custom" || undefined} title="Your own colour"
-              style={settings.clockColor === "custom" ? { background: settings.customColor } : undefined}>
-              <input type="color" className={styles.colorInput} aria-label="Your own colour" value={settings.customColor} onChange={event => set({ clockColor: "custom", customColor: event.target.value })} />
-            </label>
-          </div>
-          {settings.clockFace !== "digital" && (
-            <>
-              <span className={styles.swatchLabel}>Hands</span>
-              <div role="radiogroup" aria-label="Hand colour" className={styles.clockColors}>
-                {HAND_COLORS.map(({ label, value }) => (
-                  <button key={label} type="button" role="radio" aria-checked={settings.handColor === value} aria-label={label} title={label}
-                    className={`${styles.clockColor} ${value === null ? styles.autoColor : ""}`} style={value ? { background: value } : undefined} onClick={() => set({ handColor: value })} />
-                ))}
-                <label className={`${styles.clockColor} ${styles.customColor}`} data-checked={(settings.handColor !== null && !HAND_COLORS.some(color => color.value === settings.handColor)) || undefined} title="Your own colour"
-                  style={settings.handColor && !HAND_COLORS.some(color => color.value === settings.handColor) ? { background: settings.handColor } : undefined}>
-                  <input type="color" className={styles.colorInput} aria-label="Your own hand colour" value={settings.handColor ?? "#ffffff"} onChange={event => set({ handColor: event.target.value })} />
-                </label>
-              </div>
-              <SegmentedControl label="Seconds hand" value={settings.secondHand} onValueChange={value => set({ secondHand: value as WallSettings["secondHand"] })}
-                options={[{ value: "tick", label: "Ticks" }, { value: "smooth", label: "Sweeps" }, { value: "off", label: "None" }]} />
-            </>
-          )}
-          <Slider label="Brightness" value={Math.round(settings.clockBrightness * 100)} min={15} max={100} format={value => `${value}%`} onValueChange={value => set({ clockBrightness: value / 100 })} />
-          <Switch label="Dim red at night" checked={settings.nightRed} onCheckedChange={nightRed => set({ nightRed })} />
-        </div>
+        <RestingScreenSettings settings={settings} set={set} />
+        <NightSettings settings={settings} set={set} />
         <PhotoFrameSettings settings={settings} set={set} />
         <div className={`${styles.row} ${styles.stacked}`}>
           <div className={styles.rowText}>

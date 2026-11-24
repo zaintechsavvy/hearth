@@ -19,11 +19,10 @@ import { StateNotices } from "@/components/shell/state-notice";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { isDark } from "@/lib/left-open";
 import { isWidget, type TileConfig } from "@/lib/dashboard/layout";
-import { AnalogFace } from "./analog-face";
-import { LuxuryFace } from "./luxury-face";
-import { DigitalTime } from "./digital-time";
+import { DigitalGlance } from "./digital-glance";
+import { RestFace } from "./rest-face";
 import { DeviceMoments } from "./device-moment";
-import { clockColorOf, DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
+import { clockColorOf, DEFAULT_WALL, isNight, restBrightness, WALL_KEY, type WallSettings } from "@/lib/wall";
 import { subscribeWallRooms, wallRooms, wantWallRoom } from "@/lib/wall-rooms";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { itemsOf } from "@/lib/widgets/items";
@@ -286,9 +285,8 @@ function Glance({ night, settings, leftOpen }: { night: boolean; settings: WallS
   const photos = settings.frame && !(night && !settings.frameAtNight);
   const date = new Date(now || 0);
   const red = night && settings.nightRed;
-  const brightness = settings.clockBrightness * (night ? 1 - settings.dimLevel * 0.6 : 1);
   const offset = {
-    "--saver-dim": brightness,
+    "--saver-dim": restBrightness(settings, night),
     color: red ? undefined : clockColorOf(settings),
   } as CSSProperties;
   const tiles = home?.pages.flatMap(page => page.layout).filter((tile): tile is TileConfig => "kind" in tile && tile.kind !== undefined && isWidget(tile.kind)) ?? [];
@@ -318,9 +316,7 @@ function Glance({ night, settings, leftOpen }: { night: boolean; settings: WallS
   if (settings.clockFace !== "digital" && !photos) {
     return (
       <>
-        <span style={offset} className={styles.analog}>
-          {settings.clockFace === "luxury" ? <LuxuryFace night={night} settings={settings} /> : <AnalogFace night={night} settings={settings} note={notes[0]?.text ?? null} />}
-        </span>
+        <RestFace settings={settings} night={night} note={notes[0]?.text ?? null} sun={home?.sun} />
         <span className={styles.hint}>Touch to wake</span>
       </>
     );
@@ -329,9 +325,7 @@ function Glance({ night, settings, leftOpen }: { night: boolean; settings: WallS
   return (
     <>
       {photos && <PhotoFrame source={settings.frameSource} seconds={settings.frameSeconds} onEmpty={setFrameEmpty} />}
-      <span className={styles.glance} style={offset} data-frame={(photos && !frameEmpty) || undefined} data-align={settings.frameClock}>
-        <span className={styles.date}>{now ? date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : ""}</span>
-        <DigitalTime now={now} settings={settings} className={styles.clock} />
+      <DigitalGlance now={now} settings={settings} style={offset} frame={photos && !frameEmpty} align={settings.frameClock}>
         {weather && (
           <span className={styles.weather}>
             <Thermometer size={20} strokeWidth={1.75} aria-hidden="true" />
@@ -363,7 +357,7 @@ function Glance({ night, settings, leftOpen }: { night: boolean; settings: WallS
             ))}
           </span>
         )}
-      </span>
+      </DigitalGlance>
       <span className={styles.hint}>Touch to wake</span>
     </>
   );

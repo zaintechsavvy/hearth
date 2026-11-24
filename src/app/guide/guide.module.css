@@ -237,27 +237,6 @@
   font-size: var(--text-sm);
 }
 
-/* Each face in a screen-shaped frame, the way it looks on a tablet on its side. */
-.screen {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  aspect-ratio: 1400 / 984;
-  overflow: hidden;
-  border-radius: 14px;
-  background: oklch(8% .004 250);
-  box-shadow: 0 0 0 3px oklch(22% .004 250), 0 12px 30px -12px oklch(0% 0 0 / .5);
-}
-
-.digital {
-  color: oklch(84% .1 70);
-}
-
-.digital .digitalTime.digitalTime {
-  --size: clamp(18px, 2.9vw, 32px);
-}
-
 .actions {
   display: flex;
   justify-content: space-between;

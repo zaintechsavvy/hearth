@@ -1,0 +1,61 @@
+.face {
+  position: fixed;
+  inset: 0;
+  opacity: var(--saver-dim, 1);
+}
+
+/* Cells as wide as the screen allows and as tall, so the letters spread to its edges whichever way it stands. */
+.grid {
+  position: absolute;
+  inset: 9cqh 6cqw;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), 1fr);
+  grid-template-rows: repeat(var(--rows), 1fr);
+  font-family: var(--font-display);
+  font-size: min(calc(88cqw / var(--columns) * .56), calc(82cqh / var(--rows) * .56));
+  font-weight: 400;
+  line-height: 1;
+}
+
+.letter {
+  display: grid;
+  place-items: center;
+  color: color-mix(in oklab, currentColor 12%, transparent);
+  transition: color 1.2s var(--ease-standard), text-shadow 1.2s var(--ease-standard);
+}
+
+.letter[data-lit] {
+  color: currentColor;
+  text-shadow: 0 0 .6em color-mix(in oklab, currentColor 40%, transparent);
+}
+
+/* The minutes past the five, one dot each, clockwise from the top left. */
+.dot {
+  position: absolute;
+  width: 1.1cqmin;
+  height: 1.1cqmin;
+  border-radius: 50%;
+  background: color-mix(in oklab, currentColor 14%, transparent);
+  transition: background-color 1.2s var(--ease-standard);
+}
+
+.dot[data-lit] {
+  background: currentColor;
+}
+
+.dot[data-corner="0"] { top: 4.5cqh; left: 3cqw; }
+.dot[data-corner="1"] { top: 4.5cqh; right: 3cqw; }
+.dot[data-corner="2"] { bottom: 4.5cqh; right: 3cqw; }
+.dot[data-corner="3"] { bottom: 4.5cqh; left: 3cqw; }
+
+.face[data-red] {
+  color: oklch(58% 0.15 25);
+}
+
+.face[data-red] .letter[data-lit] {
+  text-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .letter, .dot { transition: none; }
+}

@@ -1,8 +1,8 @@
 .time {
-  --size: clamp(96px, 21vw, 280px);
+  --size: clamp(96px, 21cqw, 280px);
   display: inline-flex;
   align-items: baseline;
-  gap: clamp(8px, 1.2vw, 18px);
+  gap: clamp(8px, 1.2cqw, 18px);
   font-family: var(--font-display);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
@@ -21,7 +21,7 @@
 
 /* Stacked: hours over minutes, tall and tight like a phone's lock screen. */
 .time[data-layout="stacked"] {
-  --size: clamp(120px, 34vh, 400px);
+  --size: clamp(120px, 34cqh, 400px);
   display: inline-grid;
   justify-items: center;
 }

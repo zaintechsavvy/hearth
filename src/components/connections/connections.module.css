@@ -365,32 +365,40 @@
   .pageTime > :first-child { grid-column: 1 / -1; }
 }
 
-/* Wall tablet: a small dark stage showing the resting clock as it will look. */
-.clockPreview {
+/* Wall tablet: every clock face as a small screen, the chosen one ringed. */
+.faces {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: var(--space-3);
+}
+
+.faceOption {
+  display: grid;
+  gap: var(--space-2);
   justify-items: center;
-  gap: 2px;
-  padding: var(--space-5) var(--space-4);
-  border-radius: var(--radius-control);
-  background: radial-gradient(120% 90% at 50% 0%, oklch(22% .01 260), oklch(8% .005 260));
-}
-
-.clockPreview > * {
-  opacity: var(--clock-brightness, 1);
-}
-
-.clockPreviewDate {
+  color: var(--text-secondary);
   font-size: var(--text-sm);
-  color: color-mix(in oklab, currentColor 62%, transparent);
+  font-weight: 500;
 }
 
-/* The preview draws the same digits as the resting screen, at a size that fits Settings. */
-.clockPreviewTime.clockPreviewTime {
-  --size: 64px;
+.faceOption[aria-checked="true"] {
+  color: var(--foreground);
 }
 
-.clockPreviewTime[data-layout="stacked"] {
-  --size: 72px;
+.faceThumb {
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.faceOption[aria-checked="true"] .faceThumb {
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faceThumb { transition: none; }
+}
+
+.nightPreview {
+  max-width: 420px;
 }
 
 .clockColors {
@@ -439,10 +447,6 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 500;
-}
-
-.analogPreview {
-  background: oklch(6% .004 250);
 }
 
 .ledeLink {
@@ -553,12 +557,4 @@
   color: white;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-}
-
-.analogPreview {
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 1400 / 984;
-  width: min(100%, 360px);
-  border-radius: var(--radius-panel);
 }
