@@ -180,6 +180,7 @@
 
 /* Set exactly as the greeting beside it. */
 .cornerTime {
+  transition: opacity var(--duration-fast) var(--ease-standard);
   color: var(--foreground);
   font-family: var(--font-display);
   font-size: var(--text-xl);
@@ -206,7 +207,7 @@
 .menuContent.menuContent {
   display: grid;
   gap: 2px;
-  min-width: 220px;
+  min-width: 300px;
   padding: var(--space-2);
 }
 
@@ -318,7 +319,7 @@
 /* The pages as one row of icons, so the menu stays short. */
 .pages {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-1);
 }
 
@@ -337,10 +338,6 @@
 .page:hover {
   background: var(--surface-muted);
   color: var(--foreground);
-}
-
-.pages[data-rooms] {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .page[aria-current="page"],
@@ -413,6 +410,14 @@
   text-wrap: balance;
 }
 
+
+.corner[data-scrolled] .cornerTime {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cornerTime { transition: none; }
+}
 
 :global(:root[data-overview]) .corner {
   opacity: 0;

@@ -208,6 +208,10 @@
   white-space: nowrap;
 }
 
+.tile[data-on] .status {
+  color: oklch(45% 0 0);
+}
+
 .press[data-size="1x1"]:has(.status) .name {
   -webkit-line-clamp: 2;
   line-clamp: 2;

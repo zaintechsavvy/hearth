@@ -1,5 +1,7 @@
+/* Rows sit at the top: on the wall <main> is the screen's full height, and a room with few tiles would otherwise push the greeting down. */
 .dashboard {
   display: grid;
+  align-content: start;
   gap: var(--space-6);
 }
 
