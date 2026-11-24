@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { getUser } from "@/lib/session";
 import base from "../how-it-works/page.module.css";
+import { ScreenHelp } from "./screen-help";
 import { ArrangeVisual, ConnectVisual, FacesVisual, GoodNightVisual, WakeVisual, WallVisual } from "./visuals";
 import styles from "./guide.module.css";
 
@@ -35,7 +36,7 @@ const STEPS = [
   {
     id: "wake", title: "Wake it when someone needs it", settings: "/settings#wall", visual: <WakeVisual />,
     body: "A touch wakes the screen. It can also wake on its own, so the home is already showing when someone walks up to it.",
-    points: ["Pick motion, presence or door sensors near the tablet in Wall tablet settings.", "The doorbell takes over the screen with the camera, then lets it rest again.", "At night the screen dims, and the clock can turn a soft red."],
+    points: ["Pick motion, presence or door sensors near the tablet in Wall tablet settings.", "The doorbell takes over the screen with the camera, then lets it rest again.", "At night the screen dims, and the clock can turn a soft red.", "To let the display turn off and light up for the garage, see When the screen sleeps below."],
   },
   {
     id: "night", title: "Set up Good night", settings: "/settings#bedtime", visual: <GoodNightVisual />,
@@ -78,6 +79,7 @@ export default async function GuidePage() {
               <div className={`${base.card} ${styles.figure}`}>{step.visual}</div>
             </section>
           ))}
+          <ScreenHelp />
         </main>
       </div>
     </>

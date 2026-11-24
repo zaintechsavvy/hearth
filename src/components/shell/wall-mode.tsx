@@ -23,7 +23,7 @@ import { AnalogFace } from "./analog-face";
 import { LuxuryFace } from "./luxury-face";
 import { DigitalTime } from "./digital-time";
 import { DeviceMoments } from "./device-moment";
-import { clockColorOf, DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
+import { clockColorOf, DEFAULT_WALL, isNight, keepAwakeOf, WALL_KEY, type WallSettings } from "@/lib/wall";
 import { subscribeWallRooms, wallRooms, wantWallRoom } from "@/lib/wall-rooms";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { itemsOf } from "@/lib/widgets/items";
@@ -31,6 +31,7 @@ import { doseSlots, groupPickups, pickupWords, timerColors, timerRemaining, form
 import { skyWords } from "@/lib/widgets/weather-codes";
 import type { Forecast } from "@/lib/widgets/weather";
 import { RestActivity } from "./rest-activity";
+import { useScreenWake } from "./use-screen-wake";
 import styles from "./wall-mode.module.css";
 
 const NIGHT_RED = "oklch(52% 0.16 25)";
@@ -129,19 +130,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
     wasResting.current = resting;
   }, [resting, path, router]);
 
-  useEffect(() => {
-    if (!settings.keepAwake || !("wakeLock" in navigator)) return;
-    let lock: WakeLockSentinel | null = null;
-    const request = () => {
-      if (document.visibilityState === "visible") void navigator.wakeLock.request("screen").then(sentinel => { lock = sentinel; }).catch(() => {});
-    };
-    request();
-    document.addEventListener("visibilitychange", request);
-    return () => {
-      document.removeEventListener("visibilitychange", request);
-      void lock?.release();
-    };
-  }, [settings.keepAwake]);
+  useScreenWake(keepAwakeOf(settings.keepAwake), settings.awakeMinutes, home?.devices);
 
   // Holding the wallpaper, not a tile, shrinks the page like a watch face and offers the quick actions underneath.
   useEffect(() => {
@@ -214,15 +203,15 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
       </AnimatePresence>
       <AnimatePresence>
         {resting && (
-          <motion.button type="button" key="saver" className={styles.saver} data-night={night || undefined} data-red={(night && settings.nightRed) || undefined} aria-label="Wake the screen"
+          <motion.button type="button" key="saver" className={styles.saver} data-dark={settings.darkRest || undefined} data-night={night || undefined} data-red={(night && settings.nightRed) || undefined} aria-label="Wake the screen"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.6 }}
             onClick={() => { lastActive.current = Date.now(); setResting(false); }}>
-            <Glance night={night} settings={settings} leftOpen={leftOpen.items} />
-            <RestActivity since={restedAt} />
+            {!settings.darkRest && <Glance night={night} settings={settings} leftOpen={leftOpen.items} />}
+            {!settings.darkRest && <RestActivity since={restedAt} />}
           </motion.button>
         )}
       </AnimatePresence>
-      {resting && dark && (
+      {resting && dark && !settings.darkRest && (
         <button type="button" className={styles.bedtime} data-red={(night && settings.nightRed) || undefined}
           onPointerDown={event => event.stopPropagation()} onTouchStart={event => event.stopPropagation()}
           onClick={() => { lastActive.current = Date.now(); setResting(false); startBedtime(); }}>

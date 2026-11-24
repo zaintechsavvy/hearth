@@ -106,6 +106,8 @@ Each page opens one Server-Sent Events stream, however many tiles it shows. When
 
 Wall tablet mode is a setting on the tablet itself, kept in that browser, because each tablet hangs somewhere different. While it rests, the clock drifts a few pixels each minute so nothing burns into the screen.
 
+**Keep the screen awake** holds the display on Always, While in use (a few minutes after a touch, the doorbell, or a door, garage, lock, or alarm change), or Never, and **Rest on a dark screen** swaps the clock for near black. A web page can let a tablet's display turn off but cannot turn it back on; to light it for the garage, send it a time-sensitive notification from the Home Assistant app. The in-app guide, under *When the screen sleeps*, has the details and an example automation.
+
 ![The wall tablet](diagrams/wall.png)
 
 ## Activity

@@ -22,6 +22,11 @@
   background: black;
 }
 
+/* Resting dark: next to nothing lit, until a moment or a notice plays over it. */
+.saver[data-dark] {
+  background: oklch(3% 0 0);
+}
+
 .glance {
   display: grid;
   justify-items: center;

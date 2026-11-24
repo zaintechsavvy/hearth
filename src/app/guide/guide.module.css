@@ -284,3 +284,44 @@
 @media (prefers-reduced-motion: reduce) {
   .tile { animation: none; }
 }
+
+/* When the screen sleeps: short cards of plain answers, two across on a wide screen, and the automation to copy. */
+.help {
+  gap: var(--space-4);
+}
+
+.topics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: var(--space-4);
+}
+
+.topic {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-surface);
+}
+
+.topicTitle {
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.code {
+  overflow-x: auto;
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  background: oklch(50% 0 0 / .08);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.help code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .92em;
+}

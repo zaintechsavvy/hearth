@@ -10,7 +10,11 @@ export interface WallSettings {
   dimLevel: number;
   /** Motion, presence, or door sensors that wake the screen. */
   wakeSensors: string[];
-  keepAwake: boolean;
+  /** Hold a screen wake lock always, for `awakeMinutes` after a touch or an important event, or never. Read it with `keepAwakeOf`. */
+  keepAwake: KeepAwake;
+  awakeMinutes: number;
+  /** Rest on a near-black screen instead of the clock; moments and notices still play over it. */
+  darkRest: boolean;
   /** The resting clock's colour and how bright it shows, 0.15 to 1. `custom` uses `customColor`. */
   clockColor: ClockColor | "custom";
   /** A colour of the person's own, as `#rrggbb`. */
@@ -42,6 +46,10 @@ export interface WallSettings {
 }
 
 export type PhotoSource = "uploads" | "immich";
+export type KeepAwake = "always" | "in-use" | "never";
+
+/** The stored choice, which a tablet set up before there were three kept as `true` or `false`. */
+export const keepAwakeOf = (value: unknown): KeepAwake => value === false ? "never" : value === "in-use" || value === "never" ? value : "always";
 
 export const CLOCK_COLORS = {
   white: "oklch(96% 0 0)",
@@ -101,9 +109,10 @@ export function isLight(color: string) {
 export const WALL_KEY = "hearth-wall";
 
 export const DEFAULT_WALL: WallSettings = {
-  enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: true,
+  enabled: false, idleMinutes: 5, dimFrom: "22:00", dimTo: "07:00", dimLevel: 0.55, wakeSensors: [], keepAwake: "always",
   clockColor: "white", customColor: "#7aa7ff", clockBrightness: 0.85, clockFace: "digital", handColor: null, secondHand: "tick", digitLayout: "inline", digitScale: 1, nightRed: false, openReminder: true, openMinutes: 15,
   frame: false, frameSource: "uploads", frameSeconds: 20, frameAtNight: false, frameClock: "corner",
+  awakeMinutes: 5, darkRest: false,
 };
 
 const minutes = (time: string) => {
