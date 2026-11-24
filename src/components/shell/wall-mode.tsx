@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CalendarDays, Check, DoorOpen, History, House, LayoutGrid, Leaf, LogOut, MonitorPause, Moon, Package, Paintbrush, Pill, Recycle, Settings, Thermometer } from "lucide-react";
+import { CalendarDays, Check, DoorOpen, History, House, LayoutGrid, Leaf, LogOut, MonitorPause, Moon, Package, Paintbrush, Pill, Recycle, Search, Settings, Thermometer, Workflow } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
@@ -13,6 +13,7 @@ import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import { haptic } from "@/lib/haptics";
 import { WAKE_EVENT } from "@/components/dashboard/doorbell-call";
 import { startBedtime } from "@/components/shell/bedtime-check";
+import { openCommandMenu } from "@/components/shell/command-menu";
 import { LeftOpenBanner, leftOpenWords, useLeftOpen, type LeftOpen } from "@/components/shell/left-open";
 import { PhotoFrame } from "@/components/shell/photo-frame";
 import { StateNotices } from "@/components/shell/state-notice";
@@ -23,7 +24,7 @@ import { AnalogFace } from "./analog-face";
 import { LuxuryFace } from "./luxury-face";
 import { DigitalTime } from "./digital-time";
 import { DeviceMoments } from "./device-moment";
-import { clockColorOf, DEFAULT_WALL, isNight, WALL_KEY, type WallSettings } from "@/lib/wall";
+import { clockColorOf, DEFAULT_WALL, isNight, keepAwakeOf, WALL_KEY, type WallSettings } from "@/lib/wall";
 import { subscribeWallRooms, wallRooms, wantWallRoom } from "@/lib/wall-rooms";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { itemsOf } from "@/lib/widgets/items";
@@ -32,6 +33,7 @@ import { skyWords } from "@/lib/widgets/weather-codes";
 import type { Forecast } from "@/lib/widgets/weather";
 import { RestActivity } from "./rest-activity";
 import { RestNowPlaying } from "./rest-now-playing";
+import { useScreenWake } from "./use-screen-wake";
 import styles from "./wall-mode.module.css";
 
 const NIGHT_RED = "oklch(52% 0.16 25)";
@@ -58,7 +60,10 @@ export function WallMode() {
 }
 
 /** The header is hidden on a wall tablet, so its menu carries the way around the app and out of wall tablet mode. */
-const PAGES = [{ href: "/dashboard", label: "Home", icon: House }, { href: "/activity", label: "Activity", icon: History }, { href: "/settings", label: "Settings", icon: Settings }];
+const PAGES = [
+  { href: "/dashboard", label: "Home", icon: House }, { href: "/activity", label: "Activity", icon: History },
+  { href: "/automations", label: "Automations", icon: Workflow }, { href: "/settings", label: "Settings", icon: Settings },
+];
 
 function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => void }) {
   const path = usePathname();
@@ -130,19 +135,18 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
     wasResting.current = resting;
   }, [resting, path, router]);
 
+  useScreenWake(keepAwakeOf(settings.keepAwake), settings.awakeMinutes, home?.devices);
+
+  // The corner time belongs beside the greeting; once the tiles scroll under it, it steps aside.
+  const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    if (!settings.keepAwake || !("wakeLock" in navigator)) return;
-    let lock: WakeLockSentinel | null = null;
-    const request = () => {
-      if (document.visibilityState === "visible") void navigator.wakeLock.request("screen").then(sentinel => { lock = sentinel; }).catch(() => {});
-    };
-    request();
-    document.addEventListener("visibilitychange", request);
-    return () => {
-      document.removeEventListener("visibilitychange", request);
-      void lock?.release();
-    };
-  }, [settings.keepAwake]);
+    const main = document.querySelector("main");
+    if (!main) return;
+    const update = () => setScrolled(main.scrollTop > 24);
+    update();
+    main.addEventListener("scroll", update, { passive: true });
+    return () => main.removeEventListener("scroll", update);
+  }, [path]);
 
   // Holding the wallpaper, not a tile, shrinks the page like a watch face and offers the quick actions underneath.
   useEffect(() => {
@@ -215,16 +219,16 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
       </AnimatePresence>
       <AnimatePresence>
         {resting && (
-          <motion.button type="button" key="saver" className={styles.saver} data-night={night || undefined} data-red={(night && settings.nightRed) || undefined} aria-label="Wake the screen"
+          <motion.button type="button" key="saver" className={styles.saver} data-dark={settings.darkRest || undefined} data-night={night || undefined} data-red={(night && settings.nightRed) || undefined} aria-label="Wake the screen"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.6 }}
             onClick={() => { lastActive.current = Date.now(); setResting(false); }}>
-            <Glance night={night} settings={settings} leftOpen={leftOpen.items} />
-            <RestActivity since={restedAt} />
+            {!settings.darkRest && <Glance night={night} settings={settings} leftOpen={leftOpen.items} />}
+            {!settings.darkRest && <RestActivity since={restedAt} />}
             <RestNowPlaying />
           </motion.button>
         )}
       </AnimatePresence>
-      {resting && dark && (
+      {resting && dark && !settings.darkRest && (
         <button type="button" className={styles.bedtime} data-red={(night && settings.nightRed) || undefined}
           onPointerDown={event => event.stopPropagation()} onTouchStart={event => event.stopPropagation()}
           onClick={() => { lastActive.current = Date.now(); setResting(false); startBedtime(); }}>
@@ -234,14 +238,14 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
       <DeviceMoments devices={home?.devices} />
       <StateNotices devices={home?.devices} />
       {!resting && <LeftOpenBanner items={leftOpen.items} onClose={device => void send(device, { type: "cover", action: "close" }).catch(() => {})} onQuiet={leftOpen.quietTonight} />}
-      <div className={styles.corner} data-on-wall>
+      <div className={styles.corner} data-on-wall data-scrolled={scrolled || undefined}>
         {now > 0 && path.startsWith("/dashboard") && <time className={styles.cornerTime} dateTime={new Date(now).toISOString()}>{new Date(now).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>}
       <Popover open={menu} onOpenChange={setMenu}>
         <PopoverTrigger asChild>
           <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><LayoutGrid size={18} strokeWidth={1.75} aria-hidden="true" /></button>
         </PopoverTrigger>
         <PopoverContent align="end" className={`${glassSheetClass} ${styles.menuContent}`}>
-          <nav aria-label="Pages" className={styles.pages} data-rooms={rooms.rooms.length > 1 || undefined}>
+          <nav aria-label="Pages" className={styles.pages}>
             {PAGES.map(({ href, label, icon: Icon }) => (
               <Link key={href} href={href} className={styles.page} aria-current={!choosingRoom && path.startsWith(href) ? "page" : undefined} onClick={() => setMenu(false)}>
                 <Icon size={18} strokeWidth={1.75} aria-hidden="true" />{label}
@@ -252,6 +256,9 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
                 <DoorOpen size={18} strokeWidth={1.75} aria-hidden="true" />Rooms
               </button>
             )}
+            <button type="button" className={styles.page} onClick={() => { setMenu(false); openCommandMenu(); }}>
+              <Search size={18} strokeWidth={1.75} aria-hidden="true" />Search
+            </button>
           </nav>
           <span className={styles.menuDivider} aria-hidden="true" />
           {choosingRoom ? (

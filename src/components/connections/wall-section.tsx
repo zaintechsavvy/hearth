@@ -15,6 +15,7 @@ import { useStoredJson } from "@/components/shell/use-stored-json";
 import { CLOCK_COLORS, clockColorOf, DEFAULT_WALL, dialColorOf, faceColorOf, WALL_KEY, type ClockColor, type ClockFace, type WallSettings } from "@/lib/wall";
 import styles from "./connections.module.css";
 import { PhotoFrameSettings } from "./photo-frame-settings";
+import { ScreenWakeSettings } from "./screen-wake-settings";
 import { AnalogFace } from "@/components/shell/analog-face";
 import { LuxuryFace } from "@/components/shell/luxury-face";
 import { DigitalTime } from "@/components/shell/digital-time";
@@ -63,8 +64,8 @@ export function WallSection() {
             <Input label="Until" type="time" value={settings.dimTo} onChange={event => set({ dimTo: event.target.value })} />
           </div>
           <Slider label="Night dimming" value={Math.round(settings.dimLevel * 100)} min={0} max={85} format={value => `${value}%`} onValueChange={value => set({ dimLevel: value / 100 })} />
-          <Switch label="Keep the screen awake" checked={settings.keepAwake} onCheckedChange={keepAwake => set({ keepAwake })} />
         </div>
+        <ScreenWakeSettings settings={settings} set={set} />
         <div className={`${styles.row} ${styles.stacked}`}>
           <div className={styles.rowText}>
             <span className={styles.rowTitle}>Resting screen</span>

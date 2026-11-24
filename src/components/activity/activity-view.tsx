@@ -21,7 +21,7 @@ const ALL = "all";
 const UNDO_MS = 6000;
 const ANY_ROOM = "__any";
 const FILTERS: { value: ActivityCategory | typeof ALL; label: string }[] = [
-  { value: ALL, label: "Everything" }, { value: "doors", label: "Doors and locks" }, { value: "lights", label: "Lights" },
+  { value: ALL, label: "All" }, { value: "doors", label: "Doors and locks" }, { value: "lights", label: "Lights" },
   { value: "sensors", label: "Sensors" }, { value: "climate", label: "Climate" }, { value: "automations", label: "Automations" }, { value: "system", label: "System" },
 ];
 
@@ -90,18 +90,24 @@ export function ActivityView() {
   return (
     <div className={styles.page}>
       <header className={styles.header} data-on-wall>
-        <h1 className={styles.title}>Activity</h1>
-        <p className={styles.lede}>What happened at home, and who did it.</p>
-      </header>
-      <div className={styles.filters} role="group" aria-label="Show">
-        <DropdownMenu label={FILTERS.find(filter => filter.value === category)?.label ?? "Everything"} items={FILTERS.map(filter => ({ label: filter.label, onSelect: () => setCategory(filter.value) }))} />
-        {home && home.rooms.length > 0 && (
-          <DropdownMenu label={room === ANY_ROOM ? "Every room" : room} items={[{ label: "Every room", onSelect: () => setRoom(ANY_ROOM) }, ...home.rooms.map(value => ({ label: value, onSelect: () => setRoom(value) }))]} />
-        )}
+        <div className={styles.heading}>
+          <h1 className={styles.title}>Activity</h1>
+          <p className={styles.lede}>What happened at home, and who did it.</p>
+        </div>
         {muted.length > 0 && (
           <DropdownMenu icon={<BellOff size={15} strokeWidth={1.75} aria-hidden="true" />}
             label={`Muted: ${muted[0].name}${muted.length > 1 ? ` +${muted.length - 1}` : ""}`}
             items={muted.map(device => ({ label: `Show ${device.name} again`, icon: <BellRing size={15} strokeWidth={1.75} />, onSelect: () => void changeQuiet([device.id], device.name, false) }))} />
+        )}
+      </header>
+      <div className={styles.filters} data-on-wall>
+        <div className={styles.chips} role="radiogroup" aria-label="Show">
+          {FILTERS.map(filter => (
+            <button key={filter.value} type="button" role="radio" aria-checked={category === filter.value} className={styles.chip} onClick={() => setCategory(filter.value)}>{filter.label}</button>
+          ))}
+        </div>
+        {home && home.rooms.length > 0 && (
+          <DropdownMenu label={room === ANY_ROOM ? "Every room" : room} items={[{ label: "Every room", onSelect: () => setRoom(ANY_ROOM) }, ...home.rooms.map(value => ({ label: value, onSelect: () => setRoom(value) }))]} />
         )}
       </div>
       {isLoading && !data ? (

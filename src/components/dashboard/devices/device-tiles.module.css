@@ -417,10 +417,14 @@
 }
 
 /* The vacuum's sheet: rooms to clean, a spot clean, and suction. */
+/* A vacuum with many rooms outgrows a landscape tablet, so the sheet scrolls within the room it has. */
 .sheet {
   display: grid;
   gap: var(--space-4);
   width: min(320px, calc(100vw - 32px));
+  max-height: calc(var(--radix-popover-content-available-height, 100dvh) - 12px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--space-4);
 }
 

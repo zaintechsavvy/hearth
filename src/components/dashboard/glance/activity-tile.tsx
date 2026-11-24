@@ -34,7 +34,7 @@ export function ActivityTile({ tile, devices, interactive = true }: { tile: Tile
   const known = new Map(devices.map(device => [device.id, device]));
   const entries = data?.entries ?? [];
   return (
-    <section className={`${glassClass("panel")} ${styles.tile} ${interactive ? styles.opens : ""}`} data-size={tile.size} aria-label="Activity"
+    <section className={`${glassClass("panel")} ${styles.tile} ${styles.activityTile} ${interactive ? styles.opens : ""}`} data-size={tile.size} aria-label="Activity"
       onClick={interactive ? event => { if (!(event.target as Element).closest("a")) router.push("/activity"); } : undefined}>
       <header className={styles.header}>
         <span className={styles.title}>Activity</span>

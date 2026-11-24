@@ -363,7 +363,13 @@ button.chip:hover:not(:disabled) {
   font-weight: 400;
 }
 
-/* However tall the tile, the list fades out at its foot instead of cutting a line in half. */
+/* However tall the tile, the list fades out at its foot instead of cutting a line in half. The list fills the tile,
+   so a short one ends clear of the fade. */
+.activityTile {
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+}
+
 .activityRows {
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
