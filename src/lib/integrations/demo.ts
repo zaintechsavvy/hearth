@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { db } from "@/lib/db";
 import { demoState } from "@/lib/db/schema";
 import { DEMO_CAN, seedDemoDevices, TRACKS } from "./demo-devices";
-import { albumOf, browseLibrary, searchLibrary, songsOf } from "./demo-library";
 import { IntegrationError, type DeviceList, type HistoryPoint, type Provider } from "./types";
 
 const DEMO_CAMERA_PICTURES: Record<string, string> = { "front-camera": "front-door-doorbell.jpg", "backyard-camera": "backyard-wyze.jpg" };
@@ -116,12 +115,12 @@ function demoUsage(nativeId: string, current: number, from: Date, to: Date): His
 }
 
 /**
- * The seed with the music library and mute every demo speaker has, and a Cast-style speaker that cannot join a
- * group, so the output picker shows each way a speaker can be reached.
+ * The seed with the mute every demo speaker has, and a Cast-style speaker that cannot join a group, so the output
+ * picker shows each way a speaker can be reached.
  */
 function seedDevices(integrationId: string): Device[] {
   const devices = seedDemoDevices(integrationId).map(device => device.kind === "media_player"
-    ? { ...device, muted: false, can: { ...device.can, mute: true, browse: true, search: true } }
+    ? { ...device, muted: false, can: { ...device.can, mute: true } }
     : device);
   return [...devices, {
     id: deviceId(integrationId, "bedroom-mini"), integrationId, name: "Bedroom mini", room: "Bedroom", available: true, platform: "cast",
@@ -223,8 +222,7 @@ export class DemoProvider implements Provider {
   }
 
   async listDevices(): Promise<DeviceList> {
-    const devices = [...(await this.home()).devices.values()].map(device => device.kind === "media_player" ? { ...device, album: albumOf(device.title) } : device);
-    return { devices, unsupported: {} };
+    return { devices: [...(await this.home()).devices.values()], unsupported: {} };
   }
 
   async todoItems(nativeId: string) {
@@ -242,16 +240,6 @@ export class DemoProvider implements Provider {
 
   async vacuumAreas() {
     return ["Living room", "Kitchen", "Bedroom", "Office", "Entry"].map(name => ({ id: name.toLowerCase().replaceAll(" ", "_"), name }));
-  }
-
-  async searchMedia(_nativeId: string, query: string) {
-    return searchLibrary(query);
-  }
-
-  async browseMedia(_nativeId: string, media: { id: string } | null) {
-    const found = browseLibrary(media?.id ?? null);
-    if (!found) throw new IntegrationError("That is not in the demo's music.");
-    return found;
   }
 
   /** The demo's Evening scene: low warm lights, the porch on, and the coffee machine off. */
@@ -276,10 +264,7 @@ export class DemoProvider implements Provider {
       home.devices.set(leaderId, playTrack(leader, command.action === "next" ? 1 : back));
     } else if (command.type === "playMedia") {
       const at = TRACKS.findIndex(track => track.media.id === command.id);
-      const song = songsOf(command.id)[0];
-      const output = command.output ?? leader.output;
-      if (at >= 0) home.devices.set(leaderId, { ...playTrack(leader, 0, at), output });
-      else if (song) home.devices.set(leaderId, { ...leader, output, title: song.title, artist: song.artist, duration: song.duration, artwork: song.artwork, media: song.media, state: "playing", position: 0, positionAt: new Date().toISOString() });
+      if (at >= 0) home.devices.set(leaderId, { ...playTrack(leader, 0, at), output: command.output ?? leader.output });
     } else if (command.type === "join") {
       home.devices.set(device.id, applyCommand(device, command));
     } else if (command.type === "unjoin") {
