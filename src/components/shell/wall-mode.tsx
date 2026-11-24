@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CalendarDays, Check, DoorOpen, History, House, LayoutGrid, Leaf, LogOut, MonitorPause, Moon, Package, Paintbrush, Pill, Recycle, Search, Settings, Thermometer, Workflow } from "lucide-react";
+import { CalendarDays, Check, DoorOpen, History, House, LayoutGrid, Leaf, LogOut, MonitorPause, Moon, Package, Paintbrush, Pill, Recycle, Settings, Thermometer } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
@@ -13,7 +13,6 @@ import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import { haptic } from "@/lib/haptics";
 import { WAKE_EVENT } from "@/components/dashboard/doorbell-call";
 import { startBedtime } from "@/components/shell/bedtime-check";
-import { openCommandMenu } from "@/components/shell/command-menu";
 import { LeftOpenBanner, leftOpenWords, useLeftOpen, type LeftOpen } from "@/components/shell/left-open";
 import { PhotoFrame } from "@/components/shell/photo-frame";
 import { StateNotices } from "@/components/shell/state-notice";
@@ -59,10 +58,7 @@ export function WallMode() {
 }
 
 /** The header is hidden on a wall tablet, so its menu carries the way around the app and out of wall tablet mode. */
-const PAGES = [
-  { href: "/dashboard", label: "Home", icon: House }, { href: "/activity", label: "Activity", icon: History },
-  { href: "/automations", label: "Automations", icon: Workflow }, { href: "/settings", label: "Settings", icon: Settings },
-];
+const PAGES = [{ href: "/dashboard", label: "Home", icon: House }, { href: "/activity", label: "Activity", icon: History }, { href: "/settings", label: "Settings", icon: Settings }];
 
 function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => void }) {
   const path = usePathname();
@@ -244,7 +240,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           <button type="button" className={`${glassClass("pill")} ${styles.menu}`} aria-label="Wall tablet options"><LayoutGrid size={18} strokeWidth={1.75} aria-hidden="true" /></button>
         </PopoverTrigger>
         <PopoverContent align="end" className={`${glassSheetClass} ${styles.menuContent}`}>
-          <nav aria-label="Pages" className={styles.pages}>
+          <nav aria-label="Pages" className={styles.pages} data-rooms={rooms.rooms.length > 1 || undefined}>
             {PAGES.map(({ href, label, icon: Icon }) => (
               <Link key={href} href={href} className={styles.page} aria-current={!choosingRoom && path.startsWith(href) ? "page" : undefined} onClick={() => setMenu(false)}>
                 <Icon size={18} strokeWidth={1.75} aria-hidden="true" />{label}
@@ -255,9 +251,6 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
                 <DoorOpen size={18} strokeWidth={1.75} aria-hidden="true" />Rooms
               </button>
             )}
-            <button type="button" className={styles.page} onClick={() => { setMenu(false); openCommandMenu(); }}>
-              <Search size={18} strokeWidth={1.75} aria-hidden="true" />Search
-            </button>
           </nav>
           <span className={styles.menuDivider} aria-hidden="true" />
           {choosingRoom ? (

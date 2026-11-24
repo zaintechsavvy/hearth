@@ -209,7 +209,7 @@
 .menuContent.menuContent {
   display: grid;
   gap: 2px;
-  min-width: 300px;
+  min-width: 220px;
   padding: var(--space-2);
 }
 
@@ -321,8 +321,12 @@
 /* The pages as one row of icons, so the menu stays short. */
 .pages {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-1);
+}
+
+.pages[data-rooms] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .page {
