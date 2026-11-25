@@ -11,6 +11,8 @@ import { installPrompt } from "@/components/shell/service-worker";
 import { useStoredJson } from "@/components/shell/use-stored-json";
 import { DEFAULT_WALL, WALL_KEY, type WallSettings } from "@/lib/wall";
 import styles from "./connections.module.css";
+import { DeviceChecklist } from "./device-checklist";
+import { MomentSettings } from "./moment-settings";
 import { NightSettings } from "./night-settings";
 import { PhotoFrameSettings } from "./photo-frame-settings";
 import { ScreenWakeSettings } from "./screen-wake-settings";
@@ -18,7 +20,7 @@ import { RestingScreenSettings } from "./resting-screen-settings";
 import Link from "next/link";
 import { SettingsSection } from "./settings-section";
 
-const WAKE_CLASSES = new Set(["motion", "occupancy", "door", "opening", "garage"]);
+const WAKE_CLASSES = { motion: "Motion sensor", occupancy: "Presence sensor", door: "Door sensor", opening: "Opening sensor", garage: "Garage door sensor" } as const;
 const standalone = () => matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches;
 
 /** Turns this screen into a wall tablet. Settings stay on this device, so each tablet can behave differently. */
@@ -29,7 +31,8 @@ export function WallSection() {
   const canInstall = useSyncExternalStore(installPrompt.subscribe, () => Boolean(installPrompt.get()), () => false);
   const installed = useSyncExternalStore(() => () => {}, standalone, () => false);
   const set = (patch: Partial<WallSettings>) => setSettings({ ...settings, ...patch });
-  const sensors = (home?.devices ?? []).filter(device => device.kind === "binary_sensor" && WAKE_CLASSES.has(device.sensorClass));
+  const sensors = (home?.devices ?? []).flatMap(device => device.kind === "binary_sensor" && Object.hasOwn(WAKE_CLASSES, device.sensorClass)
+    ? [{ id: device.id, name: device.name, room: device.room, detail: WAKE_CLASSES[device.sensorClass as keyof typeof WAKE_CLASSES] }] : []);
 
   return (
     <SettingsSection id="wall" title="Wall tablet" description={<>For a screen that stays on the wall.</>}>
@@ -47,10 +50,15 @@ export function WallSection() {
             }} />
           </div>
         </div>
-        <div className={`${styles.row} ${styles.stacked}`}>
-          <Slider label="Rest after" value={settings.idleMinutes} min={0} max={30} format={value => value === 0 ? "Never" : `${value} min`} onValueChange={idleMinutes => set({ idleMinutes })} />
-        </div>
         <ScreenWakeSettings settings={settings} set={set} />
+        <div className={`${styles.row} ${styles.stacked}`}>
+          <div className={styles.rowText}>
+            <span className={styles.rowTitle}>Wake when someone walks by</span>
+            <span className={styles.rowMeta}>{sensors.length ? "Tick the motion, presence, or door sensors near this screen." : "Connect a motion or door sensor to wake the screen hands-free."}</span>
+          </div>
+          {sensors.length > 0 && <DeviceChecklist label="Wake sensors" items={sensors} chosen={settings.wakeSensors} onChange={wakeSensors => set({ wakeSensors })} />}
+        </div>
+        <MomentSettings settings={settings} set={set} devices={home?.devices ?? []} />
         <RestingScreenSettings settings={settings} set={set} />
         <NightSettings settings={settings} set={set} />
         <PhotoFrameSettings settings={settings} set={set} />
@@ -61,16 +69,6 @@ export function WallSection() {
           </div>
           <Switch label="Remind me" checked={settings.openReminder} onCheckedChange={openReminder => set({ openReminder })} />
           <Slider label="After" value={settings.openMinutes} min={5} max={60} step={5} format={value => `${value} min`} onValueChange={openMinutes => set({ openMinutes })} />
-        </div>
-        <div className={`${styles.row} ${styles.stacked}`}>
-          <div className={styles.rowText}>
-            <span className={styles.rowTitle}>Wake when someone walks by</span>
-            <span className={styles.rowMeta}>{sensors.length ? "Pick motion, presence, or door sensors near this screen." : "Connect a motion or door sensor to wake the screen hands-free."}</span>
-          </div>
-          {sensors.map(sensor => (
-            <Switch key={sensor.id} label={`${sensor.name}${sensor.room ? ` · ${sensor.room}` : ""}`} checked={settings.wakeSensors.includes(sensor.id)}
-              onCheckedChange={on => set({ wakeSensors: on ? [...settings.wakeSensors, sensor.id] : settings.wakeSensors.filter(id => id !== sensor.id) })} />
-          ))}
         </div>
         <div className={styles.row}>
           <Download className={styles.rowIcon} size={20} strokeWidth={1.75} aria-hidden="true" />

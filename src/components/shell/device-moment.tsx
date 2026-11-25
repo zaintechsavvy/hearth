@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useReducedMotion } from "motion/react";
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useEffect, useEffectEvent, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { lightTint } from "@/components/dashboard/light-controls";
 import type { Device } from "@/lib/devices/types";
 import { sentHere } from "@/lib/sent-here";
@@ -39,12 +39,14 @@ const STANDING = /\b(stand(ing)?|pedestal|floor|desk|table|tower|box|oscillating
 /**
  * Full-screen moments on a wall tablet, resting or awake: a light or fan someone changes elsewhere plays a short scene
  * of it changing. Several play one after another, each fading out before the next fades in, and a tap puts them all
- * away. A change made on this screen plays on its own tile instead. It never wakes the screen. Locks and garage doors
+ * away. A change made on this screen plays on its own tile instead, and `allow` says which devices may play at all.
+ * It never wakes the screen. Locks and garage doors
  * have their own notice, `StateNotices`, which plays `LockScene` and `GarageScene`.
  */
-export function DeviceMoments({ devices }: { devices: Device[] | undefined }) {
+export function DeviceMoments({ devices, allow }: { devices: Device[] | undefined; allow: (device: Device) => boolean }) {
   const seen = useRef<Map<string, string> | null>(null);
   const [queue, setQueue] = useState<Moment[]>([]);
+  const allowed = useEffectEvent(allow);
   useEffect(() => {
     if (!devices) return;
     const known = seen.current;
@@ -55,7 +57,7 @@ export function DeviceMoments({ devices }: { devices: Device[] | undefined }) {
       if (state === null) { if (known?.has(device.id)) next.set(device.id, known.get(device.id)!); continue; }
       next.set(device.id, state);
       const before = known?.get(device.id);
-      if (before !== undefined && before !== state && !sentHere(device.id)) {
+      if (before !== undefined && before !== state && !sentHere(device.id) && allowed(device)) {
         const moment = momentOf(device, state);
         if (moment) fresh.push(moment);
       }

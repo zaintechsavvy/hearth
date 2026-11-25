@@ -31,7 +31,7 @@ const STEPS = [
   {
     id: "rest", title: "Pick a resting screen", settings: "/settings#wall", visual: <FacesVisual />,
     body: "After a few quiet minutes the tablet rests on a clock you can read across the room. Each face takes its own colours: large digits you can stack and make bolder, an analog face, a luxury dial shaped to the screen, the time in words, or the sun's path across the day. Settings shows each one exactly as it will look on that screen.",
-    points: ["Pick the colour, or your own, and how bright it shows.", "Choose hand colours and whether the seconds tick, sweep or stay off.", "Lights, fans, locks and the garage play a short moment on the screen when they change while it rests."],
+    points: ["Pick the colour, or your own, and how bright it shows.", "Choose hand colours and whether the seconds tick, sweep or stay off.", "Lights, fans, locks and the garage play a short moment on the screen when they change, for every device or only the ones you choose."],
   },
   {
     id: "wake", title: "Wake it when someone needs it", settings: "/settings#wall", visual: <WakeVisual />,

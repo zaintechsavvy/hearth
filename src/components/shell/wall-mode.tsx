@@ -22,7 +22,9 @@ import { isWidget, type TileConfig } from "@/lib/dashboard/layout";
 import { DigitalGlance } from "./digital-glance";
 import { RestFace } from "./rest-face";
 import { DeviceMoments } from "./device-moment";
-import { clockColorOf, DEFAULT_WALL, isNight, keepAwakeOf, restBrightness, WALL_KEY, type WallSettings } from "@/lib/wall";
+import type { Device } from "@/lib/devices/types";
+import { clockColorOf, DEFAULT_WALL, isNight, keepAwakeOf, overlayBrightness, restBrightness, WALL_KEY, type WallSettings } from "@/lib/wall";
+import { momentAllowed } from "@/lib/wall-moments";
 import { subscribeWallRooms, wallRooms, wantWallRoom } from "@/lib/wall-rooms";
 import type { Agenda } from "@/lib/widgets/calendar";
 import { itemsOf } from "@/lib/widgets/items";
@@ -35,6 +37,8 @@ import { useScreenWake } from "./use-screen-wake";
 import styles from "./wall-mode.module.css";
 
 const NIGHT_RED = "oklch(52% 0.16 25)";
+/** How long after the waking touch its click is still swallowed. */
+const WAKE_TAP_MS = 700;
 const ACTIVITY = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
 /** How long a finger rests on the wallpaper before the page shrinks to the quick actions. */
 const OVERVIEW_HOLD_MS = 550;
@@ -92,14 +96,20 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
     const wake = () => {
       lastActive.current = Date.now();
       setResting(false);
-      // A touch tablet goes full screen at the first tap, since browsers only allow it from a tap.
-      if (!document.fullscreenElement && matchMedia("(pointer: coarse)").matches) void document.documentElement.requestFullscreen?.().catch(() => {});
     };
+    // A touch tablet goes full screen at a tap; browsers only allow it from the end of one, not its start.
+    const fill = () => { if (!document.fullscreenElement && matchMedia("(pointer: coarse)").matches) void document.documentElement.requestFullscreen?.().catch(() => {}); };
+    // Waking the display, whether its own Auto-Lock turned it off or someone came back to the tab, wakes Hearth with it.
+    const shown = () => { if (document.visibilityState === "visible") wake(); };
     for (const type of ACTIVITY) window.addEventListener(type, wake, { passive: true });
     window.addEventListener(WAKE_EVENT, wake);
+    window.addEventListener("pointerup", fill);
+    document.addEventListener("visibilitychange", shown);
     return () => {
       for (const type of ACTIVITY) window.removeEventListener(type, wake);
       window.removeEventListener(WAKE_EVENT, wake);
+      window.removeEventListener("pointerup", fill);
+      document.removeEventListener("visibilitychange", shown);
     };
   }, []);
 
@@ -116,10 +126,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
       if (!settings.wakeSensors.includes(device.id) || device.kind !== "binary_sensor") continue;
       const was = sensorState.current.get(device.id);
       sensorState.current.set(device.id, device.active);
-      if (was === false && device.active) {
-        lastActive.current = Date.now();
-        setResting(false);
-      }
+      if (was === false && device.active) window.dispatchEvent(new Event(WAKE_EVENT));
     }
   }, [home?.devices, settings.wakeSensors]);
 
@@ -131,6 +138,24 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
   }, [resting, path, router]);
 
   useScreenWake(keepAwakeOf(settings.keepAwake), settings.awakeMinutes, home?.devices);
+
+  // Moments, notices, and the doorbell call play above the night dimming, so they dim themselves to match it.
+  const overlay = overlayBrightness(settings, night);
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--wall-overlay", String(overlay));
+    return () => { root.style.removeProperty("--wall-overlay"); };
+  }, [overlay]);
+  const allow = (device: Device) => momentAllowed(settings, device.id, resting);
+
+  // The tap that wakes a resting screen only wakes it: its click never reaches the tile that shows through as the saver fades.
+  const wakeByTouch = () => {
+    lastActive.current = Date.now();
+    setResting(false);
+    const swallow = (event: MouseEvent) => { event.preventDefault(); event.stopPropagation(); };
+    window.addEventListener("click", swallow, { capture: true, once: true });
+    setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), WAKE_TAP_MS);
+  };
 
   // The corner time belongs beside the greeting; once the tiles scroll under it, it steps aside.
   const [scrolled, setScrolled] = useState(false);
@@ -193,7 +218,7 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
 
   return (
     <>
-      <div className={styles.dim} style={{ opacity: night && !resting ? settings.dimLevel : 0 }} aria-hidden="true" />
+      <div className={styles.dim} style={{ opacity: night ? settings.dimLevel : 0 }} aria-hidden="true" />
       <AnimatePresence>
         {overview && (
           <motion.div key="overview" className={styles.overview} role="dialog" aria-modal="true" aria-label="Quick actions"
@@ -215,8 +240,9 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
       <AnimatePresence>
         {resting && (
           <motion.button type="button" key="saver" className={styles.saver} data-dark={settings.darkRest || undefined} data-night={night || undefined} data-red={(night && settings.nightRed) || undefined} aria-label="Wake the screen"
+            style={{ "--saver-dim": restBrightness(settings, night) } as CSSProperties}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.6 }}
-            onClick={() => { lastActive.current = Date.now(); setResting(false); }}>
+            onPointerDown={wakeByTouch} onClick={() => { lastActive.current = Date.now(); setResting(false); }}>
             {!settings.darkRest && <Glance night={night} settings={settings} leftOpen={leftOpen.items} />}
             {!settings.darkRest && <RestActivity since={restedAt} />}
             <RestNowPlaying />
@@ -230,9 +256,9 @@ function Wall({ settings, onLeave }: { settings: WallSettings; onLeave: () => vo
           <Moon size={18} strokeWidth={1.75} aria-hidden="true" /> Good night
         </button>
       )}
-      <DeviceMoments devices={home?.devices} />
-      <StateNotices devices={home?.devices} />
-      {!resting && <LeftOpenBanner items={leftOpen.items} onClose={device => void send(device, { type: "cover", action: "close" }).catch(() => {})} onQuiet={leftOpen.quietTonight} />}
+      <DeviceMoments devices={home?.devices} allow={allow} />
+      <StateNotices devices={home?.devices} allow={allow} />
+      <LeftOpenBanner items={leftOpen.items} onClose={device => void send(device, { type: "cover", action: "close" }).catch(() => {})} onQuiet={leftOpen.quietTonight} />
       <div className={styles.corner} data-on-wall data-scrolled={scrolled || undefined}>
         {now > 0 && path.startsWith("/dashboard") && <time className={styles.cornerTime} dateTime={new Date(now).toISOString()}>{new Date(now).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</time>}
       <Popover open={menu} onOpenChange={setMenu}>
@@ -287,10 +313,7 @@ function Glance({ night, settings, leftOpen }: { night: boolean; settings: WallS
   const photos = settings.frame && !(night && !settings.frameAtNight);
   const date = new Date(now || 0);
   const red = night && settings.nightRed;
-  const offset = {
-    "--saver-dim": restBrightness(settings, night),
-    color: red ? undefined : clockColorOf(settings),
-  } as CSSProperties;
+  const offset = { color: red ? undefined : clockColorOf(settings) } as CSSProperties;
   const tiles = home?.pages.flatMap(page => page.layout).filter((tile): tile is TileConfig => "kind" in tile && tile.kind !== undefined && isWidget(tile.kind)) ?? [];
   const place = tiles.find(tile => tile.kind === "weather" && tile.options?.place)?.options;
   const { data: weather } = useSWR<Forecast>(place?.place ? `/api/weather?lat=${place.place.latitude}&lon=${place.place.longitude}` : null, fetchJson, { refreshInterval: 10 * 60_000 });

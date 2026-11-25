@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Mic, MicOff, Volume2, VolumeX, VideoOff, X, type LucideIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import type { EventDevice } from "@/lib/devices/types";
 import { haptic } from "@/lib/haptics";
@@ -10,6 +10,8 @@ import { chime } from "@/lib/sound";
 import { cameraFor } from "@/lib/ring-camera";
 import { IntegrationCameraTile } from "./integration-camera-tile";
 import { RingBell } from "./ring-bell";
+import { useStoredJson } from "@/components/shell/use-stored-json";
+import { DEFAULT_WALL, WALL_KEY, type WallSettings } from "@/lib/wall";
 import { useHome } from "./use-home";
 import styles from "./doorbell-call.module.css";
 
@@ -31,6 +33,9 @@ export function DoorbellCall() {
   const { home } = useHome();
   const reduce = useReducedMotion();
   const devices = home?.devices;
+  const [wall] = useStoredJson<WallSettings>(WALL_KEY, DEFAULT_WALL);
+  // A wall tablet can be told to leave rings alone; the ring is still kept, so other screens and Activity have it.
+  const quiet = useEffectEvent(() => wall.enabled && wall.doorbellCall === false);
   const seen = useRef<Map<string, string | null> | null>(null);
   const mic = useRef<MediaStreamTrack | null>(null);
   const [ring, setRing] = useState<EventDevice | null>(null);
@@ -48,16 +53,18 @@ export function DoorbellCall() {
       seen.current = new Map(doorbells.map(device => [device.id, device.last]));
       return;
     }
-    for (const doorbell of doorbells) {
-      const previous = seen.current.get(doorbell.id);
-      seen.current.set(doorbell.id, doorbell.last);
-      if (!doorbell.last || doorbell.last === previous || Date.now() - Date.parse(doorbell.last) >= FRESH_MS) continue;
+    const rung = doorbells.filter(doorbell => {
+      const previous = seen.current?.get(doorbell.id);
+      seen.current?.set(doorbell.id, doorbell.last);
+      return doorbell.last && doorbell.last !== previous && Date.now() - Date.parse(doorbell.last) < FRESH_MS;
+    });
+    for (const doorbell of rung) void fetch("/api/doorbell", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId: doorbell.id, at: doorbell.last }) }).catch(() => {});
+    for (const doorbell of quiet() ? [] : rung) {
       setRing(doorbell);
       setLooking(false);
       haptic("alert");
       chime();
       window.dispatchEvent(new Event(WAKE_EVENT));
-      void fetch("/api/doorbell", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId: doorbell.id, at: doorbell.last }) }).catch(() => {});
     }
   }, [devices]);
 

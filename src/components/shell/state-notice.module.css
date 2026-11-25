@@ -18,6 +18,12 @@
   --tone: var(--warning);
 }
 
+/* At night the notice dims to match the wall tablet's dashboard under it. */
+.card,
+.timer {
+  filter: brightness(var(--wall-overlay, 1));
+}
+
 .card {
   display: grid;
   justify-items: center;

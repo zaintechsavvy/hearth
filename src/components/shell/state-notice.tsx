@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Device } from "@/lib/devices/types";
 import { haptic } from "@/lib/haptics";
 import { sentHere } from "@/lib/sent-here";
@@ -50,10 +50,12 @@ function stateOf(device: Device): { open: boolean; words: string; picture: Pictu
 
 /**
  * On a wall tablet, a lock, garage door, or door that changes somewhere else takes the screen for a few seconds with
- * a picture of what happened. Changes made on this screen stay quiet, and a tap puts the screen back at once.
+ * a picture of what happened. Changes made on this screen stay quiet, as do devices `allow` turns down, except a
+ * leak, which always shows. A tap puts the screen back at once.
  */
-export function StateNotices({ devices }: { devices: Device[] | undefined }) {
+export function StateNotices({ devices, allow }: { devices: Device[] | undefined; allow: (device: Device) => boolean }) {
   const reduce = useReducedMotion();
+  const allowed = useEffectEvent(allow);
   const last = useRef<Map<string, boolean> | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
 
@@ -66,7 +68,7 @@ export function StateNotices({ devices }: { devices: Device[] | undefined }) {
       if (!state) continue;
       now.set(device.id, state.open);
       const before = last.current?.get(device.id);
-      if (last.current && before !== undefined && before !== state.open && (state.picture === "leak" || !sentHere(device.id))) {
+      if (last.current && before !== undefined && before !== state.open && (state.picture === "leak" || (!sentHere(device.id) && allowed(device)))) {
         next = { key: `${device.id}:${Date.now()}`, name: device.name, room: device.room, ...state, alarm: state.alarm ?? false };
       }
     }

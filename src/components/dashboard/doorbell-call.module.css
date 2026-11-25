@@ -14,6 +14,11 @@
   overflow: hidden;
 }
 
+/* On a wall tablet at night the call dims to match the dashboard, flashes included. */
+.call > * {
+  filter: brightness(var(--wall-overlay, 1));
+}
+
 /* The screen flashes a few times when the bell rings, so it is noticed from across the room. */
 .flash {
   position: absolute;

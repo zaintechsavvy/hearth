@@ -1,3 +1,5 @@
+import type { MomentMode } from "@/lib/wall-moments";
+
 /** How this screen behaves as a wall tablet. Kept on the device, since each tablet hangs somewhere different. */
 export interface WallSettings {
   enabled: boolean;
@@ -45,6 +47,14 @@ export interface WallSettings {
   frameAtNight: boolean;
   /** Where the date, clock, and weather sit over photos: the lower left corner, or the middle. */
   frameClock: "corner" | "center";
+  /** Which device changes take over the screen with a full-screen moment; read it with `momentModeOf`. */
+  moments: MomentMode;
+  /** The devices that may, when `moments` is `chosen`. */
+  momentDevices: string[];
+  /** Moments play over the resting screen too, not only while someone is using it. */
+  momentsResting: boolean;
+  /** A doorbell ring takes the screen with its camera, and wakes it. */
+  doorbellCall: boolean;
 }
 
 export type PhotoSource = "uploads" | "immich";
@@ -122,11 +132,15 @@ export const DEFAULT_WALL: WallSettings = {
   clockColor: "white", customColor: "#7aa7ff", clockBrightness: 0.85, clockFace: "digital", handColor: null, secondHand: "tick", digitLayout: "inline", digitScale: 1, nightRed: true, redBrightness: 0.15, openReminder: true, openMinutes: 15,
   frame: false, frameSource: "uploads", frameSeconds: 20, frameAtNight: false, frameClock: "corner",
   awakeMinutes: 5, darkRest: false,
+  moments: "all", momentDevices: [], momentsResting: true, doorbellCall: true,
 };
 
 /** How bright the resting clock shows: its own brightness by day, the red brightness at night when red, otherwise dimmed with the dashboard. */
 export const restBrightness = (settings: Pick<WallSettings, "clockBrightness" | "dimLevel" | "nightRed" | "redBrightness">, night: boolean) =>
   !night ? settings.clockBrightness : settings.nightRed ? settings.redBrightness : settings.clockBrightness * (1 - settings.dimLevel * 0.6);
+
+/** How bright a moment, notice, or doorbell call shows over the wall tablet: dimmed with the dashboard at night, never too dark to read. */
+export const overlayBrightness = (settings: Pick<WallSettings, "dimLevel">, night: boolean) => night ? Math.max(0.35, 1 - settings.dimLevel) : 1;
 
 const minutes = (time: string) => {
   const [hours, mins] = time.split(":").map(Number);

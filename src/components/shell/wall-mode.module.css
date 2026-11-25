@@ -20,8 +20,19 @@
   cursor: none;
 }
 
-.saver[data-night] {
+/* Night darkens the background as a layer that fades, since a gradient cannot transition. */
+.saver::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background: black;
+  opacity: 0;
+  transition: opacity 1.5s var(--ease-standard);
+}
+
+.saver[data-night]::before {
+  opacity: 1;
 }
 
 /* Resting dark: next to nothing lit, until a moment or a notice plays over it. */
@@ -34,6 +45,7 @@
   justify-items: center;
   width: min(92cqw, 1100px);
   opacity: var(--saver-dim, 1);
+  transition: opacity 1.5s var(--ease-standard), color 1.5s var(--ease-standard);
 }
 
 .date {
@@ -163,7 +175,12 @@
   left: 50%;
   translate: -50% 0;
   font-size: var(--text-xs);
-  opacity: .35;
+  opacity: max(.12, calc(var(--saver-dim, 1) * .4));
+  transition: opacity 1.5s var(--ease-standard);
+}
+
+.saver[data-red] .hint {
+  color: oklch(52% 0.16 25);
 }
 
 /* Its own layer, so iPad Safari keeps it still through momentum scrolling instead of redrawing it a frame behind. */
@@ -255,7 +272,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dim, .glance, .timerProgress { transition: none; }
+  .dim, .glance, .timerProgress, .hint, .saver::before { transition: none; }
 }
 
 /* After dark the resting screen offers the bedtime check, out of the way in a corner. */

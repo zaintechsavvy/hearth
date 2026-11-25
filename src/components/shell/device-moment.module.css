@@ -11,10 +11,12 @@
   cursor: pointer;
 }
 
+/* At night the scene dims to match the wall tablet's dashboard under it. */
 .momentContent {
   display: grid;
   place-items: center;
   gap: clamp(16px, 4vh, 40px);
+  filter: brightness(var(--wall-overlay, 1));
 }
 
 .stage {

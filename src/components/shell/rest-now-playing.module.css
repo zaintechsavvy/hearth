@@ -77,3 +77,12 @@
 @media (prefers-reduced-motion: reduce) {
   .playing, .bars span { animation: none; }
 }
+
+/* Red at night: the note turns red with the clock, and the cover loses its colour. */
+[data-red] > .playing {
+  color: oklch(52% 0.16 25);
+}
+
+[data-red] > .playing .art {
+  filter: grayscale(1);
+}

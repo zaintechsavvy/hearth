@@ -23,6 +23,8 @@ const TOPICS = [
       "Keep the screen awake, in Wall tablet settings, holds the display on Always, While in use, or Never. While in use keeps it on for a few minutes after a touch, the doorbell, or a door, garage, lock, or alarm change, then lets the iPad's Auto-Lock take over.",
       "Holding the display on from an app on the Home Screen needs iPadOS 18.4 or later.",
       "Rest on a dark screen shows near black instead of the clock while the display is on, and the garage, door, and lock pictures still play over it.",
+      "Full-screen moments chooses which devices play those pictures: every device, only the ones you tick, or none, and whether they play over the resting screen too. At night they dim with the dashboard. A water leak always shows, and doorbell rings have their own switch.",
+      "When the display comes back on, Hearth wakes with it, so one touch is enough.",
     ],
   },
   {
