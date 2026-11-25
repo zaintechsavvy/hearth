@@ -22,10 +22,15 @@ export const fetchJson = <T,>(url: string): Promise<T> => fetch(url).then(async 
   return body as T;
 });
 
+/** A Google speaker Hearth could not start Spotify on, which someone can start by asking it. */
+export class AsleepError extends Error {}
+
 /** Starts `media` on a speaker through the home's Spotify; without media, moves what Spotify plays there. */
 export const playOnSpotify = (body: { media: { id: string; type: string } | null; speakers: string[]; device?: string; shuffle?: boolean }) =>
   fetch("/api/spotify/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(async response => {
-    if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? "");
+    if (response.ok) return;
+    const answer = await response.json().catch(() => null);
+    throw new (answer?.asleep ? AsleepError : Error)(typeof answer?.error === "string" ? answer.error : "");
   });
 
 /** The player as its integration names it, which is how Spotify knows it: a tile can carry a name of its own. */

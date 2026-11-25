@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mapHassState } from "@/lib/integrations/home-assistant";
-import { playingOn, speakersFor, spotifyTargets } from "./speakers";
+import { playingOn, speakersFor, spotifyTargets, spotifyVia, type SpeakerWake } from "./speakers";
 import type { MediaPlayerDevice } from "./types";
 
 const player = (entity_id: string, state: string, attributes: Record<string, unknown>, extra: Partial<MediaPlayerDevice> = {}) =>
@@ -34,9 +34,24 @@ describe("speakersFor", () => {
   });
 
   it("moves Spotify to an idle speaker Spotify Connect cannot see yet once Spotify is connected to Hearth", () => {
-    expect(speakersFor(spotify, home, { linked: true }).find(speaker => speaker.name === "Bedroom mini")).toMatchObject({ via: "spotify", device: { id: mini.id } });
+    expect(speakersFor(spotify, home, { linked: true }).find(speaker => speaker.name === "Bedroom mini")).toMatchObject({ via: "wake", device: { id: mini.id } });
     const castPlayingSpotify = { ...kitchen, state: "playing" as const, media: { id: "spotify:track:1", type: "music" } };
-    expect(speakersFor(castPlayingSpotify, home, { linked: true }).map(speaker => [speaker.name, speaker.via])).toEqual([["Kitchen speaker", "self"], ["Bedroom mini", "spotify"]]);
+    expect(speakersFor(castPlayingSpotify, home, { linked: true }).map(speaker => [speaker.name, speaker.via])).toEqual([["Kitchen speaker", "self"], ["Bedroom mini", "wake"]]);
+  });
+
+  it("moves Spotify straight to a speaker Spotify Connect lists, and asks for an idle Google speaker by voice when Home Assistant cannot start it", () => {
+    const castPlayingSpotify = { ...kitchen, state: "playing" as const, media: { id: "spotify:track:1", type: "music" } };
+    const via = (wake: SpeakerWake) => speakersFor(castPlayingSpotify, home, { linked: true, wake }).find(speaker => speaker.name === "Bedroom mini")?.via;
+    expect(via({ visible: ["Bedroom Mini"], methods: { ha: null }, cast: [] })).toBe("spotify");
+    expect(via({ visible: [], methods: { ha: null }, cast: [] })).toBe("voice");
+    expect(via({ visible: [], methods: { ha: "spotcast" }, cast: [] })).toBe("wake");
+    expect(via({ visible: [], methods: {}, cast: [] })).toBe("wake");
+  });
+
+  it("tells Google Cast speakers apart by what Home Assistant says when the live registry has not loaded", () => {
+    const unknown = { ...mini, platform: undefined };
+    expect(spotifyVia(unknown, { visible: null, methods: { ha: null }, cast: [mini.id] })).toBe("voice");
+    expect(spotifyVia(unknown, { visible: null, methods: { ha: null }, cast: [] })).toBe("wake");
   });
 
   it("shows a Cast speaker's own place and the others it can take the music to, but not the Spotify account", () => {

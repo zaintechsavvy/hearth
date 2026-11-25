@@ -3,31 +3,38 @@
 import { Check, ChevronRight, Info } from "lucide-react";
 import { useState } from "react";
 import { useHome } from "@/components/dashboard/use-home";
-import { speakersFor, spotifyTargets, type Speaker } from "@/lib/devices/speakers";
+import { isCast, speakersFor, spotifyTargets, type Speaker } from "@/lib/devices/speakers";
 import type { MediaPlayerDevice } from "@/lib/devices/types";
-import { playOnSpotify, type Send } from "./media-hooks";
+import type { Send } from "./media-hooks";
 import { OutputIcon } from "./output-icon";
+import { useSpeakerWake, useSpotifyStart } from "./use-spotify-start";
 import { ViewHead } from "./view-head";
+import { WakeHint } from "./wake-hint";
+import { WakeStatus } from "./wake-status";
 import styles from "./media-tile.module.css";
 
 /**
  * Every speaker in the home: the player's own outputs, such as Spotify Connect devices, speakers it groups with, and
- * the rest, which take the music over; Spotify moves to an idle speaker through the home's Spotify, which wakes it.
- * A speaker it cannot reach stays listed and says why. A speaker's Spotify input opens Spotify's library, since
+ * the rest, which take the music over; Spotify moves to an idle speaker through the home's Spotify, which wakes it,
+ * or for a Google speaker Home Assistant cannot start, asks for it by voice and moves there once it answers. A speaker
+ * it cannot reach stays listed and says why. A speaker's Spotify input opens Spotify's library, since
  * switching the speaker to it plays nothing.
  */
 export function OutputPicker({ device, send, disabled, onDone, onLibrary }: { device: MediaPlayerDevice; send: Send; disabled: boolean; onDone?: () => void; onLibrary?: () => void }) {
   const { home, send: sendTo } = useHome();
   const [why, setWhy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [starting, setStarting] = useState<string | null>(null);
+  const linked = Boolean(home?.spotifyLinked);
+  const wake = useSpeakerWake(linked);
+  const { start, run: startSpotify, cancel } = useSpotifyStart();
   const devices = home?.devices ?? [];
-  const speakers = speakersFor(device, devices, { library: Boolean(onLibrary), linked: Boolean(home?.spotifyLinked) });
-  const run = (work: Promise<unknown>, key?: string) => {
+  const speakers = speakersFor(device, devices, { library: Boolean(onLibrary), linked, wake });
+  const busy = start?.phase === "starting";
+  const run = (work: Promise<unknown>) => {
     setError(null);
-    setStarting(key ?? null);
-    work.catch((failure: Error) => setError(failure.message || "That speaker did not answer.")).finally(() => setStarting(null));
+    work.catch((failure: Error) => setError(failure.message || "That speaker did not answer."));
   };
+  const woken = speakers.find(speaker => (speaker.via === "wake" || speaker.via === "voice") && speaker.device && wake && isCast(speaker.device, wake));
 
   const pick = (speaker: Speaker) => {
     if (speaker.via === "unreachable") return setWhy(why === speaker.key ? null : speaker.key);
@@ -35,7 +42,10 @@ export function OutputPicker({ device, send, disabled, onDone, onLibrary }: { de
     setWhy(null);
     if (speaker.via === "output" && speaker.output && !speaker.current) run(send({ type: "output", output: speaker.output }));
     if (speaker.via === "group" && speaker.device) run(speaker.grouped ? sendTo(speaker.device, { type: "unjoin" }) : send({ type: "join", members: [speaker.device.id] }));
-    if (speaker.via === "spotify" && speaker.device) run(playOnSpotify({ media: null, speakers: spotifyTargets(speaker.device), device: speaker.device.id }), speaker.key);
+    if ((speaker.via === "spotify" || speaker.via === "wake" || speaker.via === "voice") && speaker.device) {
+      setError(null);
+      void startSpotify(speaker.key, speaker.device, { media: null, speakers: spotifyTargets(speaker.device), device: speaker.device.id }, { voice: speaker.via === "voice" });
+    }
     if (speaker.via === "move" && speaker.device && device.media) {
       const { id, type } = device.media;
       run(sendTo(speaker.device, { type: "playMedia", id, mediaType: type }).then(() => device.state === "playing" ? send({ type: "media", action: "pause" }) : undefined));
@@ -50,10 +60,9 @@ export function OutputPicker({ device, send, disabled, onDone, onLibrary }: { de
       <div className={styles.rows} role="list">
         {speakers.map(speaker => {
           const checked = speaker.current || Boolean(speaker.grouped);
-          const detail = starting === speaker.key ? "Starting Spotify…"
-            : speaker.via === "group" ? (speaker.grouped ? "Playing together" : "Add to the group")
+          const detail = speaker.via === "group" ? (speaker.grouped ? "Playing together" : "Add to the group")
             : speaker.via === "move" ? (speaker.device?.state === "playing" && speaker.device.title ? `Playing ${speaker.device.title}` : "Move the music here")
-            : speaker.via === "spotify" ? "Move Spotify here"
+            : speaker.via === "spotify" || speaker.via === "wake" || speaker.via === "voice" ? "Move Spotify here"
             : speaker.via === "unreachable" ? "Not reachable from here"
             : speaker.via === "library" ? "Open Spotify's playlists"
             : speaker.current ? "Playing here" : null;
@@ -61,7 +70,7 @@ export function OutputPicker({ device, send, disabled, onDone, onLibrary }: { de
             <div key={speaker.key} role="listitem" className={styles.speaker}>
               <button type="button" className={styles.row} data-current={checked || undefined} data-dim={speaker.via === "unreachable" || undefined}
                 aria-pressed={speaker.via === "unreachable" || speaker.via === "library" ? undefined : checked} aria-expanded={speaker.via === "unreachable" ? why === speaker.key : undefined}
-                disabled={disabled || starting !== null || (speaker.via === "move" && !device.media)} onClick={() => pick(speaker)}>
+                disabled={disabled || busy || (speaker.via === "move" && !device.media)} onClick={() => pick(speaker)}>
                 <span className={styles.rowIcon} data-on={checked || undefined}><OutputIcon name={speaker.name} size={18} /></span>
                 <span className={styles.rowText}>
                   <span className={styles.rowName}>{speaker.name}</span>
@@ -73,11 +82,13 @@ export function OutputPicker({ device, send, disabled, onDone, onLibrary }: { de
                   : speaker.current ? <Check size={18} strokeWidth={2} aria-hidden="true" /> : null}
               </button>
               {why === speaker.key && <p className={styles.callout}>{speaker.reason}</p>}
+              {start?.key === speaker.key && <WakeStatus start={start} onCancel={cancel} />}
             </div>
           );
         })}
       </div>
       {error && <p className={styles.callout} role="alert">{error}</p>}
+      {woken?.device && wake && <WakeHint method={wake.methods[woken.device.integrationId] ?? null} />}
     </div>
   );
 }

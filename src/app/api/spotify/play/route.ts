@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { deviceProvider, readableError } from "@/lib/home";
-import { play, type Wake } from "@/lib/spotify/client";
+import { SpeakerAsleepError } from "@/lib/integrations/types";
+import { play, spotifyLinkOf, type Wake } from "@/lib/spotify/client";
 import { getHome } from "@/lib/session";
 
 const playInput = z.object({
@@ -12,7 +13,10 @@ const playInput = z.object({
   shuffle: z.boolean().default(false),
 });
 
-/** Starts something from the home's Spotify on the Spotify Connect device named like the chosen speaker. */
+/**
+ * Starts something from the home's Spotify on the Spotify Connect device named like the chosen speaker. A Google
+ * speaker Hearth could not wake answers 409 with `asleep`, so the browser can ask someone to start it by voice.
+ */
 export async function POST(request: Request) {
   const home = await getHome();
   if (!home) return new Response(null, { status: 401 });
@@ -23,10 +27,13 @@ export async function POST(request: Request) {
     const { device, ...input } = parsed.data;
     const target = device ? await deviceProvider(home.homeId, device) : null;
     const startSpotify = target?.provider.startSpotify?.bind(target.provider);
-    const wake: Wake | undefined = target && startSpotify ? start => startSpotify(target.nativeId, start) : undefined;
+    const wake: Wake | undefined = target && startSpotify
+      ? async start => startSpotify(target.nativeId, { ...start, account: (await spotifyLinkOf(home.homeId))?.account ?? null })
+      : undefined;
     await play(home.homeId, { ...input, wake });
     return new Response(null, { status: 204 });
   } catch (error) {
+    if (error instanceof SpeakerAsleepError) return Response.json({ error: error.message, asleep: true }, { status: 409 });
     return Response.json({ error: readableError(error) }, { status: 502 });
   }
 }

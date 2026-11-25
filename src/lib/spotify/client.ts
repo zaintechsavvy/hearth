@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { seal, unseal } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { spotifyLink } from "@/lib/db/schema";
-import { IntegrationError, type MediaItem } from "@/lib/integrations/types";
+import { IntegrationError, SpeakerAsleepError, type MediaItem, type SpotifyWoken } from "@/lib/integrations/types";
 import {
   ALBUMS, ARTISTS, LIKED, SEARCH_LIMIT, SEARCH_TYPES, albumItem, artistItem, folderItem, likedItem, matchDevice, playBody, playlistItem, recentContexts, recentTracks,
   spotifyMessage, topResult, trackItem,
@@ -220,27 +220,32 @@ export async function recent(homeId: string): Promise<{ items: MediaItem[]; trac
 
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-/** How a speaker Spotify cannot see was brought round: Spotify already plays there, or it should join Spotify Connect soon. */
-export type Woken = "started" | "woken";
-export type Wake = (start: { media: { id: string; type: string } | null; shuffle: boolean }) => Promise<Woken>;
+export type Wake = (start: { media: { id: string; type: string } | null; shuffle: boolean }) => Promise<SpotifyWoken>;
 
-const WAKE_WAIT_MS = 10_000;
+const WAKE_WAIT_MS = 15_000;
+
+const devices = async (homeId: string) => (await spotify<{ devices: SpotifyDevice[] }>(homeId, "me/player/devices")).devices;
+
+/** The names of the Spotify Connect devices Spotify can play on now. */
+export const spotifyDeviceNames = async (homeId: string) => (await devices(homeId)).map(device => device.name);
 
 /**
  * Plays `media` on the Spotify Connect device named like one of `speakers`, or where Spotify plays now when none are
  * given; without `media`, moves what Spotify plays now there. A speaker Spotify cannot see yet, such as an idle
- * Google Cast speaker, is woken with `wake` and waited for. A speaker Spotify has gone quiet on can refuse to start
- * until playback is moved to it, so that is tried once.
+ * Google Cast speaker, is woken with `wake` and looked for every second until it joins. A speaker Spotify has gone
+ * quiet on can refuse to start until playback is moved to it, so that is tried once.
  */
 export async function play(homeId: string, { media, speakers, shuffle, wake }: { media: { id: string; type: string } | null; speakers: string[]; shuffle: boolean; wake?: Wake }) {
-  const find = async () => matchDevice((await spotify<{ devices: SpotifyDevice[] }>(homeId, "me/player/devices")).devices, speakers);
-  let device = await find();
+  let device = matchDevice(await devices(homeId), speakers);
   if (speakers.length && !device && wake) {
-    if (await wake({ media, shuffle }) === "started") return;
+    const woken = await wake({ media, shuffle });
+    if (woken.started) return;
+    const names = [...speakers, ...woken.names];
     for (const end = Date.now() + WAKE_WAIT_MS; !device && Date.now() < end;) {
       await pause(1000);
-      device = await find();
+      device = matchDevice(await devices(homeId), names);
     }
+    if (!device) throw new (woken.voice ? SpeakerAsleepError : IntegrationError)(woken.late);
   }
   if (speakers.length && !device) throw new IntegrationError(`Spotify cannot see ${speakers[0]} yet. Play to it once from the Spotify app and it joins Spotify Connect, then Hearth can start music on it.`);
   if (device?.is_restricted) throw new IntegrationError(`${device.name} does not take commands from Hearth. Start it from the Spotify app.`);
