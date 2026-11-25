@@ -15,6 +15,7 @@ import { isClientId } from "@/lib/spotify/items";
 import styles from "./connections.module.css";
 import { SettingsSection } from "./settings-section";
 import { SetupStep } from "./setup-step";
+import { SpotifySpeakers } from "./spotify-speakers";
 import own from "./spotify-section.module.css";
 
 export interface SpotifySettings {
@@ -157,6 +158,7 @@ export function SpotifySection({ settings }: { settings: SpotifySettings }) {
           ) : steps}
         </form>
       </Glass>
+      {settings.linked && <SpotifySpeakers />}
       <Alert tone="danger" title="Spotify did not connect" open={Boolean(error)}>{error ?? ""}</Alert>
     </SettingsSection>
   );

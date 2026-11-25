@@ -32,11 +32,10 @@ export interface Provider {
   cameraHls?(nativeId: string): Promise<string>;
   /** What a media player played recently, and what it plays next when it knows. */
   mediaQueue?(nativeId: string, current: string | null, askQueue: boolean): Promise<{ recent: { title: string; artist: string | null; media: { id: string; type: string } | null }[]; next: { title: string; artist: string | null; media: { id: string; type: string } | null } | null }>;
-  /**
-   * Starts Spotify on a speaker Spotify Connect cannot see yet, or wakes it so it joins: `started` when Spotify plays
-   * `media` there already, `woken` when it should show up in Spotify Connect shortly. Throws a readable reason when it cannot.
-   */
-  startSpotify?(nativeId: string, start: { media: { id: string; type: string } | null; shuffle: boolean }): Promise<"started" | "woken">;
+  /** How this integration can start Spotify on an idle Google Cast speaker, and which of its media players are Cast ones. */
+  spotifyWake?(): Promise<SpotifyWakeSetup>;
+  /** Starts Spotify on a speaker Spotify Connect cannot see yet, or wakes it so it joins. Throws a readable reason when it cannot. */
+  startSpotify?(nativeId: string, start: SpotifyStart): Promise<SpotifyWoken>;
   /** Music a media player can find by name: songs, albums, artists, and playlists. */
   searchMedia?(nativeId: string, query: string): Promise<MediaItem[]>;
   /** What is inside an album, artist, or playlist; with no media, the top of the player's library. */
@@ -55,6 +54,28 @@ export interface Provider {
   /** Fetches a playlist or segment of a stream `cameraHls` started. */
   cameraHlsFetch?(path: string, search: string, signal: AbortSignal): Promise<Response>;
 }
+
+/** What can cast Spotify onto an idle Google Cast speaker: Spotcast, or the Google Assistant SDK asked in words. */
+export type SpotifyWakeMethod = "spotcast" | "assistant";
+
+export interface SpotifyWakeSetup {
+  method: SpotifyWakeMethod | null;
+  /** Native ids of the Google Cast media players. */
+  cast: string[];
+}
+
+export interface SpotifyStart {
+  media: { id: string; type: string } | null;
+  shuffle: boolean;
+  /** The Spotify account Hearth is signed in to, by its display name, so Spotcast uses the same one. */
+  account: string | null;
+}
+
+/**
+ * `started` when Spotify plays the media there already. Otherwise the speaker should join Spotify Connect shortly under
+ * one of `names`, and `late` says why when it does not; with `voice`, it is a Google speaker someone can start by asking.
+ */
+export type SpotifyWoken = { started: true } | { started: false; names: string[]; late: string; voice: boolean };
 
 export interface MediaItem {
   title: string;
@@ -123,6 +144,11 @@ export function countBy(values: string[]) {
 /** An error whose message is safe and useful to show the person who owns the integration. */
 export class IntegrationError extends Error {
   override name = "IntegrationError";
+}
+
+/** A Google speaker Hearth could not start Spotify on, which joins Spotify Connect once someone asks it to play Spotify. */
+export class SpeakerAsleepError extends IntegrationError {
+  override name = "SpeakerAsleepError";
 }
 
 export class WebRtcUnsupportedError extends IntegrationError {

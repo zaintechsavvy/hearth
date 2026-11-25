@@ -1,3 +1,5 @@
+import type { SpotifyWakeMethod } from "@/lib/integrations/types";
+import { matchDevice } from "@/lib/spotify/items";
 import type { Device, MediaPlayerDevice } from "./types";
 
 /**
@@ -11,10 +13,11 @@ export interface Speaker {
   current: boolean;
   /**
    * `output` is one of its own outputs; `move` plays the current music on `device` instead; `spotify` moves Spotify
-   * to `device`, waking it into Spotify Connect first; `unreachable` cannot; `library` is Spotify listed among a
+   * to `device`, which Spotify Connect lists; `wake` starts Spotify on `device` first; `voice` is an idle Google Cast
+   * speaker Home Assistant has no way to start Spotify on, which someone asks to play Spotify; `unreachable` cannot; `library` is Spotify listed among a
    * speaker's inputs, which opens Spotify's library rather than switching to it.
    */
-  via: "self" | "output" | "group" | "move" | "spotify" | "unreachable" | "library";
+  via: "self" | "output" | "group" | "move" | "spotify" | "wake" | "voice" | "unreachable" | "library";
   output?: string;
   device?: MediaPlayerDevice;
   /** Playing together with the player now, for `group`. */
@@ -39,14 +42,39 @@ export function homeSpeakers(devices: Device[]) {
   return devices.filter((device): device is MediaPlayerDevice => device.kind === "media_player" && device.available && !device.auxiliary && device.platform !== "spotify");
 }
 
+/** What `/api/spotify/speakers` says about getting Spotify onto the home's speakers. */
+export interface SpeakerWake {
+  /** The Spotify Connect devices Spotify lists now, by name, or null when Spotify did not say. */
+  visible: string[] | null;
+  /** How each integration starts Spotify on an idle Google Cast speaker, by integration id. */
+  methods: Record<string, SpotifyWakeMethod | null>;
+  /** The Google Cast speakers, by device id. */
+  cast: string[];
+}
+
+/** Whether Spotify Connect lists `device` now. */
+export const spotifySees = (device: MediaPlayerDevice, visible: string[]) =>
+  matchDevice(visible.map(name => ({ id: name, name, is_active: false, is_restricted: false })), spotifyTargets(device)) !== null;
+
+/** Whether `device` is a Google Cast speaker, by its integration or by what `/api/spotify/speakers` says. */
+export const isCast = (device: MediaPlayerDevice, wake: SpeakerWake) => device.platform === "cast" || wake.cast.includes(device.id);
+
+/** How Spotify reaches `device` through Hearth: it is listed, Hearth wakes it, or someone asks it to play Spotify. */
+export function spotifyVia(device: MediaPlayerDevice, wake: SpeakerWake | undefined): "spotify" | "wake" | "voice" {
+  if (!wake) return "wake";
+  if (wake.visible && spotifySees(device, wake.visible)) return "spotify";
+  return isCast(device, wake) && device.integrationId in wake.methods && !wake.methods[device.integrationId] ? "voice" : "wake";
+}
+
 const spotifyReason = (name: string) => `Connect Spotify in Settings and Hearth can start Spotify on ${name}, even while it is idle.`;
 
 /**
  * Every speaker in the home, as `device` can reach it, with a speaker its outputs already name listed once. With
  * `library`, a speaker's own Spotify input leads to the Spotify library. With `linked`, the home's Spotify is
- * connected to Hearth, so Spotify moves to any speaker that plays, idle ones included, since Hearth wakes them.
+ * connected to Hearth, so Spotify moves to any speaker that plays, idle ones included where `wake` says Hearth can
+ * start them.
  */
-export function speakersFor(device: MediaPlayerDevice, devices: Device[], { library = false, linked = false } = {}): Speaker[] {
+export function speakersFor(device: MediaPlayerDevice, devices: Device[], { library = false, linked = false, wake }: { library?: boolean; linked?: boolean; wake?: SpeakerWake } = {}): Speaker[] {
   const others = homeSpeakers(devices).filter(other => other.id !== device.id);
   const claimed = new Set<string>();
   const outputs = outputsOf(device);
@@ -62,7 +90,7 @@ export function speakersFor(device: MediaPlayerDevice, devices: Device[], { libr
     const base = { key: `device:${other.id}`, name: other.name, room: other.room, current: false, device: other };
     if (device.can.group && other.can.group && other.integrationId === device.integrationId) list.push({ ...base, via: "group", grouped: device.group.includes(other.id) });
     else if (!other.can.play) list.push({ ...base, via: "unreachable", reason: `${other.name} cannot be sent music from Hearth.` });
-    else if (isSpotify(device)) list.push(linked ? { ...base, via: "spotify" } : { ...base, via: "unreachable", reason: spotifyReason(other.name) });
+    else if (isSpotify(device)) list.push(linked ? { ...base, via: spotifyVia(other, wake) } : { ...base, via: "unreachable", reason: spotifyReason(other.name) });
     else list.push({ ...base, via: "move" });
   }
   const rank = (speaker: Speaker) => (speaker.current ? 0 : speaker.grouped || speaker.via === "library" ? 1 : speaker.via === "unreachable" ? 3 : 2);
