@@ -320,6 +320,7 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
         id: device.id, name: device.name, room: device.room, detail: `${kindLabel(device)} · ${statusText(device)}`,
         source: integrationNames.get(device.integrationId) ?? "", icon: style.icon, color: style.color,
         auxiliary: device.auxiliary || sourceById.get(device.id)?.hidden, available: device.available, placed: placed.has(device.id),
+        keywords: [device.sourceName, device.sourceRoom, device.id.split(":").pop()],
       });
     }
     const rank = (candidate: Candidate) => (candidate.auxiliary ? 2 : 0) + ((devices.get(candidate.id)?.kind ?? kinds[0]) === kinds[0] ? 0 : 1);

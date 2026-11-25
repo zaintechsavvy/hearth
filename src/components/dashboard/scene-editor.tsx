@@ -13,6 +13,8 @@ import { glassSheetClass } from "@/components/glass/glass";
 import { createScene, updateScene } from "@/lib/actions";
 import type { TileIcon } from "@/lib/dashboard/layout";
 import { defaultStyle } from "@/lib/dashboard/style";
+import { groupByRoom, matchesSearch, searchTerms } from "@/lib/device-search";
+import { kindLabel } from "@/lib/devices/status";
 import type { Device, DeviceCommand } from "@/lib/devices/types";
 import { captureState, sceneable, type HearthScene } from "@/lib/scenes/types";
 import { TILE_ICON_COMPONENTS, iconLabel } from "./tiles/tile-icons";
@@ -57,13 +59,8 @@ function SceneForm({ devices, scene, onSaved }: { devices: Device[]; scene: Hear
   const included = new Set(chosen.map(([id]) => id));
 
   const rooms = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    const groups = new Map<string, Device[]>();
-    for (const device of candidates) {
-      if (included.has(device.id) || (needle && !`${device.name} ${device.room ?? ""}`.toLowerCase().includes(needle))) continue;
-      groups.set(device.room ?? "Other", [...(groups.get(device.room ?? "Other") ?? []), device]);
-    }
-    return [...groups.entries()].sort(([a], [b]) => a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b));
+    const terms = searchTerms(query);
+    return groupByRoom(candidates.filter(device => !included.has(device.id) && matchesSearch([device.name, device.room, kindLabel(device), device.sourceName, device.sourceRoom], terms)), device => device.room, "Other");
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `included` is derived from `chosen`
   }, [candidates, query, chosen]);
 
