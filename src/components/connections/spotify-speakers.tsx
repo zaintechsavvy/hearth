@@ -44,7 +44,7 @@ export function SpotifySpeakers() {
             <li>Spotcast needs Spotify Premium and Home Assistant 2026.4 or newer. Install the maintained Spotcast, by Mincka: in HACS, open the three-dot menu, choose Custom repositories, add https://github.com/Mincka/spotcast as an Integration, then download Spotcast from it.</li>
             <li>Restart Home Assistant. Spotcast doesn&apos;t appear under Add integration until you do.</li>
             <li>In <a href="https://developer.spotify.com/dashboard" {...ext}>Spotify&apos;s developer dashboard</a>, open or create an app and add the Redirect URI https://my.home-assistant.io/redirect/oauth.</li>
-            <li>Go to Settings, Devices and services, Add integration, Spotcast. Enter the app&apos;s Client ID and secret, then link the same Spotify account Hearth uses.</li>
+            <li>Open Home Assistant at its https address (such as your Nabu Casa or Tailscale one), not homeassistant.local, and go to Settings, Devices and services, Add integration, Spotcast. Enter the app&apos;s Client ID and secret, then link the same Spotify account Hearth uses. Spotify answers &ldquo;redirect_uri: Not matching configuration&rdquo; when Home Assistant sends an address the app doesn&apos;t list: add that https address followed by /auth/external/callback to the app, or add a line with my: to configuration.yaml so it sends the my.home-assistant.io one.</li>
             <li>Finish the desktop sign in it asks for: approve, copy the address your browser lands on (an error page at 127.0.0.1:8080 is expected), and paste it in.</li>
           </ol>
           <p className={own.text}>
