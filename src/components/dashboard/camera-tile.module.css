@@ -44,7 +44,7 @@
 
 .caption {
   position: absolute;
-  top: var(--space-3);
+  bottom: var(--space-3);
   left: var(--space-3);
   max-width: calc(100% - 80px);
   display: inline-flex;
@@ -170,7 +170,7 @@
 .notice {
   position: absolute;
   left: var(--space-3);
-  bottom: var(--space-3);
+  top: var(--space-3);
   display: flex;
   align-items: center;
   gap: var(--space-1);

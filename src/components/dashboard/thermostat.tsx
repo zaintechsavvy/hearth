@@ -15,6 +15,7 @@ import { cue } from "@/lib/sound";
 import styles from "./thermostat.module.css";
 
 const COMMIT_DELAY_MS = 700;
+const SETTLE_MS = 10_000;
 const RESTING_GLOW = 0.42;
 const MODES: Record<ThermostatMode, { label: string; icon: LucideIcon }> = {
   off: { label: "Off", icon: Power }, heat: { label: "Heat", icon: Flame }, cool: { label: "Cool", icon: Snowflake },
@@ -66,7 +67,12 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
     animate(coolRest, cooling ? RESTING_GLOW : 0, settle);
   }, [heating, cooling, reduce, warmRest, coolRest]);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const settle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => { clearTimeout(timer.current); clearTimeout(settle.current); }, []);
+
+  // A sent target stays on screen until the thermostat reports it, or for a while if it never does, so the number
+  // doesn't flick back to the old one between the command and Home Assistant's update.
+  if (draft !== null && !pending && device.target === draft) setDraft(null);
 
   useEffect(() => { if (device.mode !== "off") lastOn.current = device.mode; }, [device.mode]);
 
@@ -90,11 +96,13 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
     setError(null);
     try {
       await onCommand({ type: "targetTemperature", value });
+      clearTimeout(settle.current);
+      settle.current = setTimeout(() => setDraft(null), SETTLE_MS);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The thermostat did not accept the change.");
+      setDraft(null);
     } finally {
       setPending(false);
-      setDraft(null);
     }
   }
 
@@ -106,6 +114,7 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
     setDraft(next);
     pulse(direction);
     clearTimeout(timer.current);
+    clearTimeout(settle.current);
     timer.current = setTimeout(() => commit(next), COMMIT_DELAY_MS);
   }
 
