@@ -41,11 +41,15 @@ export function SpotifySpeakers() {
           </p>
           <p className={own.stepTitle}>Spotcast, from the community store</p>
           <ol className={`${own.text} ${own.numbered}`}>
-            <li>Spotcast needs Spotify Premium and Home Assistant 2026.4 or newer. In Home Assistant, open the community store (HACS), find Spotcast, install it, and restart.</li>
+            <li>Spotcast needs Spotify Premium and Home Assistant 2026.4 or newer. Install the maintained Spotcast, by Mincka: in HACS, open the three-dot menu, choose Custom repositories, add https://github.com/Mincka/spotcast as an Integration, then download Spotcast from it.</li>
+            <li>Restart Home Assistant. Spotcast doesn&apos;t appear under Add integration until you do.</li>
             <li>In <a href="https://developer.spotify.com/dashboard" {...ext}>Spotify&apos;s developer dashboard</a>, open or create an app and add the Redirect URI https://my.home-assistant.io/redirect/oauth.</li>
             <li>Go to Settings, Devices and services, Add integration, Spotcast. Enter the app&apos;s Client ID and secret, then link the same Spotify account Hearth uses.</li>
             <li>Finish the desktop sign in it asks for: approve, copy the address your browser lands on (an error page at 127.0.0.1:8080 is expected), and paste it in.</li>
           </ol>
+          <p className={own.text}>
+            If Add integration says Spotcast &ldquo;cannot be added from the UI&rdquo; and to use configuration.yaml, you have the old Spotcast, which is no longer maintained. Remove it in HACS, delete the custom_components/spotcast folder if it is still there, restart, then install Mincka&apos;s as above. Keep any Spotcast entry under Devices and services; deleting it erases its settings.
+          </p>
           <p className={own.text}><a href="https://github.com/Mincka/spotcast/blob/main/docs/config/spotcast_configuration.md" {...ext}>Spotcast&apos;s setup guide</a></p>
           <p className={own.stepTitle}>Google Assistant SDK, built into Home Assistant</p>
           <ol className={`${own.text} ${own.numbered}`}>
