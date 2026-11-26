@@ -13,8 +13,8 @@ describe("settle", () => {
   });
 
   it("leaves other changes alone and drops muted devices", () => {
-    const entries = [entry("lamp", "turned on", 3), entry("lamp", "turned off", 2), entry("bedroom", "noticed someone", 1)];
-    expect(settle(entries, new Set(["bedroom"])).map(item => item.id)).toEqual(["lamp:3", "lamp:2"]);
+    const entries = [entry("lamp", "turned on", 3), entry("door", "opened", 2), entry("bedroom", "noticed someone", 1)];
+    expect(settle(entries, new Set(["bedroom"])).map(item => item.id)).toEqual(["lamp:3", "door:2"]);
   });
 });
 
@@ -58,9 +58,10 @@ describe("settle, back and forth", () => {
     expect(lines[0].group?.map(line => line.what)).toEqual(["turned off", "turned on", "turned off", "turned on"]);
   });
 
-  it("leaves two changes, or ones far apart, as they are", () => {
+  it("tells one on and off as one line, and leaves changes far apart as they are", () => {
     const lines = settle([at("Lamp", "turned off", 40), at("Lamp", "turned on", 20), at("Lamp", "turned off", 5), at("Lamp", "turned on", 0)], new Set());
-    expect(lines.map(line => line.what)).toEqual(["turned off", "turned on", "turned off", "turned on"]);
+    expect(lines.map(line => line.what)).toEqual(["turned off", "turned on", "turned on and off"]);
+    expect(lines[2].group?.map(line => line.what)).toEqual(["turned off", "turned on"]);
   });
 });
 

@@ -8,7 +8,7 @@ const TOGETHER_MS = 5000;
 
 /** Back and forth on the same devices this close together is one stretch of fiddling, told as one line. */
 const REPEAT_GAP_MS = 10 * 60_000;
-const REPEATS = 3;
+const REPEATS = 2;
 /** One level set in steps, a thermostat nudged up three times, with each step this close to the last, is told as one change. */
 const STEPS_GAP_MS = 60_000;
 const SET_TO = /^was set to (-?\d+(?:\.\d+)?)(°\w*|%)$/;
@@ -121,6 +121,6 @@ function repeats(lines: ActivityEntry[]) {
     const pair = pairOf(latest.what)!;
     const both = run.some(line => line.what !== latest.what);
     const tone = run.some(line => line.tone === "alert") ? "alert" : run.some(line => line.tone === "warning") ? "warning" : "info";
-    return [{ ...latest, id: `repeat:${run[0].id}`, what: `${both ? pair[2] : latest.what} ${run.length} times`, tone, group: [...run].reverse() } satisfies ActivityEntry];
+    return [{ ...latest, id: `repeat:${run[0].id}`, what: both && run.length === 2 ? pair[2] : `${both ? pair[2] : latest.what} ${run.length} times`, tone, group: [...run].reverse() } satisfies ActivityEntry];
   }).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 }
