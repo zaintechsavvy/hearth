@@ -25,7 +25,7 @@
   transition: background-color var(--duration-fast) var(--ease-standard);
 }
 
-.chip:hover:not(:disabled) {
+.chip:hover:not(:disabled, [aria-checked="true"]) {
   background: oklch(50% 0 0 / .14);
 }
 

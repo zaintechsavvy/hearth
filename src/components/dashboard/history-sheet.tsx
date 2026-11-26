@@ -57,7 +57,7 @@ function Body({ device }: { device: ChartedDevice }) {
         unit={unit}
         height={220}
         loading={isLoading && !data}
-        emptyLabel={error ? "History is unavailable right now." : "No readings yet. Hearth records them from now on."}
+        emptyLabel={error ? "History is unavailable right now." : data && !data.recording ? "No readings yet. They come from your integration's history, which fills in as the value changes." : "No readings yet. Hearth records them from now on."}
         formatValue={value => format(value)}
         formatTick={value => format(value)}
         legend={false}

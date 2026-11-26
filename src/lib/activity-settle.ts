@@ -9,6 +9,10 @@ const TOGETHER_MS = 5000;
 /** Back and forth on the same devices this close together is one stretch of fiddling, told as one line. */
 const REPEAT_GAP_MS = 10 * 60_000;
 const REPEATS = 3;
+/** One level set in steps, a thermostat nudged up three times, with each step this close to the last, is told as one change. */
+const STEPS_GAP_MS = 60_000;
+const SET_TO = /^was set to (-?\d+(?:\.\d+)?)(°\w*|%)$/;
+
 /** Changes that undo each other, and how a stretch of them reads: "turned on and off". */
 const PAIRS = [["turned on", "turned off", "turned on and off"], ["opened", "closed", "opened and closed"], ["locked", "unlocked", "locked and unlocked"]] as const;
 
@@ -51,7 +55,43 @@ export function settle(entries: ActivityEntry[], muted: ReadonlySet<string>) {
     const order = all.map((name, index) => ({ name, id: [...ids, entry.deviceId as string][index] })).sort((a, b) => a.name.localeCompare(b.name));
     merged[merged.length - 1] = { ...group, name: names(order.map(item => item.name)), room: group.room === entry.room ? group.room : null, deviceIds: order.map(item => item.id), tone: group.tone === "info" ? entry.tone : group.tone };
   }
-  return repeats(merged).reverse();
+  return repeats(steps(merged)).reverse();
+}
+
+/**
+ * Lines, oldest first, with each run of one device set to a new level step by step folded into one line from the
+ * level before the first step to the last: "was set from 25° to 26.5°C". The first step's own start is one step back.
+ */
+function steps(lines: ActivityEntry[]) {
+  const out: ActivityEntry[] = [];
+  let run: ActivityEntry[] = [];
+  const flush = () => {
+    if (run.length < 2) out.push(...run);
+    else {
+      const values = run.map(line => Number(SET_TO.exec(line.what)![1]));
+      const step = values[1] - values[0];
+      const steady = step !== 0 && values.every((value, index) => index === 0 || Math.abs(value - values[index - 1] - step) < 1e-9);
+      const unit = SET_TO.exec(run[run.length - 1].what)![2];
+      const latest = run[run.length - 1];
+      const from = steady ? `${Math.round((values[0] - step) * 10) / 10}${unit === "%" ? "%" : "°"} ` : "";
+      out.push({ ...latest, id: `steps:${run[0].id}`, what: steady ? `was set from ${from}to ${values[values.length - 1]}${unit}` : latest.what, group: [...run].reverse() });
+    }
+    run = [];
+  };
+  for (const line of lines) {
+    const last = run[run.length - 1];
+    const joins = last && SET_TO.test(line.what) && line.deviceId && line.deviceId === last.deviceId && !line.deviceIds && line.by === last.by
+      && (line.via ?? null) === (last.via ?? null) && Date.parse(line.at) - Date.parse(last.at) <= STEPS_GAP_MS;
+    if (!joins) {
+      flush();
+      if (SET_TO.test(line.what) && line.deviceId && !line.deviceIds) { run = [line]; continue; }
+      out.push(line);
+      continue;
+    }
+    run.push(line);
+  }
+  flush();
+  return out;
 }
 
 /** Lines, oldest first, with each stretch of the same devices switched back and forth folded into one. */

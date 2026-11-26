@@ -614,7 +614,9 @@ export class HomeAssistantProvider implements Provider {
     const climate = entityId.startsWith("climate.");
     if (!climate && !entityId.startsWith("sensor.")) return null;
     const params = new URLSearchParams({ filter_entity_id: entityId, end_time: to.toISOString() });
-    if (!climate) {
+    // A thermostat's room temperature is an attribute, which Home Assistant leaves out of its significant changes.
+    if (climate) params.set("significant_changes_only", "0");
+    else {
       params.set("minimal_response", "");
       params.set("no_attributes", "");
     }

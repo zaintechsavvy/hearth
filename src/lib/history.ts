@@ -3,6 +3,7 @@ import { and, asc, eq, gte } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { reading } from "@/lib/db/schema";
 import { deviceProvider } from "@/lib/home";
+import { isServerless } from "@/lib/setup-check";
 import type { HistoryPoint } from "@/lib/integrations/types";
 import { downsample } from "./downsample";
 
@@ -16,6 +17,8 @@ export interface History {
   average: number | null;
   /** Where the points came from: the integration's own history, or Hearth's recorder. */
   source: "integration" | "hearth";
+  /** Whether Hearth keeps readings of its own here; a serverless host has no recorder running between requests. */
+  recording: boolean;
 }
 
 export async function historyFor(userId: string, deviceId: string, range: HistoryRange): Promise<History | null> {
@@ -29,12 +32,15 @@ export async function historyFor(userId: string, deviceId: string, range: Histor
   } catch {
     points = null;
   }
-  if (!points?.length) {
-    source = "hearth";
+  if (!points || points.length < 2) {
     const rows = await db.select({ at: reading.at, value: reading.value }).from(reading)
       .where(and(eq(reading.userId, userId), eq(reading.deviceId, deviceId), gte(reading.at, new Date(from)))).orderBy(asc(reading.at));
-    points = rows.map(row => ({ t: row.at.getTime(), v: row.value }));
+    if (rows.length > (points?.length ?? 0)) {
+      source = "hearth";
+      points = rows.map(row => ({ t: row.at.getTime(), v: row.value }));
+    }
   }
+  points ??= [];
   const shown = downsample(points, from, to);
   const values = points.map(point => point.v);
   return {
@@ -43,5 +49,6 @@ export async function historyFor(userId: string, deviceId: string, range: Histor
     max: values.length ? Math.max(...values) : null,
     average: values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length * 10) / 10 : null,
     source,
+    recording: !isServerless(),
   };
 }

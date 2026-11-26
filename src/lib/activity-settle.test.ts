@@ -63,3 +63,25 @@ describe("settle, back and forth", () => {
     expect(lines.map(line => line.what)).toEqual(["turned off", "turned on", "turned off", "turned on"]);
   });
 });
+
+describe("settle, steps", () => {
+  const set = (value: number, second: number, by: string | null = "Alex"): ActivityEntry => ({
+    id: `home:${second}`, at: new Date(Date.UTC(2026, 9, 19, 12, 0, second)).toISOString(), deviceId: "home", name: "Home", room: null, what: `was set to ${value}°C`, category: "climate", tone: "info", by,
+  });
+
+  it("tells a thermostat nudged up step by step as one change from where it started", () => {
+    const [line] = settle([set(26.5, 20), set(26, 10), set(25.5, 0)], new Set());
+    expect(line.what).toBe("was set from 25° to 26.5°C");
+    expect(line.group?.map(item => item.id)).toEqual(["home:20", "home:10", "home:0"]);
+  });
+
+  it("keeps changes a while apart, and by different people, as their own lines", () => {
+    const apart = settle([{ ...set(26, 0), at: new Date(Date.UTC(2026, 9, 19, 12, 5)).toISOString(), id: "late" }, set(25.5, 0)], new Set());
+    expect(apart.map(line => line.what)).toEqual(["was set to 26°C", "was set to 25.5°C"]);
+    expect(settle([set(26, 10, "Sam"), set(25.5, 0)], new Set())).toHaveLength(2);
+  });
+
+  it("says only where it ended when the steps were uneven", () => {
+    expect(settle([set(24, 20), set(26, 10), set(25.5, 0)], new Set())[0].what).toBe("was set to 24°C");
+  });
+});
