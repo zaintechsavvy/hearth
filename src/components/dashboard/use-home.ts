@@ -65,9 +65,32 @@ function predict(device: Device, command: DeviceCommand): Device {
 }
 
 /** How long a command just sent outranks a pushed snapshot that still shows the device as it was. */
-const SETTLE_MS = 4000;
-/** Commands sent from this screen, kept until a snapshot agrees with them or they age out. */
-const recent = new Map<string, { command: DeviceCommand; at: number }>();
+const SETTLE_MS = 8000;
+/**
+ * How long a command still outranks snapshots once one has agreed with it. Many integrations report the commanded
+ * state at once, then a poll of the device itself that still has the old one, then the new one; this rides out that
+ * stale report instead of letting the slider spring back.
+ */
+const AGREED_MS = 2500;
+/** Commands sent from this screen, kept until snapshots have agreed with them for a while, or they age out. */
+const recent = new Map<string, { command: DeviceCommand; at: number; agreedAt?: number }>();
+
+/** Whether a snapshot shows a command done; a light reports a brightness a point off what it was sent. */
+function agrees(device: Device, command: DeviceCommand) {
+  if (command.type === "brightness" && device.kind === "light") return device.on && Math.abs(device.brightness - command.value) <= 1;
+  return same(applyCommand(device, command), device);
+}
+
+/** Whether a sent command still outranks `device` as a snapshot reports it, noting when a snapshot first agrees. */
+export function outranks(device: Device, sent: { command: DeviceCommand; at: number; agreedAt?: number }, now: number) {
+  if (now - sent.at > SETTLE_MS) return false;
+  if (agrees(device, sent.command)) {
+    sent.agreedAt ??= now;
+    return false;
+  }
+  return sent.agreedAt === undefined || now - sent.agreedAt < AGREED_MS;
+}
+const finished = (sent: { at: number; agreedAt?: number }, now: number) => now - sent.at > SETTLE_MS || (sent.agreedAt !== undefined && now - sent.agreedAt >= AGREED_MS);
 const same = (a: Device, b: Device) => JSON.stringify(a) === JSON.stringify(b);
 /** Tells every reader of the home that the pending commands changed, so each shows them at once. */
 const pending = { version: 0, listeners: new Set<() => void>() };
@@ -83,7 +106,7 @@ function withPending(snapshot: HomeSnapshot): HomeSnapshot {
   let changed = false;
   const devices = snapshot.devices.map(device => {
     const sent = recent.get(device.id);
-    if (!sent || now - sent.at > SETTLE_MS || same(applyCommand(device, sent.command), device)) return device;
+    if (!sent || !outranks(device, sent, now)) return device;
     changed = true;
     return predict(device, sent.command);
   });
@@ -102,8 +125,8 @@ function reconcile(snapshot: HomeSnapshot): HomeSnapshot {
   const devices = snapshot.devices.map(device => {
     const sent = recent.get(device.id);
     if (!sent) return device;
-    if (same(applyCommand(device, sent.command), device) || now - sent.at > SETTLE_MS) {
-      recent.delete(device.id);
+    if (!outranks(device, sent, now)) {
+      if (finished(sent, now)) recent.delete(device.id);
       return device;
     }
     changed = true;
