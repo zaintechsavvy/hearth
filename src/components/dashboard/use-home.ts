@@ -78,6 +78,11 @@ const recent = new Map<string, { command: DeviceCommand; at: number; agreedAt?: 
 /** Whether a snapshot shows a command done; a light reports a brightness a point off what it was sent. */
 function agrees(device: Device, command: DeviceCommand) {
   if (command.type === "brightness" && device.kind === "light") return device.on && Math.abs(device.brightness - command.value) <= 1;
+  // A timer's end is reckoned on the server a moment after the prediction's, so only whether one runs must match.
+  if (command.type === "thermostatFanTimer" && device.kind === "thermostat") {
+    const predicted = applyCommand(device, command);
+    return device.fanMode === predicted.fanMode && !device.fanUntil === !predicted.fanUntil;
+  }
   return same(applyCommand(device, command), device);
 }
 

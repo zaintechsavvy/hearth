@@ -78,6 +78,7 @@ export function commandCue(device: Device, command: DeviceCommand): Cue | null {
     case "thermostatMode":
     case "thermostatPreset":
     case "thermostatFan":
+    case "thermostatFanTimer":
     case "vacuumFanSpeed":
     case "output":
     case "mute":

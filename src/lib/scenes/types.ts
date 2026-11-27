@@ -1,6 +1,7 @@
 import { hsToHex } from "@/lib/devices/color";
 import type { TileIcon } from "@/lib/dashboard/layout";
 import { applyCommand, type Device, type DeviceCommand } from "@/lib/devices/types";
+import { fanDuration } from "@/lib/devices/fan-timer";
 
 export interface SceneAction {
   deviceId: string;
@@ -101,6 +102,8 @@ export function describeAction(device: Device, command: DeviceCommand) {
       return `Preset ${command.preset}`;
     case "thermostatFan":
       return `Fan ${command.mode}`;
+    case "thermostatFanTimer":
+      return command.minutes === 0 ? "Fan off" : command.minutes === null ? "Fan on" : `Fan for ${fanDuration(command.minutes)}`;
     case "alarm":
       return command.action === "disarm" ? "Disarm" : `Arm ${command.mode ?? "home"}`;
     case "todo":

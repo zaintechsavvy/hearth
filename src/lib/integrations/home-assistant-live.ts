@@ -147,6 +147,25 @@ export class HomeAssistantLive {
     };
   }
 
+  /**
+   * Sends a command that answers only once it finishes, such as a script with a delay, and returns once Home
+   * Assistant has had `settleMs` to refuse it. Home Assistant keeps running it after this connection closes.
+   */
+  async start(message: Record<string, unknown>, settleMs = 1500) {
+    const release = this.subscribe(() => {});
+    try {
+      if (!(await this.waitUntilReady(COMMAND_TIMEOUT_MS))) throw new IntegrationError(this.error ?? "Home Assistant did not answer.");
+      const refused = await new Promise<Result | null>(resolve => {
+        const id = this.send(message);
+        const timer = setTimeout(() => { this.waiting.delete(id); resolve(null); }, settleMs);
+        this.waiting.set(id, { result: answer => { clearTimeout(timer); this.waiting.delete(id); resolve(answer.success ? null : answer); } });
+      });
+      if (refused) throw new HomeAssistantCommandError(refused.error?.message ?? "Home Assistant refused the request.", refused.error?.code);
+    } finally {
+      release();
+    }
+  }
+
   private notify() {
     for (const listener of this.listeners) listener();
   }
