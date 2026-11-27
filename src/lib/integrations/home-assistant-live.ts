@@ -78,6 +78,11 @@ export class HomeAssistantLive {
     return this.ready ? [...this.states.values()] : null;
   }
 
+  /** One entity's latest state, or undefined until the first full load has arrived. */
+  state(entityId: string): HassState | null | undefined {
+    return this.ready ? this.states.get(entityId) ?? null : undefined;
+  }
+
   /** Connects for a moment if needed and resolves once states have loaded, or after the timeout. */
   waitUntilReady(timeoutMs: number) {
     if (this.ready) return Promise.resolve(true);

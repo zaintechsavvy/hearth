@@ -74,7 +74,7 @@ function formatReading(device: SensorDevice) {
 
 /** What the tile says, and whether it is in its noteworthy state (unlocked, open, motion, a recent ring). */
 function describe(device: StateDevice, now: number): { text: string; active: boolean } {
-  if (!device.available) return { text: "Unavailable", active: false };
+  if (!device.available) return { text: "Not responding", active: false };
   switch (device.kind) {
     case "lock":
       return { text: LOCK_TEXT[device.state], active: device.state !== "locked" && device.state !== "locking" };

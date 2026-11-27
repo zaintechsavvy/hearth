@@ -246,6 +246,8 @@ const TURN_ON = 128;
 /** Each Home Assistant's actions and Google Cast media players, by its address, for waking speakers into Spotify Connect. */
 const wakeByServer = new Map<string, { at: number; actions: Set<string>; cast: Set<string> | null }>();
 const WAKE_CALL_MS = 30_000;
+/** How long a forced poll of an unavailable entity may take before the command is given up. */
+const REACH_MS = 15_000;
 /** Lists the Google Cast integration's media players, which the REST API cannot otherwise tell apart before the live socket opens. */
 const CAST_TEMPLATE = "{{ integration_entities('cast') | select('match', 'media_player[.]') | list | tojson }}";
 
@@ -382,11 +384,24 @@ const PEOPLE_TEMPLATE = "{% for person in states.person %}{{ person.attributes.u
 
 /** Logbook rows as entries, crediting the automation or script that made a change, or the person whose Home Assistant user did. */
 export function logbookEntries(rows: HassLogbookRow[], people: Map<string, string>): LogbookEntry[] {
+  // The state each entity last had while reachable, and which are unreachable now, so a return reads as one.
+  const settled = new Map<string, string>();
+  const away = new Set<string>();
   return rows.flatMap(row => {
     const at = typeof row.when === "number" ? new Date(row.when * 1000) : new Date(row.when);
-    const what = logbookWords(row);
+    let what = logbookWords(row);
     const name = row.name ?? row.entity_id;
+    if (row.entity_id && row.state) {
+      const before = settled.get(row.entity_id);
+      if (row.state === "unavailable") away.add(row.entity_id);
+      else {
+        // Back in the state it left in, or in one not known, it only came back; in another, someone changed it meanwhile.
+        if (away.delete(row.entity_id) && (before === undefined || before === row.state || row.state === "unknown")) what = "came back online";
+        if (row.state !== "unknown") settled.set(row.entity_id, row.state);
+      }
+    }
     if (Number.isNaN(at.getTime()) || !name || !what) return [];
+    if (what === "came back online" || what === "went offline") return [{ at, nativeId: row.entity_id ?? null, name, what, by: null, via: null }];
     const automated = row.context_domain === "automation" || row.context_domain === "script";
     const by = automated && row.context_name ? `the ${row.context_name} ${row.context_domain}`
       : row.context_user_id ? people.get(row.context_user_id) ?? null : null;
@@ -846,7 +861,21 @@ export class HomeAssistantProvider implements Provider {
     return this.request(`api/services/${domain}/${service}`, { method: "POST", body: JSON.stringify(data), ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}) });
   }
 
+  /**
+   * Home Assistant skips a service call to an unavailable entity without an error, so the call would look sent and do
+   * nothing. A HomeKit accessory that dozes between polls is unavailable most of the time, and a forced poll often
+   * reaches it, so one is asked for first; if the entity is still unavailable, the person is told rather than ignored.
+   */
+  private async reach(entityId: string) {
+    const state = this.live.state(entityId) ?? await this.request<HassState>(`api/states/${entityId}`).catch(() => null);
+    if (state?.state !== "unavailable") return;
+    await this.call("homeassistant", "update_entity", { entity_id: entityId }, REACH_MS).catch(() => {});
+    const after = await this.request<HassState>(`api/states/${entityId}`);
+    if (after.state === "unavailable") throw new IntegrationError(`${str(after.attributes.friendly_name) ?? "This device"} is not responding to Home Assistant. Try it from its own remote or app, or check that it has power.`);
+  }
+
   async execute(entityId: string, command: DeviceCommand) {
+    await this.reach(entityId);
     const domain = entityId.split(".")[0];
     const target = { entity_id: entityId };
     switch (command.type) {

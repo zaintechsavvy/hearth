@@ -33,7 +33,7 @@ const levelOf = (device: ToggleDevice) => device.kind === "light" ? device.brigh
 const hasLevel = (device: ToggleDevice) => (device.kind === "light" && device.dimmable) || (device.kind === "fan" && device.adjustable);
 
 export function describeDevice(device: ToggleDevice, shownLevel = levelOf(device)) {
-  if (!device.available) return "Unavailable";
+  if (!device.available) return "Not responding";
   if (!device.on || shownLevel === 0) return "Off";
   return hasLevel(device) ? `${shownLevel}%` : "On";
 }
@@ -47,7 +47,8 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
   const style = defaultStyle(device);
   const Icon = TILE_ICON_COMPONENTS[config.icon ?? style.icon];
   const color = config.color ?? style.color;
-  const disabled = !device.available || !interactive;
+  // Home Assistant is asked to reach an unavailable device before each command, so a dozing one can still be switched.
+  const disabled = !interactive;
   const spin = device.kind === "fan" && device.on && SPINNING_ICONS.has(config.icon ?? style.icon) ? { "--spin-duration": `${Math.max(0.5, 3 - device.speed / 100 * 2.4)}s` } as CSSProperties : undefined;
   const controls = device.kind === "light" && hasControls(device) && interactive && device.available ? onOpenControls : undefined;
   const press = useLongPress(onHold === undefined ? controls : onHold ?? undefined);
@@ -93,7 +94,7 @@ export function ToggleTile({ device, config, onCommand, interactive = true, onOp
                 <span className={level.foot}>
                   {icon(22)}
                   <span className={styles.name}>{device.name}</span>
-                  {error && <span className={`${styles.meta} ${styles.error}`}>{error}</span>}
+                  {error ? <span className={`${styles.meta} ${styles.error}`}>{error}</span> : !device.available && <span className={styles.meta}>{describeDevice(device)}</span>}
                 </span>
               </LevelOverlay>
             )}

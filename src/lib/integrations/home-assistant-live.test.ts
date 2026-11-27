@@ -126,7 +126,7 @@ describe("HomeAssistantLive", () => {
     });
     const provider = new HomeAssistantProvider("play-order", { url: "http://127.0.0.1:1", token: "t" });
     await provider.execute("media_player.spotify", { type: "playMedia", id: "spotify:playlist:1", mediaType: "playlist", output: "Kitchen speaker" });
-    expect(calls).toEqual(["/api/services/media_player/play_media", "/api/services/media_player/select_source"]);
+    expect(calls.filter(path => path.startsWith("/api/services/"))).toEqual(["/api/services/media_player/play_media", "/api/services/media_player/select_source"]);
     fetch.mockRestore();
   });
 

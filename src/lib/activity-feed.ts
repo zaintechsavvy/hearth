@@ -122,8 +122,12 @@ async function windowPage(home: string, filters: SQL[], sources: { row: typeof i
     const device = row.deviceId ? devices.get(row.deviceId) : undefined;
     return { ...row, at: row.at.toISOString(), name: row.name || device?.name || "A device", room: row.room ?? device?.room ?? null };
   })).map(entry => {
-    const match = entry.by ? undefined : theirsAll.find(other => sameChange(entry, other));
-    return match ? { ...entry, by: match.by, via: match.via } : entry;
+    const back = entry.what === "came back online";
+    const match = entry.by ? undefined : theirsAll.find(other => sameChange(entry, other) && !(back && other.what === "went offline"));
+    if (!match) return entry;
+    // Hearth sees only that a device came back; the integration knows when it came back because someone switched it at the device.
+    const changed = back && match.what !== entry.what;
+    return changed ? { ...entry, what: match.what, category: match.category, tone: match.tone, by: match.by, via: match.via } : { ...entry, by: match.by, via: match.via };
   });
   const unseen = theirsAll.filter(entry => {
     const time = Date.parse(entry.at);

@@ -31,7 +31,7 @@ export const ALARM_TEXT: Record<AlarmState, string> = {
 
 /** The current state in a few words, for lists and summaries. */
 export function statusText(device: Device): string {
-  if (!device.available) return "Unavailable";
+  if (!device.available) return "Not responding";
   switch (device.kind) {
     case "light":
       return device.on ? (device.dimmable ? `On · ${device.brightness}%` : "On") : "Off";

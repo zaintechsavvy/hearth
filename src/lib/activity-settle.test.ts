@@ -18,6 +18,20 @@ describe("settle", () => {
   });
 });
 
+describe("settle, outages", () => {
+  const now = Date.UTC(2026, 9, 19, 13, 0);
+
+  it("drops a device dozing offline for a few minutes, coming back or not yet back", () => {
+    const entries = [entry("fan", "went offline", 58), entry("fan", "came back online", 31), entry("fan", "went offline", 30), entry("lamp", "turned on", 20)];
+    expect(settle(entries, new Set(), now).map(item => item.id)).toEqual(["lamp:20"]);
+  });
+
+  it("keeps an outage of ten minutes or more, and a change made while away", () => {
+    const entries = [entry("fan", "turned on", 45), entry("fan", "went offline", 44), entry("fan", "came back online", 20), entry("fan", "went offline", 5)];
+    expect(settle(entries, new Set(), now).map(item => item.id)).toEqual(["fan:45", "fan:20", "fan:5"]);
+  });
+});
+
 describe("settle, together", () => {
   const at = (deviceId: string, what: string, second: number, by: string | null = "Dana"): ActivityEntry => ({
     id: `${deviceId}:${second}`, at: new Date(Date.UTC(2026, 9, 19, 12, 0, second)).toISOString(), deviceId, name: deviceId, room: "Kitchen", what, category: "lights", tone: "info", by,

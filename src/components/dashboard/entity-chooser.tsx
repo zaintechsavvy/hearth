@@ -94,7 +94,7 @@ export function EntityChooser({ candidates, current, onChoose, empty }: EntityCh
           {item.id === current && <Badge tone="info" size="sm">Linked</Badge>}
           {item.placed && item.id !== current && <Badge size="sm">On dashboard</Badge>}
           {item.auxiliary && <Badge size="sm">Settings or diagnostics</Badge>}
-          {!item.available && <Badge tone="warning" size="sm">Unavailable</Badge>}
+          {!item.available && <Badge tone="warning" size="sm">Not responding</Badge>}
         </span>
       </button>
     );

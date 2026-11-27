@@ -30,6 +30,7 @@ describe("mapHassState", () => {
 
   it("marks unavailable entities and ignores unsupported domains", () => {
     expect(mapHassState("ha", { entity_id: "switch.plug", state: "unavailable", attributes: {} }, "C")).toMatchObject({ kind: "switch", available: false });
+    expect(mapHassState("ha", { entity_id: "fan.standing", state: "unknown", attributes: {} }, "C")).toMatchObject({ kind: "fan", available: true, on: false });
     expect(mapHassState("ha", { entity_id: "sensor.humidity", state: "40", attributes: {} }, "C")).toBeNull();
   });
 
@@ -138,6 +139,29 @@ describe("logbookEntries", () => {
       ["light.kitchen", "turned off", "Sam", "in Home Assistant"],
       ["switch.lamp", "turned on", null, "at the device"],
       ["light.porch", "turned on", "the Sunset automation", null],
+    ]);
+  });
+});
+
+describe("logbookEntries, outages", () => {
+  it("tells a return to the same state as coming back, and a different one as the change made at the device", () => {
+    const entries = logbookEntries([
+      { when: 1791964800, entity_id: "fan.standing", state: "off" },
+      { when: 1791964860, entity_id: "fan.standing", state: "unavailable" },
+      { when: 1791964920, entity_id: "fan.standing", state: "off" },
+      { when: 1791964980, entity_id: "fan.standing", state: "unavailable" },
+      { when: 1791965040, entity_id: "fan.standing", state: "on" },
+      { when: 1791965100, entity_id: "light.porch", state: "unavailable" },
+      { when: 1791965160, entity_id: "light.porch", state: "on" },
+    ], new Map());
+    expect(entries.map(entry => [entry.nativeId, entry.what, entry.via])).toEqual([
+      ["fan.standing", "turned off", "at the device"],
+      ["fan.standing", "went offline", null],
+      ["fan.standing", "came back online", null],
+      ["fan.standing", "went offline", null],
+      ["fan.standing", "turned on", "at the device"],
+      ["light.porch", "went offline", null],
+      ["light.porch", "came back online", null],
     ]);
   });
 });
