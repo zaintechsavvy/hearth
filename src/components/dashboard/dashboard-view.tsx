@@ -80,6 +80,9 @@ import { itemsOf } from "@/lib/widgets/items";
 import { publishWallRooms, subscribeWallRooms, takeWantedRoom, wallRooms } from "@/lib/wall-rooms";
 import styles from "./dashboard.module.css";
 
+/** Controls a finger drags sideways, such as a volume or position slider and the thermostat dial, which never turn the page. Arc's slider marks only its thumb, so its control is found as the element holding the thumbs. */
+const SIDEWAYS_CONTROL = '[role="slider"], div:has(> div > [data-thumb]), input[type="range"], [data-no-swipe]';
+
 const SAVE_DELAY_MS = 500;
 const PAGE_KEY = "hearth-page";
 const SWIPE_PX = 70;
@@ -366,7 +369,8 @@ export function DashboardView({ userName, canEdit = true }: { userName: string; 
   };
   const swipeHandlers = !editing && screens.length > 1 ? {
     onPointerDownCapture: (event: React.PointerEvent) => {
-      if (event.pointerType === "touch") swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY };
+      if (event.pointerType !== "touch" || (event.target as Element).closest(SIDEWAYS_CONTROL)) return;
+      swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY };
     },
     onPointerMoveCapture: (event: React.PointerEvent) => {
       if (swipe.current?.id === event.pointerId) Object.assign(swipe.current, { lastX: event.clientX, lastY: event.clientY });
