@@ -125,7 +125,7 @@
   color: var(--danger);
 }
 
-/* Compact: the arrows sit either side of the reading, so nothing stacks into the name or the modes. */
+/* Large without a dial: the arrows above and below the reading. */
 .stack {
   min-height: 0;
   display: grid;
@@ -134,23 +134,36 @@
   gap: var(--space-1);
 }
 
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(2px, 3cqi, 14px);
-}
-
 .root[data-layout="compact"] .step {
-  width: clamp(36px, 14cqi, 48px);
-  height: clamp(36px, 14cqi, 48px);
+  width: clamp(36px, 15cqi, 48px);
+  height: clamp(34px, 13cqi, 44px);
 }
 
 .root[data-layout="compact"] .reading {
-  font-size: clamp(36px, 24cqi, 64px);
+  font-size: clamp(34px, 22cqi, 60px);
 }
 
-/* Wide: the reading on the left, the arrows and power to the right, and the modes along the bottom. */
+.root[data-layout="compact"] .panel {
+  gap: var(--space-2);
+}
+
+.root[data-layout="compact"] .readout {
+  gap: 2px;
+  min-width: 0;
+}
+
+.root[data-layout="compact"] .status {
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.root[data-layout="compact"] .steps {
+  gap: 0;
+  margin-right: calc(var(--space-2) * -1);
+}
+
+/* Compact and wide: the reading on the left, where its first digit always starts, and the arrows stacked to its right. */
 .panel {
   min-height: 0;
   display: grid;
@@ -204,9 +217,10 @@
   color: var(--foreground);
 }
 
+/* Left-aligned in one row: a tile has a fixed height, so a second row would squeeze the dial instead. */
 .modes {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--space-1);
   min-width: 0;
 }
@@ -252,7 +266,6 @@
 }
 
 .root[data-layout="wide"] .mode {
-  flex: 1;
   height: clamp(40px, 15cqh, 52px);
   font-size: var(--text-base);
 }
@@ -267,6 +280,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .reading, .step, .mode, .power { transition: none; }
+  .spinner { animation-duration: 2s; }
 }
 
 /* A small compact tile keeps the reading and arrows and drops the modes. */
@@ -346,9 +360,34 @@
   display: grid;
 }
 
-.root[data-dial] .reading {
+/* The degree hangs off the digits, so the digits themselves sit on the dial's centre line. */
+.root[data-dial] .dialArea .reading {
+  position: relative;
   font-size: 26cqi;
-  margin-left: .25em;
+}
+
+.root[data-dial] .dialArea .degree {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: .02em;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(1turn); } }
+
+.optionsError {
+  color: var(--danger);
+  font-size: var(--text-sm);
 }
 
 .dialAction {

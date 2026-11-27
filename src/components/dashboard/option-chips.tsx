@@ -14,18 +14,20 @@ interface OptionChipsProps {
   disabled?: boolean;
   /** The words for an option; the integration's own name, tidied, by default. */
   format?: (option: string) => string;
+  /** The chosen option still waiting on the device, which shows a spinner in place of its tick. */
+  busy?: string | null;
   onChoose: (option: string) => void;
 }
 
 /** A labelled row of choices, one of them current, for settings a device names itself, such as presets or suction. The current one is filled and ticked. */
-export function OptionChips({ label, value, options, disabled, format = settingName, onChoose }: OptionChipsProps) {
+export function OptionChips({ label, value, options, disabled, format = settingName, busy = null, onChoose }: OptionChipsProps) {
   return (
     <div className={styles.group}>
       <span className={styles.label}>{label}</span>
       <div role="radiogroup" aria-label={label} className={styles.chips}>
         {options.map(option => (
-          <button key={option} type="button" role="radio" aria-checked={option === value} className={styles.chip} disabled={disabled} onClick={() => option !== value && onChoose(option)}>
-            <span className={styles.check} aria-hidden="true"><Check size={14} strokeWidth={2.25} /></span>
+          <button key={option} type="button" role="radio" aria-checked={option === value} aria-busy={(option === value && busy === option) || undefined} className={styles.chip} disabled={disabled} onClick={() => option !== value && onChoose(option)}>
+            <span className={styles.check} aria-hidden="true">{option === value && busy === option ? <span className={styles.spinner} /> : <Check size={14} strokeWidth={2.25} />}</span>
             {format(option)}
           </button>
         ))}

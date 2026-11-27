@@ -1,55 +1,60 @@
 "use client";
 
 import { useState } from "react";
-import { Slider } from "@/components/arc/slider/slider";
-import { FAN_TIMER_MINUTES, fanDuration, fanMinutesLeft } from "@/lib/devices/fan-timer";
+import { FAN_MARKS, FAN_STOPS, UNTIL_OFF, fanDuration, fanMinutesLeft, fanStopLabel, fanStopMark, nearestFanIndex } from "@/lib/devices/fan-timer";
 import { fanRest, type DeviceCommand, type ThermostatDevice } from "@/lib/devices/types";
 import { useNow } from "./use-now";
+import { usePending } from "./use-pending";
 import { OptionChips, settingName } from "./option-chips";
+import { StopSlider } from "./stop-slider";
+import type { DialTone } from "./thermostat-dial";
 import styles from "./fan-timer.module.css";
 
-const TIMER = "timer";
-const DEFAULT_INDEX = FAN_TIMER_MINUTES.indexOf(30);
-const MARKS = FAN_TIMER_MINUTES.map((minutes, index) => ({ value: index, label: [10, 60, 240, 720].includes(minutes) ? fanDuration(minutes).replace(" min", "m").replace(" h", "h") : undefined }));
 const clock = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
-
-/** The nearest snap point to a running timer's time left, so the slider opens where the timer is. */
-const nearestIndex = (minutes: number) => FAN_TIMER_MINUTES.reduce((best, value, index) => Math.abs(value - minutes) < Math.abs(FAN_TIMER_MINUTES[best] - minutes) ? index : best, 0);
 
 interface FanTimerProps {
   device: ThermostatDevice & { fanTimer: "native" | "scripted" };
-  onCommand: (command: DeviceCommand) => void;
+  /** The thermostat's colour now, which the slider fills with. */
+  tone: DialTone;
+  /** Sends a command; it settles once the thermostat has answered, and has already shown any failure. */
+  onCommand: (command: DeviceCommand) => Promise<void>;
 }
 
-/** A thermostat fan's modes with a timer: run it for a while, until turned off, or back to auto. */
-export function FanTimer({ device, onCommand }: FanTimerProps) {
+/** A thermostat fan's modes. On runs it until it is turned off, or for as long as the slider below says. */
+export function FanTimer({ device, tone, onCommand }: FanTimerProps) {
   const now = useNow(10_000);
+  const [slow, track] = usePending();
+  const [draft, setDraft] = useState<number | null>(null);
   const rest = fanRest(device.fanModes) ?? "auto";
-  const left = device.fanMode === "on" ? fanMinutesLeft(device.fanUntil, now) : null;
-  const [index, setIndex] = useState(() => left ? nearestIndex(left) : DEFAULT_INDEX);
-  const current = left !== null ? TIMER : device.fanMode;
-  const options = [rest, TIMER, "on", ...device.fanModes.filter(mode => mode !== rest && mode !== "on")];
-  const run = (minutes: number | null) => onCommand({ type: "thermostatFanTimer", minutes });
-  const choose = (option: string) => option === TIMER ? run(FAN_TIMER_MINUTES[index]) : option === "on" ? run(null) : option === rest ? run(0) : onCommand({ type: "thermostatFan", mode: option });
-  const label = (option: string) => option === TIMER ? "Timer" : option === "on" ? "Until I turn it off" : settingName(option);
-  const untimed = device.fanMode === "on" && left === null;
+  const options = [rest, "on", ...device.fanModes.filter(mode => mode !== rest && mode !== "on")];
+  const on = device.fanMode === "on";
+  const left = on ? fanMinutesLeft(device.fanUntil, now) : null;
+  const shown = left !== null ? nearestFanIndex(left) : UNTIL_OFF;
+  const send = (option: string, command: DeviceCommand) => void track("fan", option, onCommand(command));
+  const choose = (option: string) => option === "on" ? send("on", { type: "thermostatFanTimer", minutes: null })
+    : option === rest ? send(rest, { type: "thermostatFanTimer", minutes: 0 }) : send(option, { type: "thermostatFan", mode: option });
+  const commit = (index: number) => {
+    setDraft(null);
+    if (index !== shown) send("on", { type: "thermostatFanTimer", minutes: FAN_STOPS[index] });
+  };
+  const minutes = draft === null ? null : FAN_STOPS[draft];
+  const forever = device.fanTimer === "native" ? "Nest stops it after 12 hours" : "No timer";
+  const value = draft !== null ? fanStopLabel(draft) : left !== null ? fanDuration(left) : fanStopLabel(UNTIL_OFF);
+  const detail = draft !== null ? minutes === null ? forever : `Off at ${clock.format(now + minutes * 60_000)}`
+    : left !== null ? `Off at ${clock.format(Date.parse(device.fanUntil!))}` : forever;
 
   return (
-    <div className={styles.fan}>
-      <OptionChips label="Fan" value={current} options={options} disabled={!device.available} format={label} onChoose={choose} />
-      {left !== null && (
-        <div className={styles.timer}>
-          <Slider label="Run for" min={0} max={FAN_TIMER_MINUTES.length - 1} step={1} marks={MARKS} value={index} format={at => fanDuration(FAN_TIMER_MINUTES[at])}
-            onValueChange={setIndex} onValueCommit={at => run(FAN_TIMER_MINUTES[at])} disabled={!device.available} />
-        </div>
-      )}
-      {(left !== null || untimed) && (
-        <div className={styles.running}>
-          <p className={styles.left} aria-live="polite">
-            {left !== null ? `Off at ${clock.format(Date.parse(device.fanUntil!))} · ${fanDuration(left)} left`
-              : device.fanTimer === "native" ? "On, for up to 12 hours" : "On until you turn it off"}
-          </p>
-          <button type="button" className={styles.stop} disabled={!device.available} onClick={() => run(0)}>Stop</button>
+    <div className={styles.fan} data-tone={tone}>
+      <OptionChips label="Fan" value={device.fanMode} options={options} disabled={!device.available} busy={slow.fan}
+        format={option => option === "on" ? "On" : settingName(option)} onChoose={choose} />
+      {on && (
+        <div className={styles.run}>
+          <div className={styles.value} aria-live="polite">
+            <output>{value}</output>
+            <span>{detail}</span>
+          </div>
+          <StopSlider label="Run the fan for" count={FAN_STOPS.length} index={draft ?? shown} disabled={!device.available}
+            valueText={fanStopLabel} marks={FAN_MARKS} markText={fanStopMark} onInput={setDraft} onCommit={commit} />
         </div>
       )}
       {left !== null && device.fanTimer === "scripted" && (

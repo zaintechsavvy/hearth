@@ -1,0 +1,113 @@
+.root {
+  --thumb: 26px;
+  --stop-track: oklch(50% 0 0 / .14);
+  display: grid;
+}
+
+:root[data-theme="dark"] .root {
+  --stop-track: oklch(100% 0 0 / .12);
+}
+
+/* A 44px hit area round a 10px track that fills in the thermostat's tone. */
+.stops {
+  position: relative;
+  height: 44px;
+  touch-action: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+.stops[aria-disabled] {
+  cursor: default;
+  opacity: .5;
+}
+
+.rail {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--thumb) / 2);
+  right: calc(var(--thumb) / 2);
+  height: 10px;
+  margin-top: -5px;
+}
+
+.rail::before,
+.filled {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 5px;
+}
+
+.rail::before {
+  left: calc(var(--thumb) / -2);
+  right: calc(var(--thumb) / -2);
+  background: var(--stop-track);
+}
+
+.filled {
+  left: calc(var(--thumb) / -2);
+  width: calc(var(--at) + var(--thumb) / 2);
+  background: var(--stop-tone, var(--foreground));
+  transition: width 140ms var(--ease-standard), background-color var(--duration-standard) var(--ease-standard);
+}
+
+.dot {
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  opacity: .45;
+  transition: background-color 140ms var(--ease-standard), opacity 140ms var(--ease-standard);
+}
+
+.dot[data-filled] {
+  background: var(--background);
+  opacity: .7;
+}
+
+.thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--at);
+  width: var(--thumb);
+  height: var(--thumb);
+  margin: calc(var(--thumb) / -2) 0 0 calc(var(--thumb) / -2);
+  border-radius: 50%;
+  background: oklch(99% 0 0);
+  box-shadow: 0 1px 2px oklch(0% 0 0 / .2), 0 3px 10px oklch(0% 0 0 / .16), 0 0 0 .5px oklch(0% 0 0 / .08);
+  transition: left 140ms var(--ease-standard), transform 180ms var(--ease-standard);
+}
+
+.stops[data-dragging] .thumb { transform: scale(1.12); }
+.stops:focus-visible .thumb { box-shadow: 0 0 0 3px var(--background), 0 0 0 5px var(--foreground); }
+
+.marks {
+  position: relative;
+  height: 16px;
+  margin: -4px 13px 0;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.marks span {
+  position: absolute;
+  transform: translateX(-50%);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.marks span:first-child { transform: none; margin-left: -6px; }
+.marks span:last-child { transform: none; right: -6px; left: auto !important; }
+.marks span[data-on] { color: var(--foreground); }
+
+@media (prefers-reduced-motion: reduce) {
+  .filled, .dot, .thumb, .marks span { transition: none; }
+  .stops[data-dragging] .thumb { transform: none; }
+}

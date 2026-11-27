@@ -12,6 +12,7 @@ import { OptionChips } from "./option-chips";
 import { FanTimer } from "./fan-timer";
 import { ThermostatDial, type DialTone } from "./thermostat-dial";
 import { useNow } from "./use-now";
+import { usePending } from "./use-pending";
 import { fanDuration, fanMinutesLeft } from "@/lib/devices/fan-timer";
 import { clamp, type DeviceCommand, type ThermostatDevice, type ThermostatMode } from "@/lib/devices/types";
 import type { TileSize } from "@/lib/dashboard/layout";
@@ -56,6 +57,7 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
   const [draft, setDraft] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [slow, track] = usePending();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const warmRest = useMotionValue(0);
@@ -142,9 +144,14 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
     : heating ? "Heating" : cooling ? "Cooling" : device.mode === "dry" ? "Drying" : device.mode === "fan" ? "Fan only" : "Holding";
   const status = device.available ? [action, indoor].filter(Boolean).join(" · ") : action;
   const press = reduce ? undefined : { scale: 0.92 };
-  const setMode = (mode: ThermostatMode) => void onCommand({ type: "thermostatMode", mode }).catch(cause => setError(cause instanceof Error ? cause.message : "Could not change the mode."));
-  const modes = ORDER.filter(mode => device.modes.includes(mode));
   const fail = (cause: unknown) => setError(cause instanceof Error ? cause.message : "Could not change that.");
+  /** Sends a change that shows at once; it settles when the thermostat answers, having shown any failure. */
+  const send = (command: DeviceCommand) => {
+    setError(null);
+    return onCommand(command).catch(fail);
+  };
+  const setMode = (mode: ThermostatMode) => void track("mode", mode, send({ type: "thermostatMode", mode }));
+  const modes = ORDER.filter(mode => device.modes.includes(mode));
   const options = !preview && (device.presets.length > 0 || device.fanModes.length > 0) && (
     <Popover>
       <PopoverTrigger asChild>
@@ -153,9 +160,12 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className={`${glassSheetClass} ${styles.options}`}>
-        {device.presets.length > 0 && <OptionChips label="Preset" value={device.preset} options={device.presets} disabled={!device.available} onChoose={preset => void onCommand({ type: "thermostatPreset", preset }).catch(fail)} />}
-        {device.fanTimer ? <FanTimer device={{ ...device, fanTimer: device.fanTimer }} onCommand={command => void onCommand(command).catch(fail)} />
-          : device.fanModes.length > 0 && <OptionChips label="Fan" value={device.fanMode} options={device.fanModes} disabled={!device.available} onChoose={mode => void onCommand({ type: "thermostatFan", mode }).catch(fail)} />}
+        {device.presets.length > 0 && <OptionChips label="Preset" value={device.preset} options={device.presets} disabled={!device.available} busy={slow.preset}
+          onChoose={preset => void track("preset", preset, send({ type: "thermostatPreset", preset }))} />}
+        {device.fanTimer ? <FanTimer device={{ ...device, fanTimer: device.fanTimer }} tone={tone} onCommand={send} />
+          : device.fanModes.length > 0 && <OptionChips label="Fan" value={device.fanMode} options={device.fanModes} disabled={!device.available} busy={slow.fan}
+            onChoose={mode => void track("fan", mode, send({ type: "thermostatFan", mode }))} />}
+        {error && <p className={styles.optionsError} role="alert">{error}</p>}
       </PopoverContent>
     </Popover>
   );
@@ -194,9 +204,10 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
     <div role="radiogroup" aria-label="Mode" className={styles.modes}>
       {modes.map(mode => {
         const { label, icon: Icon } = MODES[mode];
+        const busy = device.mode === mode && slow.mode === mode;
         return (
-          <motion.button key={mode} type="button" role="radio" aria-checked={device.mode === mode} className={styles.mode} data-mode={mode} whileTap={press} onClick={() => setMode(mode)} aria-label={label} title={label}>
-            <Icon size={layout === "compact" ? 16 : 18} strokeWidth={1.75} aria-hidden="true" />
+          <motion.button key={mode} type="button" role="radio" aria-checked={device.mode === mode} aria-busy={busy || undefined} className={styles.mode} data-mode={mode} whileTap={press} onClick={() => device.mode !== mode && setMode(mode)} aria-label={label} title={label}>
+            {busy ? <span className={styles.spinner} aria-hidden="true" /> : <Icon size={layout === "compact" ? 16 : 18} strokeWidth={1.75} aria-hidden="true" />}
             {layout !== "compact" && <span>{label}</span>}
           </motion.button>
         );
@@ -246,16 +257,10 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
             </div>
           ) : errorLine}
         </div>
-      ) : layout === "wide" ? (
+      ) : layout === "wide" || layout === "compact" ? (
         <div className={styles.panel}>
           <div className={styles.readout}>{reading}{statusLine}{fanLine}</div>
           <div className={styles.steps}>{up}{down}</div>
-        </div>
-      ) : layout === "compact" ? (
-        <div className={styles.stack}>
-          <div className={styles.row}>{down}{reading}{up}</div>
-          {statusLine}
-          {fanLine}
         </div>
       ) : (
         <div className={styles.stack}>{up}{reading}{statusLine}{fanLine}{down}</div>
