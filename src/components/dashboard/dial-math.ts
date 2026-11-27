@@ -42,10 +42,10 @@ export function arcPath(cx: number, cy: number, radius: number, from: number, to
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${radius} ${radius} 0 ${large} 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 }
 
-/** Ticks a person can read: one per whole degree, or every second or fifth one on a wide range. */
+/** A quiet scale: ticks on whole degrees spaced 1, 2, 5 or 10 apart, the closest that keeps the arc to about a dozen. */
 export function tickValues({ min, max }: DialRange) {
   const span = max - min;
-  const every = span <= 40 ? 1 : span <= 80 ? 2 : 5;
+  const every = [1, 2, 5, 10].find(gap => span / gap <= 12) ?? 10;
   const values: number[] = [];
   for (let value = Math.ceil(min / every) * every; value <= max; value += every) values.push(value);
   return values;

@@ -1,7 +1,7 @@
 /* Sizes are shares of the dial, which is square and as large as its area allows, so one drawing serves every tile. */
 .dial {
   --dial-track: oklch(50% 0 0 / .14);
-  --dial-tick: oklch(50% 0 0 / .32);
+  --dial-tick: oklch(50% 0 0 / .2);
   --dial-tone: color-mix(in oklch, var(--foreground) 62%, transparent);
   position: relative;
   width: min(100cqw, 100cqh);
@@ -17,7 +17,7 @@
 
 :root[data-theme="dark"] .dial {
   --dial-track: oklch(100% 0 0 / .1);
-  --dial-tick: oklch(100% 0 0 / .26);
+  --dial-tick: oklch(100% 0 0 / .16);
 }
 
 .dial[data-tone="warm"] { --dial-tone: oklch(70% .16 50); }

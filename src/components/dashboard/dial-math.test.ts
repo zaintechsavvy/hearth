@@ -40,9 +40,9 @@ describe("the thermostat dial", () => {
     expect(arcPath(100, 100, 80, -135, 0)).toContain(" 0 0 1 100.00 20.00");
   });
 
-  it("ticks every degree on a narrow range and thins out on a wide one", () => {
-    expect(tickValues(celsius)).toHaveLength(21);
-    expect(tickValues(fahrenheit)[0]).toBe(46);
-    expect(tickValues(fahrenheit)).toHaveLength(25);
+  it("keeps the scale to about a dozen ticks on whole degrees", () => {
+    expect(tickValues(celsius)).toEqual([10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]);
+    expect(tickValues(fahrenheit)).toEqual([45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95]);
+    expect(tickValues({ min: 7, max: 35, step: 0.5 }).length).toBeLessThanOrEqual(13);
   });
 });
