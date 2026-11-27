@@ -1,5 +1,5 @@
 import {
-  clamp, deviceId, type BinarySensorClass, type CoverClass, type CoverState, type Device, type DeviceCommand, type EventClass, type LockState, type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode, type MediaPlayerDevice, type MediaState, type RepeatMode, parseDeviceId, type AlarmState, type ArmMode, type TodoItem, type VacuumState,
+  clamp, deviceId, fanRest, fanTimeable, type ThermostatDevice, type BinarySensorClass, type CoverClass, type CoverState, type Device, type DeviceCommand, type EventClass, type LockState, type SceneVariant, type SensorClass, type TemperatureUnit, type ThermostatAction, type ThermostatMode, type MediaPlayerDevice, type MediaState, type RepeatMode, parseDeviceId, type AlarmState, type ArmMode, type TodoItem, type VacuumState,
 } from "@/lib/devices/types";
 import { HomeAssistantCommandError, homeAssistantLive, type HomeAssistantLive } from "./home-assistant-live";
 import { unreachableMessage } from "./reach";
@@ -48,6 +48,22 @@ const SENSOR_CLASSES: Record<string, SensorClass> = {
   carbon_dioxide: "co2", pm25: "pm25",
 };
 const EVENT_CLASSES: Record<string, EventClass> = { doorbell: "doorbell", button: "button", motion: "motion" };
+/** Hearth's note of when a fan timer it started ends: a state it posts to Home Assistant, which keeps it until a restart, as long as the timer itself. */
+const fanTimerMarker = (entityId: string) => `sensor.hearth_fan_timer_${entityId.split(".")[1]}`;
+/** Fired before a fan timer starts or stops, so a timer Hearth started earlier ends without turning the fan back. */
+const FAN_TIMER_EVENT = "hearth_fan_timer";
+
+/**
+ * A thermostat's fan timer and when it ends. Google Nest times its fan itself and reports the end on its own sensor;
+ * any other fan with an on mode is timed by Home Assistant, from Hearth's marker.
+ */
+export function withFanTimer(device: ThermostatDevice, entityId: string, states: Map<string, HassState>, platform: string | undefined, now = Date.now()): ThermostatDevice {
+  if (!fanTimeable(device.fanModes)) return device;
+  const nest = states.get(`sensor.${entityId.split(".")[1]}_fan_timer_timeout`);
+  const ends = [nest?.state, states.get(fanTimerMarker(entityId))?.state].find(value => value && Date.parse(value) > now);
+  return { ...device, fanTimer: platform === "nest" || nest ? "native" : "scripted", fanUntil: device.fanMode === "on" && ends ? new Date(Date.parse(ends)).toISOString() : null };
+}
+
 const SCENE_DOMAINS: Record<string, SceneVariant> = { scene: "scene", script: "script", button: "button", input_button: "button" };
 
 /** Areas are not in the REST state objects; a template renders `entity_id<TAB>area` for every entity in one request. */
@@ -495,9 +511,11 @@ export class HomeAssistantProvider implements Provider {
     const skipped: string[] = [];
     const byId = new Map(states.map(state => [state.entity_id, state]));
     for (const state of states) {
+      if (state.entity_id.startsWith("sensor.hearth_fan_timer_")) continue;
       let device = mapHassState(this.integrationId, state, unit, areas.get(state.entity_id) ?? null);
       // A person's phone battery lives on the tracker that follows them.
       if (device?.kind === "person") device = { ...device, battery: num(byId.get(str(state.attributes.source) ?? "")?.attributes.battery_level) };
+      if (device?.kind === "thermostat") device = withFanTimer(device, state.entity_id, byId, this.live.platforms.get(state.entity_id));
       if (!device) skipped.push(state.entity_id.split(".")[0]);
       else {
         const platform = device.kind === "media_player" ? mediaPlatform(state, this.live.platforms.get(state.entity_id)) : undefined;
@@ -951,7 +969,10 @@ export class HomeAssistantProvider implements Provider {
       case "thermostatPreset":
         return void await this.call("climate", "set_preset_mode", { ...target, preset_mode: command.preset });
       case "thermostatFan":
+        await this.endFanTimer(entityId);
         return void await this.call("climate", "set_fan_mode", { ...target, fan_mode: command.mode });
+      case "thermostatFanTimer":
+        return void await this.fanTimer(entityId, command.minutes);
       case "alarm": {
         const service = command.action === "disarm" ? "alarm_disarm" : `alarm_arm_${command.mode ?? "home"}`;
         return void await this.call("alarm_control_panel", service, { ...target, ...(command.code ? { code: command.code } : {}) });
@@ -961,6 +982,60 @@ export class HomeAssistantProvider implements Provider {
         if (command.action === "remove") return void await this.call("todo", "remove_item", { ...target, item: command.item });
         return void await this.call("todo", "update_item", { ...target, item: command.item, status: command.action === "check" ? "completed" : "needs_action" });
     }
+  }
+
+  /** Ends a timer Hearth started, so it does not turn the fan back later. Both calls need an administrator's token; without one there is no scripted timer to end. */
+  private async endFanTimer(entityId: string) {
+    await Promise.all([
+      this.request(`api/events/${FAN_TIMER_EVENT}`, { method: "POST", body: JSON.stringify({ entity_id: entityId }) }).catch(() => {}),
+      this.request(`api/states/${fanTimerMarker(entityId)}`, { method: "DELETE" }).catch(() => {}),
+    ]);
+  }
+
+  /**
+   * Nest runs its fan for a set time itself. Elsewhere Home Assistant runs a script that waits, then turns the fan
+   * back to how it was, unless the fan changed or another timer started meanwhile. The script lives in Home
+   * Assistant, so it outlasts this request and Hearth's server, but not a restart of Home Assistant.
+   */
+  private async fanTimer(entityId: string, minutes: number | null) {
+    const { attributes } = await this.request<HassState>(`api/states/${entityId}`);
+    const modes = strings(attributes.fan_modes);
+    const rest = fanRest(modes);
+    if (!fanTimeable(modes) || !rest) throw new IntegrationError("This thermostat's fan cannot run on a timer.");
+    await this.endFanTimer(entityId);
+    const target = { entity_id: entityId };
+    if (minutes === 0) return void await this.call("climate", "set_fan_mode", { ...target, fan_mode: rest });
+    if (minutes === null) return void await this.call("climate", "set_fan_mode", { ...target, fan_mode: "on" });
+    await this.live.waitUntilReady(8000);
+    if (this.live.platforms.get(entityId) === "nest") {
+      await this.call("nest", "set_fan_timer", { ...target, duration: { minutes } });
+    } else {
+      const before = str(attributes.fan_mode);
+      await this.call("climate", "set_fan_mode", { ...target, fan_mode: "on" });
+      await this.live.start({
+        type: "execute_script",
+        sequence: [
+          {
+            wait_for_trigger: [
+              { trigger: "event", event_type: FAN_TIMER_EVENT, event_data: target },
+              { trigger: "state", entity_id: entityId, attribute: "fan_mode", from: "on" },
+            ],
+            timeout: { minutes },
+            continue_on_timeout: true,
+          },
+          { condition: "template", value_template: "{{ wait.trigger is none }}" },
+          { action: "climate.set_fan_mode", target, data: { fan_mode: before && before !== "on" ? before : rest } },
+        ],
+      }).catch((error: unknown) => {
+        throw new IntegrationError(error instanceof HomeAssistantCommandError && error.code === "unauthorized"
+          ? "The fan is on, but a timer needs a Home Assistant administrator's token to turn it off again."
+          : "The fan is on, but Home Assistant could not start the timer to turn it off again.");
+      });
+    }
+    const until = new Date(Date.now() + minutes * 60_000).toISOString();
+    await this.request(`api/states/${fanTimerMarker(entityId)}`, {
+      method: "POST", body: JSON.stringify({ state: until, attributes: { device_class: "timestamp", friendly_name: "Hearth fan timer" } }),
+    }).catch(() => {});
   }
 
   /** Range thermostats keep their spread: both setpoints move by the same amount. */

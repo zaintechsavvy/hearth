@@ -12,6 +12,16 @@ describe("devices", () => {
     expect(applyCommand(thermostat, { type: "power", on: true }).mode).toBe("cool");
   });
 
+  it("predicts a fan timer: on with an end, on without one, and back to auto", () => {
+    const fan = { ...thermostat, fanMode: "auto", fanModes: ["auto", "on"], fanTimer: "scripted" as const, fanUntil: null };
+    const timed = applyCommand(fan, { type: "thermostatFanTimer", minutes: 30 });
+    expect(timed.fanMode).toBe("on");
+    expect(Date.parse(timed.fanUntil ?? "") - Date.now()).toBeGreaterThan(29 * 60_000);
+    expect(applyCommand(timed, { type: "thermostatFanTimer", minutes: null })).toMatchObject({ fanMode: "on", fanUntil: null });
+    expect(applyCommand(timed, { type: "thermostatFanTimer", minutes: 0 })).toMatchObject({ fanMode: "auto", fanUntil: null });
+    expect(applyCommand(timed, { type: "thermostatFan", mode: "auto" })).toMatchObject({ fanMode: "auto", fanUntil: null });
+  });
+
   it("splits ids on the first colon only", () => {
     expect(parseDeviceId("abc:light.kitchen")).toEqual({ integrationId: "abc", nativeId: "light.kitchen" });
     expect(parseDeviceId("nope")).toBeNull();

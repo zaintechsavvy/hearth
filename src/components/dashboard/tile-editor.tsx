@@ -120,9 +120,9 @@ const CAMERA_SIZE_NOTES: Partial<Record<TileSize, string>> = {
 
 const THERMOSTAT_SIZE_NOTES: Partial<Record<TileSize, string>> = {
   "2x2": "Arrows beside the reading",
-  "3x3": "Room for every control",
-  "4x2": "Modes along the bottom",
-  "4x3": "A big reading and modes",
+  "3x3": "A dial to drag",
+  "4x2": "Arrows, modes along the bottom",
+  "4x3": "A dial beside the room",
 };
 
 const NO_CAMERA = "__none";

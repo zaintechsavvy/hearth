@@ -91,6 +91,10 @@ export interface ThermostatDevice extends DeviceBase {
   /** How its fan runs, such as auto, low, or high; empty when its fan cannot be set. */
   fanMode: string | null;
   fanModes: string[];
+  /** How a fan timer runs: the thermostat's own, or Home Assistant turning the fan back after a delay. Absent when the fan has no on mode to time. */
+  fanTimer?: "native" | "scripted";
+  /** When a running fan timer ends, as an ISO time; null when the fan runs untimed or not at all. */
+  fanUntil?: string | null;
 }
 
 export type LockState = "locked" | "unlocked" | "locking" | "unlocking" | "jammed" | "open" | "unknown";
@@ -290,6 +294,8 @@ export type DeviceCommand =
   | { type: "vacuumAreas"; areas: string[] }
   | { type: "thermostatPreset"; preset: string }
   | { type: "thermostatFan"; mode: string }
+  /** Runs the fan for `minutes`, or until turned off when null; 0 stops it. */
+  | { type: "thermostatFanTimer"; minutes: number | null }
   /** `code` is the alarm's own code, when it has one. */
   | { type: "alarm"; action: "arm" | "disarm"; mode?: ArmMode; code?: string }
   /** `item` is the item's uid, or the text of a new one. */
@@ -396,7 +402,14 @@ export function applyCommand<T extends Device>(device: T, command: DeviceCommand
     case "thermostatPreset":
       return device.kind === "thermostat" ? { ...device, preset: command.preset } : device;
     case "thermostatFan":
-      return device.kind === "thermostat" ? { ...device, fanMode: command.mode } : device;
+      return device.kind === "thermostat" ? { ...device, fanMode: command.mode, ...("fanUntil" in device ? { fanUntil: null } : {}) } : device;
+    case "thermostatFanTimer":
+      if (device.kind !== "thermostat") return device;
+      return {
+        ...device,
+        fanMode: command.minutes === 0 ? fanRest(device.fanModes) ?? device.fanMode : "on",
+        fanUntil: command.minutes ? new Date(Date.now() + command.minutes * 60_000).toISOString() : null,
+      };
     case "alarm":
       if (device.kind !== "alarm") return device;
       return { ...device, state: command.action === "disarm" ? "disarmed" : command.mode === "away" || command.mode === "vacation" ? "arming" : `armed_${command.mode ?? "home"}` };
@@ -413,6 +426,12 @@ export function livePosition(device: MediaPlayerDevice, now = Date.now()) {
   const at = device.position + elapsed;
   return device.duration ? Math.min(at, device.duration) : at;
 }
+
+/** The mode a timed fan goes back to when it stops: auto where the thermostat has it, otherwise off. */
+export const fanRest = (modes: string[]) => modes.find(mode => mode === "auto") ?? modes.find(mode => mode === "off") ?? null;
+
+/** Whether a fan can be timed: it needs an on mode, and a mode to go back to. */
+export const fanTimeable = (modes: string[]) => modes.includes("on") && fanRest(modes) !== null;
 
 export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));

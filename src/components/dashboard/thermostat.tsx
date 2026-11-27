@@ -9,6 +9,10 @@ import { TextShimmer } from "@/components/arc/text-shimmer/text-shimmer";
 import { motionTokens } from "@/components/arc/lib/motion-tokens";
 import { glassClass, glassSheetClass } from "@/components/glass/glass";
 import { OptionChips } from "./option-chips";
+import { FanTimer } from "./fan-timer";
+import { ThermostatDial, type DialTone } from "./thermostat-dial";
+import { useNow } from "./use-now";
+import { fanDuration, fanMinutesLeft } from "@/lib/devices/fan-timer";
 import { clamp, type DeviceCommand, type ThermostatDevice, type ThermostatMode } from "@/lib/devices/types";
 import type { TileSize } from "@/lib/dashboard/layout";
 import { cue } from "@/lib/sound";
@@ -26,6 +30,8 @@ const ORDER: ThermostatMode[] = ["heat", "cool", "auto", "dry", "fan"];
 /** Compact puts the arrows beside the reading, large stacks them around it, and wide sets the controls to the right with the modes along the bottom. */
 type Layout = "compact" | "large" | "wide";
 const layoutOf = (size?: TileSize): Layout => size === "4x2" || size === "4x3" ? "wide" : size === "3x3" ? "large" : "compact";
+/** Tiles three cells tall have room for a dial a finger can drag; shorter ones keep the arrows. */
+const hasDial = (size?: TileSize) => size === "3x3" || size === "4x3";
 
 export const formatTemperature = (value: number) => Number.isInteger(value) ? String(value) : value.toFixed(1);
 
@@ -41,6 +47,8 @@ interface ThermostatProps {
 export function Thermostat({ device, size, preview = false, onCommand, onOpenHistory }: ThermostatProps) {
   const reduce = useReducedMotion();
   const layout = layoutOf(size);
+  const dial = hasDial(size);
+  const now = useNow(10_000);
   const root = useRef<HTMLElement>(null);
   /** The reading's digits measure their width once, so a resized tile gets fresh ones instead of digits that overlap. */
   const [fit, setFit] = useState(0);
@@ -107,21 +115,32 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
   }
 
   function nudge(direction: 1 | -1) {
+    if (target === null) return;
+    change(clamp(Math.round((target + direction * device.step) / device.step) * device.step, device.min, device.max), true);
+  }
+
+  /** A new target from the arrows, the keys, or the dial; `settled` once it is let go, which sends it after a pause. */
+  function change(next: number, settled: boolean) {
     if (off || target === null) return;
-    const next = clamp(Math.round((target + direction * device.step) / device.step) * device.step, device.min, device.max);
-    if (next === target) return;
-    cue("select", { emphasis: "subtle", direction: direction > 0 ? "forward" : "back" });
-    setDraft(next);
-    pulse(direction);
     clearTimeout(timer.current);
     clearTimeout(settle.current);
+    if (next !== target) {
+      cue("select", { emphasis: "subtle", direction: next > target ? "forward" : "back" });
+      setDraft(next);
+    }
+    if (!settled) return;
+    if (device.target === next) return setDraft(null);
+    if (device.target !== null) pulse(next > device.target ? 1 : -1);
     timer.current = setTimeout(() => commit(next), COMMIT_DELAY_MS);
   }
 
+  const fanLeft = device.fanMode === "on" ? fanMinutesLeft(device.fanUntil, now) : null;
+  const fanNote = fanLeft !== null ? `Fan · ${fanDuration(fanLeft)} left` : device.fanTimer && device.fanMode === "on" ? "Fan on" : null;
+  const tone: DialTone = off ? "off" : heating ? "warm" : cooling ? "cool" : device.mode === "heat" ? "warm" : device.mode === "cool" ? "cool" : "neutral";
   const indoor = device.current === null ? null : `Indoor ${formatTemperature(device.current)}°${device.humidity === null ? "" : ` · ${Math.round(device.humidity)}%`}`;
-  const status = !device.available ? "Unavailable"
-    : device.mode === "off" ? ["Off", indoor].filter(Boolean).join(" · ")
-    : [heating ? "Heating" : cooling ? "Cooling" : device.mode === "dry" ? "Drying" : device.mode === "fan" ? "Fan only" : "Holding", indoor].filter(Boolean).join(" · ");
+  const action = !device.available ? "Unavailable" : device.mode === "off" ? "Off"
+    : heating ? "Heating" : cooling ? "Cooling" : device.mode === "dry" ? "Drying" : device.mode === "fan" ? "Fan only" : "Holding";
+  const status = device.available ? [action, indoor].filter(Boolean).join(" · ") : action;
   const press = reduce ? undefined : { scale: 0.92 };
   const setMode = (mode: ThermostatMode) => void onCommand({ type: "thermostatMode", mode }).catch(cause => setError(cause instanceof Error ? cause.message : "Could not change the mode."));
   const modes = ORDER.filter(mode => device.modes.includes(mode));
@@ -135,7 +154,8 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
       </PopoverTrigger>
       <PopoverContent align="end" className={`${glassSheetClass} ${styles.options}`}>
         {device.presets.length > 0 && <OptionChips label="Preset" value={device.preset} options={device.presets} disabled={!device.available} onChoose={preset => void onCommand({ type: "thermostatPreset", preset }).catch(fail)} />}
-        {device.fanModes.length > 0 && <OptionChips label="Fan" value={device.fanMode} options={device.fanModes} disabled={!device.available} onChoose={mode => void onCommand({ type: "thermostatFan", mode }).catch(fail)} />}
+        {device.fanTimer ? <FanTimer device={{ ...device, fanTimer: device.fanTimer }} onCommand={command => void onCommand(command).catch(fail)} />
+          : device.fanModes.length > 0 && <OptionChips label="Fan" value={device.fanMode} options={device.fanModes} disabled={!device.available} onChoose={mode => void onCommand({ type: "thermostatFan", mode }).catch(fail)} />}
       </PopoverContent>
     </Popover>
   );
@@ -154,7 +174,7 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
   const reading = (
     <p className={styles.reading}>
       {preview ? <span className={styles.number}>{target === null ? "--" : formatTemperature(target)}</span>
-        : <SlotText key={fit} value={target === null ? "--" : formatTemperature(target)} spins={0} duration={0.45} stagger={0.04} announce className={styles.number} />}
+        : <SlotText key={fit} value={target === null ? "--" : formatTemperature(target)} spins={0} duration={0.45} stagger={0.04} announce={!dial} className={styles.number} />}
       <span className={styles.degree} aria-hidden="true">°</span>
     </p>
   );
@@ -163,6 +183,8 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
       {error ? <span className={styles.error}>{error}</span> : <TextShimmer active={pending}>{pending && target !== null ? `Setting to ${formatTemperature(target)}°` : status}</TextShimmer>}
     </p>
   );
+  const fanLine = fanNote && <span className={styles.fanNote}><Fan size={13} strokeWidth={1.75} aria-hidden="true" />{fanNote}</span>;
+  const errorLine = error && <p className={styles.status} aria-live="polite"><span className={styles.error}>{error}</span></p>;
   const power = canPower && (
     <motion.button type="button" className={styles.power} whileTap={press} aria-pressed={!off} onClick={() => setMode(off ? lastOn.current : "off")} aria-label={off ? `Turn ${device.name} on` : `Turn ${device.name} off`} title={off ? "Turn on" : "Turn off"}>
       <Power size={15} strokeWidth={1.75} aria-hidden="true" />
@@ -183,7 +205,7 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
   );
 
   return (
-    <section ref={root} className={`${glassClass()} ${styles.root}`} aria-labelledby={`${device.id}-name`} data-off={off || undefined} data-layout={layout}>
+    <section ref={root} className={`${glassClass()} ${styles.root}`} aria-labelledby={`${device.id}-name`} data-off={off || undefined} data-layout={layout} data-dial={dial || undefined}>
       <motion.span className={styles.warm} style={{ opacity: warmRest }} aria-hidden="true" />
       <motion.span className={styles.cool} style={{ opacity: coolRest }} aria-hidden="true" />
       <motion.span className={`${styles.warm} ${styles.flash}`} style={{ opacity: warmPulse }} aria-hidden="true" />
@@ -203,18 +225,40 @@ export function Thermostat({ device, size, preview = false, onCommand, onOpenHis
         </span>
       </header>
 
-      {layout === "wide" ? (
+      {dial && target !== null ? (
+        <div className={styles.dialPanel}>
+          <div className={styles.dialArea}>
+            <ThermostatDial name={device.name} unit={device.unit} value={target} current={device.current} min={device.min} max={device.max} step={device.step}
+              tone={tone} active={heating || cooling} disabled={off || preview} format={formatTemperature} onChange={change}>
+              <span className={styles.dialAction}><TextShimmer active={pending}>{pending ? "Setting" : action}</TextShimmer></span>
+              {reading}
+              {layout === "large" && indoor && <span className={styles.dialIndoor}>{indoor}</span>}
+              {layout === "large" && fanLine}
+            </ThermostatDial>
+          </div>
+          {layout === "wide" ? (
+            <div className={styles.readout}>
+              {device.current !== null && <span className={styles.caption}>Indoor</span>}
+              {device.current !== null && <p className={styles.indoor}>{formatTemperature(device.current)}<span className={styles.degree} aria-hidden="true">°</span></p>}
+              {device.humidity !== null && <p className={styles.status}>Humidity {Math.round(device.humidity)}%</p>}
+              {fanLine}
+              {errorLine}
+            </div>
+          ) : errorLine}
+        </div>
+      ) : layout === "wide" ? (
         <div className={styles.panel}>
-          <div className={styles.readout}>{reading}{statusLine}</div>
+          <div className={styles.readout}>{reading}{statusLine}{fanLine}</div>
           <div className={styles.steps}>{up}{down}</div>
         </div>
       ) : layout === "compact" ? (
-        <div className={styles.dial}>
+        <div className={styles.stack}>
           <div className={styles.row}>{down}{reading}{up}</div>
           {statusLine}
+          {fanLine}
         </div>
       ) : (
-        <div className={styles.dial}>{up}{reading}{statusLine}{down}</div>
+        <div className={styles.stack}>{up}{reading}{statusLine}{fanLine}{down}</div>
       )}
 
       {modeButtons}

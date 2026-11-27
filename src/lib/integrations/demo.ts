@@ -1,4 +1,4 @@
-import { applyCommand, deviceId, livePosition, type Device, type DeviceCommand, type MediaPlayerDevice, type TodoItem } from "@/lib/devices/types";
+import { applyCommand, deviceId, fanRest, livePosition, type Device, type DeviceCommand, type MediaPlayerDevice, type TodoItem } from "@/lib/devices/types";
 import "server-only";
 import { eq } from "drizzle-orm";
 import { readFile } from "node:fs/promises";
@@ -74,6 +74,7 @@ function simulate(home: DemoHome, now: number) {
       home.devices.set(id, device.repeat === "one" ? playTrack(device, 0) : playTrack(device, 1));
       followLeader(home, id);
     }
+    if (device.kind === "thermostat" && device.fanUntil && Date.parse(device.fanUntil) <= now) home.devices.set(id, { ...device, fanMode: fanRest(device.fanModes), fanUntil: null });
     if (device.kind !== "thermostat" || device.current === null) continue;
     const goal = device.mode === "off" || device.target === null ? AMBIENT : device.target;
     const heats = (device.mode === "heat" || device.mode === "auto") && goal > device.current + 0.05;
@@ -119,9 +120,9 @@ function demoUsage(nativeId: string, current: number, from: Date, to: Date): His
  * picker shows each way a speaker can be reached.
  */
 function seedDevices(integrationId: string): Device[] {
-  const devices = seedDemoDevices(integrationId).map(device => device.kind === "media_player"
+  const devices = seedDemoDevices(integrationId).map((device): Device => device.kind === "media_player"
     ? { ...device, muted: false, can: { ...device.can, mute: true } }
-    : device);
+    : device.kind === "thermostat" ? { ...device, fanMode: "auto", fanModes: ["auto", "on"], fanTimer: "native", fanUntil: null } : device);
   return [...devices, {
     id: deviceId(integrationId, "bedroom-mini"), integrationId, name: "Bedroom mini", room: "Bedroom", available: true, platform: "cast",
     kind: "media_player", state: "off", title: null, artist: null, artwork: null, position: null, positionAt: null, duration: null,
@@ -166,7 +167,9 @@ export class DemoProvider implements Provider {
     const seeded = new Map(seedDevices(this.integrationId).map(device => [device.id, device]));
     for (const [id, seed] of seeded) {
       const device = home.devices.get(id);
-      home.devices.set(id, device ? { ...seed, ...device, ...("can" in seed && "can" in device ? { can: { ...seed.can, ...device.can } } : {}) } as Device : seed);
+      // A thermostat saved before its fan could be timed takes the seed's fan, which has the on mode a timer needs.
+      const fan = seed.kind === "thermostat" && device?.kind === "thermostat" && !device.fanTimer ? { fanMode: seed.fanMode, fanModes: seed.fanModes } : {};
+      home.devices.set(id, device ? { ...seed, ...device, ...fan, ...("can" in seed && "can" in device ? { can: { ...seed.can, ...device.can } } : {}) } as Device : seed);
     }
     filled.add(home.devices);
   }
