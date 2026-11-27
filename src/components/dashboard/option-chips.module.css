@@ -15,26 +15,52 @@
   gap: 6px;
 }
 
+/* Unchosen chips are outlined and quiet; the chosen one is filled like the thermostat's mode, with a tick, so it reads at a glance over any glass. */
 .chip {
-  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
   padding: 0 14px;
   border-radius: 999px;
-  background: oklch(50% 0 0 / .08);
-  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px oklch(50% 0 0 / .24);
+  color: var(--text-secondary);
   font-size: var(--text-sm);
-  transition: background-color var(--duration-fast) var(--ease-standard);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
 }
 
 .chip:hover:not(:disabled, [aria-checked="true"]) {
-  background: oklch(50% 0 0 / .14);
+  background: oklch(50% 0 0 / .1);
+  color: var(--foreground);
 }
 
 .chip[aria-checked="true"] {
   background: var(--foreground);
+  box-shadow: none;
   color: var(--background);
-  font-weight: 500;
+}
+
+.check {
+  display: inline-grid;
+  place-items: center;
+  width: 0;
+  margin-left: -2px;
+  opacity: 0;
+  overflow: hidden;
+  transition: width var(--duration-fast) var(--ease-standard), margin var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
+}
+
+.chip[aria-checked="true"] .check {
+  width: 14px;
+  margin: 0 6px 0 -4px;
+  opacity: 1;
 }
 
 .chip:disabled {
   opacity: .5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip, .check { transition: none; }
 }
