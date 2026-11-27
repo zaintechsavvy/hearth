@@ -225,6 +225,10 @@
   min-width: 0;
 }
 
+.root[data-dial] .modes {
+  justify-content: center;
+}
+
 .mode {
   display: inline-flex;
   align-items: center;
